@@ -1,0 +1,105 @@
+.site-header {
+  background-color: #ffffff;
+  border-bottom: 4px solid #32a041;
+  padding: 0.75rem 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.header-container {
+  max-width: 1200px;
+  margin: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+}
+
+.logo-ifma {
+  height: 45px;
+  width: auto;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  color: #2c3e50;
+  font-family: sans-serif;
+}
+
+.sub-text { font-size: 0.75rem; text-transform: uppercase; }
+.main-text { font-weight: bold; font-size: 1.1rem; }
+
+/* Navegação */
+.nav-links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: #555;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: color 0.2s;
+}
+
+.nav-links a:hover, .active-link {
+  color: #32a041;
+}
+
+/* Ações e Busca */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.search-box {
+  display: flex;
+  background: #f1f1f1;
+  border-radius: 20px;
+  padding: 4px 12px;
+}
+
+.search-box input {
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 4px;
+  font-size: 0.85rem;
+}
+
+.search-box button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.login-button {
+  background-color: #32a041;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.login-button:hover {
+  background-color: #288a35;
+}
+
+/* Responsividade Básica */
+@media (max-width: 850px) {
+  .nav-links { display: none; } /* Em produção, usar menu hambúrguer */
+}

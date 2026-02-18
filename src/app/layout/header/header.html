@@ -1,1 +1,32 @@
-<p>header works!</p>
+<header class="site-header">
+  
+  <div class="header-container">
+    
+    <div class="brand" routerLink="/">
+      <img src="ifma-logo.png" alt="Logo IFMA" class="logo-ifma">
+      <div class="brand-text">
+        <span class="sub-text">Plataforma de Ciência da</span>
+        <span class="main-text">Computação</span>
+      </div>
+    </div>
+
+    <nav class="nav-links">
+      <a href="/sobre" routerLinkActive="active-link">Sobre</a>
+      <a routerLink="/eventos" routerLinkActive="active-link">Eventos</a>
+      <a routerLink="/projetos" routerLinkActive="active-link">Projetos</a>
+      <a routerLink="/processo-seletivo" routerLinkActive="active-link">Processo Seletivo</a>
+    </nav>
+
+    <div class="header-actions">
+      <div class="search-box">
+        <input type="text" placeholder="Busca global..." #searchInput>
+        <button (click)="onSearch(searchInput.value)">🔍</button>
+      </div>
+      
+      <button class="login-button" (click)="onLogin()">
+        Entrar
+      </button>
+    </div>
+  </div>
+
+</header>
