@@ -1,7 +1,7 @@
 <header class="site-header">
   
   <div class="header-container">
-    
+
     <div class="brand" routerLink="/">
       <img src="ifma-logo.png" alt="Logo IFMA" class="logo-ifma">
       <div class="brand-text">
@@ -9,13 +9,6 @@
         <span class="main-text">Computação</span>
       </div>
     </div>
-
-    <nav class="nav-links">
-      <a href="/sobre" routerLinkActive="active-link">Sobre</a>
-      <a routerLink="/eventos" routerLinkActive="active-link">Eventos</a>
-      <a routerLink="/projetos" routerLinkActive="active-link">Projetos</a>
-      <a routerLink="/processo-seletivo" routerLinkActive="active-link">Processo Seletivo</a>
-    </nav>
 
     <div class="header-actions">
       <div class="search-box">
@@ -27,6 +20,67 @@
         Entrar
       </button>
     </div>
+    
   </div>
+
+  <nav class="header-navigation">
+
+    <div class="nav-container">
+      <ul class="nav-list">
+
+        <li class="nav-item has-dropdown">
+          <a class="nav-link">Sobre o Curso ▼</a>
+          <ul class="dropdown-menu">
+            <li><a routerLink="/sobre/apresentacao">Apresentação</a></li>
+            <li><a routerLink="/sobre/docentes">Corpo Docente</a></li>
+            <li><a routerLink="/sobre/infraestrutura">Laboratórios</a></li>
+          </ul>
+        </li>
+
+        <li class="nav-item has-dropdown">
+          <a class="nav-link">Ensino ▼</a>
+          <ul class="dropdown-menu">
+            <li><a routerLink="/ensino/matriz">Matriz Curricular</a></li>
+            <li><a routerLink="/ensino/calendario">Calendário Acadêmico</a></li>
+            <li><a routerLink="/ensino/editais">Editais</a></li>
+          </ul>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" routerLink="/eventos">Eventos</a>
+        </li>
+        
+        <li class="nav-item has-dropdown">
+          <a class="nav-link">Pesquisa & Extensão ▼</a>
+          <ul class="dropdown-menu">
+            <li><a routerLink="/projetos/pesquisa">Projetos de Pesquisa</a></li>
+            <li><a routerLink="/projetos/extensao">Projetos de Extensão</a></li>
+            <li><a routerLink="/projetos/clubes">Clubes Acadêmicos</a></li>
+          </ul>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" routerLink="/processo-seletivo">Processo Seletivo</a>
+        </li>
+
+      </ul>
+ 
+      <div class="contact-social">
+        <div class="social-icons">
+          <a href="https://instagram.com/ccomp_ifma" target="_blank" title="Instagram" class="social-link">
+            <span class="icon"> </span>
+          </a>
+          <a href="https://github.com/ccomp-ifma" target="_blank" title="GitHub" class="social-link">
+            <span class="icon"></span>
+          </a>
+        </div>
+        <div class="phone-contact">
+          <span class="icon"></span>
+          <a href="tel:9988051558">(99) 8805-1558</a>
+        </div>
+      </div>
+
+    </div> 
+   </nav>
 
 </header>
