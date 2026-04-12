@@ -1,0 +1,80 @@
+<section class="destaque-container">
+  <div class="section-header">
+    <span class="linha-verde"></span>
+    <h2>Evento em Destaque</h2>
+  </div>
+
+  @if (evento){
+    <div class="cartao-destaque">
+      <div class="conteudo-principal">
+        <div class="tags">
+          <span class="tag tag-sigla">{{ evento.sigla }}</span>
+          <span class="tag tag-modalidade">{{ evento.modalidade }}</span>
+        </div>
+  
+        <h1 class="titulo-evento">{{ evento.titulo }}</h1>
+        <p class="descricao-evento">{{ evento.descricao }}</p>
+  
+        <div class="grid-info-rapida">
+
+          <div class="info-item">
+            <span class="icon"><mat-icon>date_range</mat-icon></span>
+            <div class="info-text">
+              <small>DATA</small>
+              <strong>{{ evento.data }}</strong>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <span class="icon"><mat-icon>access_time</mat-icon></span>
+            <div class="info-text">
+              <small>INÍCIO</small>
+              <strong>{{ evento.horario }}</strong>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <span class="icon"><mat-icon>location_on</mat-icon></span>
+            <div class="info-text">
+              <small>LOCAL</small>
+              <strong>{{ evento.local }}</strong>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <span class="icon"><mat-icon>people</mat-icon></span>
+            <div class="info-text">
+              <small>VAGAS</small>
+              <strong>{{ evento.vagas }} Total</strong>
+            </div>
+          </div>
+
+        </div>
+  
+        <button class="btn-inscrever" (click)="inscrever()">
+          Inscrever-se agora <span><mat-icon>arrow_forward</mat-icon></span>
+        </button>
+
+      </div>
+  
+      <div class="painel-lateral">
+
+        <div class="imagem-destaque">
+          <img [src]="evento.imagemUrl" [alt]="evento.titulo">
+        </div>
+        
+        <div class="detalhes-tecnicos">
+          <h3>Informações Rápidas</h3>
+          <ul>
+            <li><span>Carga Horária:</span> <strong>{{ evento.cargaHoraria }}</strong></li>
+            <li><span>Certificado:</span> <strong>{{ evento.certificado ? 'Sim (ACCs)' : 'Não' }}</strong></li>
+            <li><span>Público:</span> <strong>{{ evento.publico }}</strong></li>
+            <li><span>Pré-requisito:</span> <strong>{{ evento.preRequisito }}</strong></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  }
+  
+</section>
