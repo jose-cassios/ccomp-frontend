@@ -1,1 +1,45 @@
-<p>footer works!</p>
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      
+      <div class="footer-brand">
+        <h2 class="logo">CCOMP</h2>
+        <p class="description">
+          Portal acadêmico dedicado ao compartilhamento de conhecimento e inovação tecnológica.
+        </p>
+      </div>
+
+      <div class="footer-group">
+        <h3>Links Rápidos</h3>
+        <ul>
+          @for (link of quickLinks; track link.label) {
+            <li><a [routerLink]="link.path">{{ link.label }}</a></li>
+          }
+        </ul>
+      </div>
+
+      <div class="footer-group">
+        <h3>Contato</h3>
+        <address>
+          <p><mat-icon>place</mat-icon> Campus Caxias, IFMA</p>
+          <p><mat-icon>email</mat-icon> contato&#64;ifma.edu.br</p>
+          <p><mat-icon>phone</mat-icon> (99) 98844-2274</p>
+        </address>
+      </div>
+
+      <div class="footer-institutional">
+        <img src="assets/ifma-logo-white.png" alt="Logo IFMA" class="ifma-logo">
+        <div class="legal-links">
+          <a routerLink="/privacidade">Privacidade</a>
+          <span class="divider">|</span>
+          <a routerLink="/termos">Termos</a>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; {{ currentYear() }} CCOMP - Instituto Federal do Maranhão.</p>
+    </div>
+  </div>
+</footer>
