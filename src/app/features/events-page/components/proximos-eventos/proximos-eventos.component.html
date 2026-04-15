@@ -1,0 +1,61 @@
+<section class="calendario-section">
+  <div class="header-flex">
+    <div class="titulo-area">
+      <h2 class="section-title">Próximos Eventos</h2>
+      <p class="section-subtitle">Explore as próximas oportunidades de aprendizado e networking agendadas para este semestre.</p>
+    </div>
+    
+    <div class="filtros-container">
+      @for (filtro of filtros; track filtro) {
+        <button 
+          [class.active]="filtroAtivo === filtro" 
+          (click)="filtroAtivo = filtro">
+          {{ filtro }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="eventos-grid">
+    @for (item of eventos; track item.id) {
+      <div class="evento-card">
+
+        <div class="card-media">
+          <span class="status-tag" [ngClass]="item.statusClass">{{ item.status }}</span>
+          <img [src]="item.imagemUrl" [alt]="item.titulo">
+        </div>
+
+        <div class="card-content">
+          <h3 class="evento-titulo">{{ item.titulo }}</h3>
+          <p class="evento-desc">{{ item.descricao }}</p>
+
+          <div class="evento-footer">
+            <div class="meta-info">
+              <span><mat-icon>calendar_today</mat-icon> {{ item.data }}</span>
+              
+              @if (item.inscritos) {
+                <span><mat-icon>group</mat-icon> {{ item.inscritos }} inscritos</span>
+              } @else if (item.local) {
+                <span><mat-icon>place</mat-icon> {{ item.local }}</span>
+              } @else {
+                <span><mat-icon>priority_high</mat-icon> {{ item.vagasRestantes }}/{{ item.vagasTotal }} vagas</span>
+              }
+            </div>
+
+            <button class="btn-detalhes" (click)="verDetalhes(item.id)">
+              Ver Detalhes <mat-icon>open_in_new</mat-icon>
+            </button>
+          </div>
+        </div>
+        
+      </div>
+    }
+  </div>
+
+  <div class="footer-action">
+    <button class="btn-link" (click)="irParaCalendario()">
+      Ver Calendário Completo <mat-icon>arrow_forward</mat-icon>
+    </button>
+  </div>
+
+</section>
