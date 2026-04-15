@@ -1,0 +1,9 @@
+.page-wrapper {
+  display: flex;
+  flex-direction: column;
+  padding: 40px 0;
+}
+
+.section-spacer {
+  width: 100%;
+}
