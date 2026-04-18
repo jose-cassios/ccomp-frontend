@@ -1,0 +1,146 @@
+.bg-light {
+  background-color: #f9f9f9;
+  width: 100%;
+  max-width: none;
+}
+
+.section-title {
+  text-align: center;
+  margin-bottom: 40px;
+  color: #2c3e50;
+  font-size: 2rem;
+}
+
+/* HERO SECTION */
+.hero {
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/assets/images/campus-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 5%;
+  color: white;
+  gap: 40px;
+  /* text-align: center; */
+}
+
+.hero-content{
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.hero-content h1 {
+  font-size: 3rem;
+  line-height: 1.2;
+  margin: 0;
+}
+.hero-content p {
+  font-size: 1.2rem;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: #32a041;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 15px;
+}
+
+.hero-btns {
+  display: flex;
+  gap: 15px;
+  justify-content: flex-start;
+}
+
+.btn-primary {
+  background: #32a041;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.btn-primary:hover{
+  background-color: #288034;
+}
+
+
+.btn-secondary {
+  background: transparent;
+  color: white;
+  border: 2px solid white;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.btn-secondary:hover{
+  background: white;
+  color: #2c3e50;
+}
+
+/* CARROSSEL HERO */
+.hero-carousel{
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 1.8rem;
+  border-radius: 12px;
+  width: 80%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.carousel-item h3{
+  font-size: 1.5rem;
+  margin: 15px 0 10px 0;
+}
+
+.carousel-item p{
+  font-size: 1rem;
+  color: #ccc;
+  margin-bottom: 20px;
+}
+
+.badge-novo{
+  background-color: #32a041;
+  color: white;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.carousel-indicators{
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: center;
+}
+
+.dot{
+  height: 8px;
+  width: 8px;
+  background-color: rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.dot.active{
+  background-color: #32a041;
+  width: 20px;
+  border-radius: 4px;
+}
