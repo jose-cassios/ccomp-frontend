@@ -1,0 +1,97 @@
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.section-header h3{
+  color: #15803D;
+  font-size: 20px;
+}
+
+.linha-verde {
+  width: 40px;
+  height: 4px;
+  background-color: #32a041;
+  display: inline-block;
+}
+
+/* Grid e Cards */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 30px;
+}
+
+.card-item {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  transition: transform 0.3s;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-item:hover { transform: translateY(-5px); }
+
+/* --- Mídia do Card --- */
+.card-media {
+  position: relative;
+  height: 200px;
+  flex-shrink: 0;
+}
+
+.card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+
+.card-body {
+  padding: 25px;
+  flex-grow: 1;
+}
+
+.card-body h4 {
+  font-size: 1.25rem;
+  margin-bottom: 12px;
+  color: #2c3e50;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.card-description {
+  font-size: 0.9rem;
+  color: #666;
+  line-height: 1.5;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Rodapé Card */
+.card-footer {
+  padding: 0 25px 25px 25px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-read-more {
+  color: #32a041; 
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 0.85rem;
+  transition: color 0.2s, text-decoration 0.2s;
+}
+
+.btn-read-more:hover {
+  color: #15803D;
+  text-decoration: underline;
+}
+
+

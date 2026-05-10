@@ -10,8 +10,8 @@ html {
   height: 100%;
   @include mat.theme((
     color: (
-      primary: mat.$azure-palette,
-      tertiary: mat.$blue-palette,
+      primary: mat.$magenta-palette,
+      tertiary: mat.$violet-palette,
     ),
     typography: Roboto,
     density: 0,
@@ -35,3 +35,5 @@ body {
   margin: 0;
   height: 100%;
 }
+
+

@@ -1,0 +1,142 @@
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+.section-header h3{
+  color: #15803D;
+  font-size: 20px;
+}
+
+.linha-verde {
+  width: 40px;
+  height: 4px;
+  background-color: #32a041;
+  display: inline-block;
+}
+
+.promo-banner-card {
+  background: #DDE9E1;
+  width: 100%;
+  max-width: 1184px;
+  min-height: 424px;
+  border-radius: 1rem;
+  display: flex;
+  color: white;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+.badge-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.badge.status-open {
+  background-color: #15803d;
+  color: white;
+}
+
+.promo-content{
+  flex: 1.2;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.promo-image{
+  flex: 1;
+  background-color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.promo-image img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.promo-content h2{
+  color: #022C22;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 15px 0;
+  line-height: 1.1;
+}
+
+.promo-description {
+  color: #14532D;
+  line-height: 1.6;
+  margin-bottom: 25px;
+}
+
+.promo-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 20px;
+  margin-bottom: 35px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-item .label {
+  font-size: 0.75rem;
+  color: #16A34A;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.detail-item .value {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #022C22;
+}
+
+.btn-cta {
+  background-color: #15803d;
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  width: fit-content;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.btn-cta:hover {
+  background-color: #166534;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 992px) {
+  .promo-banner-card {
+    flex-direction: column;
+  }
+
+  .promo-image {
+    order: -1; 
+    height: 250px;
+  }
+
+  .promo-details-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

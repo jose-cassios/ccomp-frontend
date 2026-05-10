@@ -1,0 +1,31 @@
+<section class="destaques-container section-container">
+  <div class="section-header">
+    <span class="linha-verde"></span>
+    <h3>Destaques da Semana</h3>
+  </div>
+
+  <div class="cards-grid">
+
+
+    @for(item of destaques; track item.id){
+
+      <article class="card-item">
+        <div class="card-media">
+          <img [src]="item.imagem" [alt]="item.alt">
+        </div>
+
+        <div class="card-body">
+          <h4>{{item.titulo}}</h4>
+          <p class="card-description">
+            {{item.descricao}}
+          </p>
+        </div>
+
+        <div class="card-footer">
+          <a [routerLink]="item.rota" class="btn-read-more">Leia completo →</a>
+        </div>
+      </article>
+    }
+
+  </div>
+</section>

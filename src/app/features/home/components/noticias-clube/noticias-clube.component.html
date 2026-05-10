@@ -1,0 +1,24 @@
+<section class="noticias-container">
+  <div class="noticias-wrapper">
+    <div class="notice-card">
+      <div class="notice-image">
+        <img [src]="noticia.imagem" [alt]="noticia.tituloCard" />
+      </div>
+      <div class="description-notice">
+        <span class="category-tag">{{noticia.categoria}}</span>
+        <h3>{{noticia.tituloCard}}</h3>
+        <p> {{noticia.descricao}}</p>
+      </div>
+      <button class="btn-cta">Quero me inscrever</button>
+    </div>
+
+    <div class="notice-side-content">
+      <div class="section-header">
+        <span class="linha-verde"></span>
+        <span class="label">{{noticia.labelSessao}}</span>
+      </div>
+      <h2 class="main-notice-title">{{noticia.tituloPrincipal}}</h2>
+      <button class="btn-secondary">Ver informações</button>
+    </div>
+  </div>
+</section>

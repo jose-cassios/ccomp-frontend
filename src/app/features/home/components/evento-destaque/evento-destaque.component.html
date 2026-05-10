@@ -1,0 +1,37 @@
+<section class="promo-event-section">
+  <div class="section-header">
+    <span class="linha-verde"></span>
+    <h3>EVENTO EM DESTAQUE</h3>
+  </div>
+
+  <div class="promo-banner-card">
+    <div class="promo-content">
+
+      <div class="badge-group">
+        @if (evento.inscricoesAbertas) {
+          <span class="badge status-open">INSC. ABERTAS</span>
+        }
+        <span class="badge">{{evento.modalidade}}</span>
+      </div>
+      <h2 class="promo-title">{{evento.titulo}}</h2>
+      <p class="promo-description">
+        {{evento.descricao}}
+      </p>
+
+      <div class="promo-details-grid">
+        @for(item of evento.detalhes; track item.label){
+          <div class="detail-item">
+            <span class="label">{{item.label}}</span>
+            <span class="value">{{item.value}}</span>
+          </div>
+        }
+      </div>
+      <button class="btn-cta">
+        {{ evento.inscricoesAbertas ? 'Inscrever-se agora' : 'Saiba mais' }}
+      </button>
+    </div>
+    <div class="promo-image">
+      <img [src]="evento.imagem" [alt]="evento.titulo">
+    </div>
+  </div>
+</section>

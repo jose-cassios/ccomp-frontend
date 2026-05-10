@@ -1,0 +1,77 @@
+<section class="hero-banner">
+  <div class="hero-bg">
+    <div class="bg-overlay"></div>
+  </div>
+
+  <div class="hero-container">
+    <div class="hero-content-area">
+      <div class="hero-titles">
+        <span class="badge-inst">Instituto Federal do Maranhão</span>
+        <h1 class="hero-title">
+          Bem-vindo ao <br /><span class="text-highlight"
+            >Bacharelado em Ciência da Computação</span
+          >
+        </h1>
+        <p class="hero-desc">
+          Formando profissionais de excelência técnica e científica para os desafios da era digital.
+          Conheça nossa infraestrutura de ponta e projetos de pesquisa inovadores.
+        </p>
+      </div>
+
+      <div class="hero-stats">
+        @for (stat of estatisticas; track stat.label) {
+          <div class="stat-item">
+            <p class="stat-value">{{ stat.valor }}</p>
+            <p class="stat-label">{{ stat.label }}</p>
+          </div>
+        }
+      </div>
+
+      <div class="hero-actions">
+        <button class="btn-primary-gradient">Cadastre seu evento</button>
+        <button class="btn-secondary-light">Ver Abertos</button>
+      </div>
+    </div>
+
+    <div class="hero-card-area">
+      <div class="news-card">
+        <div class="news-img-container">
+          <img
+            [src]="atualizacoes[currentIndex].imagem"
+            [alt]="atualizacoes[currentIndex].titulo"
+            class="news-img fade-in"
+          />
+
+          @if (atualizacoes[currentIndex].isNovo) {
+            <div class="badge-novo-floating fade-in">
+              <span class="dot-white"></span> Ultimas Notícias
+            </div>
+          }
+        </div>
+
+        <div class="news-content fade-in">
+          <div class="news-header">
+            <h3 class="news-tag">{{ atualizacoes[currentIndex].tag }}</h3>
+            <div class="news-controls">
+              <button (click)="prev()">‹</button>
+              <button (click)="next()">›</button>
+            </div>
+          </div>
+
+          <h2 class="news-title">{{ atualizacoes[currentIndex].titulo }}</h2>
+          <p class="news-desc">{{ atualizacoes[currentIndex].descricao }}</p>
+
+          <div class="carousel-indicators">
+            @for (item of atualizacoes; track item.id; let i = $index) {
+              <span class="dot" [class.active]="i === currentIndex" (click)="goTo(i)"> </span>
+            }
+          </div>
+
+          <div class="news-footer">
+            <a [href]="atualizacoes[currentIndex].link" class="link-acessar"> +Mais Informações </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
