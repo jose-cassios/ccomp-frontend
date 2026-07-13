@@ -1,14 +1,11 @@
-<section class="destaques-container section-container">
+<section>
   <div class="section-header">
     <span class="linha-verde"></span>
     <h3>Destaques da Semana</h3>
   </div>
 
   <div class="cards-grid">
-
-
     @for(item of destaques; track item.id){
-
       <article class="card-item">
         <div class="card-media">
           <img [src]="item.imagem" [alt]="item.alt">
@@ -26,6 +23,5 @@
         </div>
       </article>
     }
-
   </div>
 </section>

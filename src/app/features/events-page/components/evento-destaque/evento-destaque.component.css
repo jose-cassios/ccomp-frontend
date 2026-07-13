@@ -4,20 +4,6 @@
   padding: 0 20px;
 }
 
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 30px;
-}
-
-.linha-verde {
-  width: 40px;
-  height: 4px;
-  background-color: #32a041;
-  display: inline-block;
-}
-
 .section-header h2 {
   font-size: 1.8rem;
   color: #2c3e50;
