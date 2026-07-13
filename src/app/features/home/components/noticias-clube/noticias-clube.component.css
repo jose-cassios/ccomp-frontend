@@ -53,18 +53,10 @@
   max-width: 500px;
 }
 
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 30px;
-}
-
+/* Sobre o fundo escuro da seção, a linha usa o verde claro */
 .linha-verde {
   width: 27px;
-  height: 4px;
-  background-color: #6EF585;
-  display: inline-block;
+  background-color: var(--brand-accent);
 }
 
 .label{
@@ -82,11 +74,10 @@
 }
 
 /* Botões */
-.btn-cta {
+.btn-cta-light {
   align-self: flex-end;
   background-color: #e0e3e2;
   color: #055023;
-  align-self: flex-end;
   border: none;
   padding: 12px 25px;
   border-radius: 8px;
@@ -96,7 +87,7 @@
   transition: transform 0.2s, background-color 0.2s;
 }
 
-.btn-cta:hover{
+.btn-cta-light:hover{
   background-color: #d7dbda;
   transform: translateY(-2px);
 }
