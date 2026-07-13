@@ -1,0 +1,24 @@
+  <div class="split-layout">
+    <div class="agenda-wrapper">
+      <div class="section-header">
+        <span class="linha-verde"></span>
+        <h3 class="section-subtitle">AGENDA DO MÊS</h3>
+      </div>
+      <div class="agenda-list">
+        @for(item of agendaMes; track item.title){
+          <div class="agenda-item">
+            <div class="agenda-date">
+              <span class="month">{{item.month}}</span>
+              <span class="day">{{item.day}}</span>
+            </div>
+            <div class="agenda-info">
+              <span class="agenda-tag">{{item.tag}}</span>
+              <h4>{{item.title}}</h4>
+            </div>
+          </div>
+        }
+        <button class="btn-text">Ver calendário completo →</button>
+      </div>
+
+    </div>
+  </div>
