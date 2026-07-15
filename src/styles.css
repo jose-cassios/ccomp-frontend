@@ -1,6 +1,69 @@
 /* You can add global styles to this file, and also import other style files */
+
+:root {
+  /* Marca */
+  --brand-100: #dcfce7;
+  --brand-500: #32a041;
+  --brand-600: #15803d;
+  --brand-700: #166534;
+  /* Verde claro, para uso sobre fundo escuro */
+  --brand-accent: #6ef585;
+
+  /* Texto */
+  --text-strong: #2c3e50;
+  --text-muted: #666;
+}
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+}
+
+/* ===== Cabeçalho de seção ===== */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.section-header h3 {
+  color: var(--brand-600);
+  font-size: 20px;
+}
+
+.linha-verde {
+  width: 40px;
+  height: 4px;
+  background-color: var(--brand-500);
+  display: inline-block;
+}
+
+/* ===== Botões ===== */
+.btn-cta {
+  background-color: var(--brand-600);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  width: fit-content;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.btn-cta:hover {
+  background-color: var(--brand-700);
+  transform: translateY(-2px);
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: var(--brand-500);
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 15px;
 }
