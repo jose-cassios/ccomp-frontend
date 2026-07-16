@@ -74,22 +74,10 @@
 }
 
 /* Botões */
+/* A aparência do .btn-cta-light é global; aqui só o posicionamento. */
 .btn-cta-light {
   align-self: flex-end;
-  background-color: #e0e3e2;
-  color: #055023;
-  border: none;
-  padding: 12px 25px;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
   margin: 0 25px 25px;
-  transition: transform 0.2s, background-color 0.2s;
-}
-
-.btn-cta-light:hover{
-  background-color: #d7dbda;
-  transform: translateY(-2px);
 }
 
 .btn-secondary {

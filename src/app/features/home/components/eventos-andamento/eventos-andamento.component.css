@@ -1,0 +1,237 @@
+/* o align-items mantém a altura centralizada */
+.carousel-viewport {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: calc(1184px + 2 * (44px + 16px));
+  margin: 0 auto;
+}
+
+.promo-banner-card {
+  flex: 1;
+  min-width: 0;
+  background: #DDE9E1;
+  min-height: 424px;
+  border-radius: 1rem;
+  display: flex;
+  color: white;
+  overflow: hidden;
+}
+
+.badge-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  background-color: var(--brand-100);
+  color: var(--brand-600);
+}
+
+.badge.status-open {
+  background-color: var(--brand-600);
+  color: white;
+}
+
+.promo-content{
+  flex: 1.2;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.promo-image{
+  position: relative;
+  flex: 1;
+  background-color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.promo-image img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.promo-content h2{
+  color: #022C22;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 15px 0;
+  line-height: 1.1;
+}
+
+.promo-description {
+  color: #14532D;
+  line-height: 1.6;
+  margin-bottom: 25px;
+}
+
+.promo-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 20px;
+}
+
+/* Aparência vem do .btn-cta-light global; aqui só posição e ajustes de link. */
+.btn-ver-evento {
+  position: absolute;
+  color: #078E30;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  font-size: 1rem;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-item .label {
+  font-size: 0.75rem;
+  color: #16A34A;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.detail-item .value {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #022C22;
+}
+
+/* CARROSSEL */
+.carousel-indicators {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.dot {
+  height: 6px;
+  width: 6px;
+  padding: 0;
+  border: none;
+  background-color: rgba(111, 122, 107, 0.3);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.dot.active {
+  background-color: #006b1f;
+  width: 20px;
+  border-radius: 4px;
+}
+
+.dot:hover {
+  background-color: #006b1f;
+  opacity: 0.7;
+}
+
+.carousel-arrow {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  background: #fff;
+  border: 1px solid rgba(2, 44, 34, 0.08);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--brand-600);
+  font-size: 1.5rem;
+  font-weight: bold;
+  line-height: 1;
+  padding-bottom: 3px;
+  box-shadow: 0 4px 14px rgba(2, 44, 34, 0.18);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.carousel-arrow:hover {
+  background: var(--brand-600);
+  color: #fff;
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0.3; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in { animation: none; }
+}
+
+@media (max-width: 992px) {
+  /* talvez remover as setas */
+  .carousel-viewport {
+    display: block;
+    position: relative;
+  }
+
+  .promo-banner-card {
+    flex-direction: column;
+    /* Passa a ser o bloco de referência do CTA, que sai de cima da imagem. */
+    position: relative;
+  }
+
+  /* Com a imagem no topo, um CTA sobre ela apareceria antes do texto;
+     static devolve o posicionamento do botão para o card inteiro */
+  .promo-image {
+    position: static;
+    order: -1;
+    height: 250px;
+  }
+
+  .promo-content {
+    padding-bottom: 96px;
+  }
+
+  .btn-ver-evento {
+    left: 24px;
+    right: 24px;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(2, 44, 34, 0.2);
+  }
+
+  .promo-details-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Centradas sobre a imagem (250px de altura), não no meio do card. */
+  .carousel-arrow {
+    position: absolute;
+    top: 125px;
+    transform: translateY(-50%);
+    z-index: 2;
+  }
+
+  .carousel-arrow--prev {
+    left: 12px;
+  }
+
+  .carousel-arrow--next {
+    right: 12px;
+  }
+}
