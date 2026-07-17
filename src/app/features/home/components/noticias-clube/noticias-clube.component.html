@@ -1,24 +1,65 @@
-<section class="noticias-container">
+<section
+  class="noticias-container"
+  (mouseenter)="autoplayPausado.set(true)"
+  (mouseleave)="autoplayPausado.set(false)"
+>
   <div class="noticias-wrapper">
-    <div class="notice-card">
-      <div class="notice-image">
-        <img [src]="noticia.imagem" [alt]="noticia.tituloCard" />
+    <div class="carousel-viewport">
+      <div class="carousel-stage">
+        @for (clube of clubes; track clube.id; let i = $index) {
+          <!-- Todos os cards ficam no DOM: só o ativo é visível, o resto faz o crossfade -->
+          <div
+            class="notice-card"
+            [class.is-active]="i === currentIndex()"
+            [attr.inert]="i === currentIndex() ? null : ''"
+            [attr.aria-hidden]="i === currentIndex() ? null : 'true'"
+          >
+            <div class="notice-image">
+              <img [src]="clube.imagem" [alt]="clube.nome" />
+            </div>
+            <div class="description-notice">
+              <span class="category-tag">{{ clube.categoria }}</span>
+              <h3>{{ clube.nome }}</h3>
+              <p>{{ clube.descricao }}</p>
+            </div>
+            <a
+              class="btn-cta-light"
+              [routerLink]="clube.link"
+              [attr.aria-label]="'Quero me inscrever no ' + clube.nome"
+            >
+              Quero me inscrever
+            </a>
+          </div>
+        }
       </div>
-      <div class="description-notice">
-        <span class="category-tag">{{noticia.categoria}}</span>
-        <h3>{{noticia.tituloCard}}</h3>
-        <p> {{noticia.descricao}}</p>
+
+      <div class="carousel-indicators">
+        @for (clube of clubes; track clube.id; let i = $index) {
+          <button
+            type="button"
+            class="dot"
+            [class.active]="i === currentIndex()"
+            [attr.aria-label]="'Ir para o clube ' + clube.nome"
+            [attr.aria-current]="i === currentIndex()"
+            (click)="goTo(i)"
+          ></button>
+        }
       </div>
-      <button class="btn-cta-light">Quero me inscrever</button>
     </div>
 
     <div class="notice-side-content">
       <div class="section-header">
         <span class="linha-verde"></span>
-        <span class="label">{{noticia.labelSessao}}</span>
+        <span class="label">{{ labelSessao }}</span>
       </div>
-      <h2 class="main-notice-title">{{noticia.tituloPrincipal}}</h2>
-      <button class="btn-secondary">Ver informações</button>
+      <h2 class="main-notice-title">{{ clubeAtual().chamada }}</h2>
+      <a
+        class="btn-secondary"
+        [routerLink]="clubeAtual().link"
+        [attr.aria-label]="'Ver informações do ' + clubeAtual().nome"
+      >
+        Ver informações
+      </a>
     </div>
   </div>
 </section>

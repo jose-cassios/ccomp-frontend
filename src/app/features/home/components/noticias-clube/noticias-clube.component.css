@@ -15,16 +15,41 @@
   gap: 60px;
 }
 
-/* Card */
-.notice-card {
-  display: flex;
-  flex-direction: column;
-  background-color: #0f172a;
-  border-radius: 1rem;
+/* Carrossel */
+.carousel-viewport {
+  position: relative;
   flex: 1;
   max-width: 450px;
+}
+
+/* Altura fixa porque os cards são absolutos e não sustentam o bloco. Casa com o min-height do card. */
+.carousel-stage {
+  position: relative;
+  height: 520px;
+}
+
+/* Card */
+.notice-card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+  background-color: #0f172a;
+  border-radius: 1rem;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transform: scale(0.96);
+  pointer-events: none;
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+
+.notice-card.is-active {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+  z-index: 1;
 }
 
 .notice-image img {
@@ -77,7 +102,9 @@
 /* A aparência do .btn-cta-light é global; aqui só o posicionamento. */
 .btn-cta-light {
   align-self: flex-end;
-  margin: 0 25px 25px;
+  margin: auto 25px 25px;
+  color: #078E30;
+  text-decoration: none;
 }
 
 .btn-secondary {
@@ -90,9 +117,64 @@
   padding: 12px 30px;
   border-radius: 12px;
   cursor: pointer;
+  text-decoration: none;
   transition: transform 0.2s ease;
 }
 .btn-secondary:hover{
   background-color: #e8eaea;
   transform: translateY(-2px);
+}
+
+/* Indicadores */
+.carousel-indicators {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.dot {
+  height: 6px;
+  width: 6px;
+  padding: 0;
+  border: none;
+  background-color: rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.dot.active {
+  background-color: #fff;
+  width: 20px;
+  border-radius: 4px;
+}
+
+.dot:hover {
+  background-color: #fff;
+  opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notice-card {
+    transition: none;
+  }
+}
+
+@media (max-width: 992px) {
+  .noticias-wrapper {
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  .carousel-viewport,
+  .notice-side-content {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .main-notice-title {
+    font-size: 2.2rem;
+  }
 }
