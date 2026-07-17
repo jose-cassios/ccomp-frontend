@@ -83,7 +83,28 @@ export class EventosAndamentoComponent {
     },
   ];
 
-  eventoAtual = computed(() => this.eventos[this.currentIndex()]);
+  // Distância de cada evento até o atual pelo caminho mais curto do círculo:
+  // -1 (esquerda), 0 (centro), 1 (direita) e null para quem fica fora do deck.
+  private posicoes = computed(() => {
+    const total = this.eventos.length;
+    const atual = this.currentIndex();
+
+    return this.eventos.map((_, i) => {
+      let distancia = i - atual;
+
+      if (distancia > total / 2) {
+        distancia -= total;
+      } else if (distancia < -total / 2) {
+        distancia += total;
+      }
+
+      return Math.abs(distancia) <= 1 ? distancia : null;
+    });
+  });
+
+  posicao(index: number): number | null {
+    return this.posicoes()[index];
+  }
 
   constructor() {
     // O timer só existe no browser: no SSR ele nunca dispararia change detection
@@ -109,5 +130,13 @@ export class EventosAndamentoComponent {
 
   goTo(index: number) {
     this.currentIndex.set(index);
+  }
+
+  // Cards laterais são `inert`
+  // trazer a carta para o centro é seguro
+  aoClicarNoCard(index: number) {
+    if (this.posicao(index) !== 0) {
+      this.goTo(index);
+    }
   }
 }

@@ -9,7 +9,6 @@
   </div>
 
   <div class="carousel-viewport">
-    <!-- setas ficam fora do @for: não devem ser recriadas a cada troca. -->
     <button
       type="button"
       class="carousel-arrow carousel-arrow--prev"
@@ -19,43 +18,54 @@
       ‹
     </button>
 
-    <!-- O track por id recria o conteúdo a cada troca, reiniciando o fade-in. -->
-    @for (evento of [eventoAtual()]; track evento.id) {
-      <div class="promo-banner-card">
-        <div class="promo-content fade-in">
-          <div class="badge-group">
-            @if (evento.inscricoesAbertas) {
-              <span class="badge status-open">INSC. ABERTAS</span>
-            }
-            <span class="badge">{{ evento.modalidade }}</span>
+    <div class="carousel-stage">
+      @for (evento of eventos; track evento.id; let i = $index) {
+        <!-- Todos os cards ficam no DOM: a posição no deck é só transform/opacity, permite animar a troca -->
+        <div
+          class="promo-banner-card"
+          [class.is-active]="posicao(i) === 0"
+          [class.is-prev]="posicao(i) === -1"
+          [class.is-next]="posicao(i) === 1"
+          [class.is-oculto]="posicao(i) === null"
+          [attr.inert]="posicao(i) === 0 ? null : ''"
+          [attr.aria-hidden]="posicao(i) === 0 ? null : 'true'"
+          (click)="aoClicarNoCard(i)"
+        >
+          <div class="promo-content">
+            <div class="badge-group">
+              @if (evento.inscricoesAbertas) {
+                <span class="badge status-open">INSC. ABERTAS</span>
+              }
+              <span class="badge">{{ evento.modalidade }}</span>
+            </div>
+
+            <h2 class="promo-title">{{ evento.titulo }}</h2>
+            <p class="promo-description">{{ evento.descricao }}</p>
+
+            <div class="promo-details-grid">
+              @for (item of evento.detalhes; track item.label) {
+                <div class="detail-item">
+                  <span class="label">{{ item.label }}</span>
+                  <span class="value">{{ item.value }}</span>
+                </div>
+              }
+            </div>
           </div>
 
-          <h2 class="promo-title">{{ evento.titulo }}</h2>
-          <p class="promo-description">{{ evento.descricao }}</p>
+          <div class="promo-image">
+            <img [src]="evento.imagem" [alt]="evento.titulo" />
 
-          <div class="promo-details-grid">
-            @for (item of evento.detalhes; track item.label) {
-              <div class="detail-item">
-                <span class="label">{{ item.label }}</span>
-                <span class="value">{{ item.value }}</span>
-              </div>
-            }
+            <a
+              class="btn-cta-light btn-ver-evento"
+              [routerLink]="evento.link"
+              [attr.aria-label]="'Ver evento: ' + evento.titulo"
+            >
+              Ver evento <span aria-hidden="true">→</span>
+            </a>
           </div>
         </div>
-
-        <div class="promo-image">
-          <img [src]="evento.imagem" [alt]="evento.titulo" class="fade-in" />
-
-          <a
-            class="btn-cta-light btn-ver-evento"
-            [routerLink]="evento.link"
-            [attr.aria-label]="'Ver evento: ' + evento.titulo"
-          >
-            Ver evento <span aria-hidden="true">→</span>
-          </a>
-        </div>
-      </div>
-    }
+      }
+    </div>
 
     <button
       type="button"

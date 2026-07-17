@@ -1,21 +1,65 @@
-/* o align-items mantém a altura centralizada */
 .carousel-viewport {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  max-width: calc(1184px + 2 * (44px + 16px));
+  position: relative;
+  max-width: 1184px;
   margin: 0 auto;
 }
 
+/* Altura fixa porque as cartas são absolutas e não sustentam o bloco.
+   Casa com o min-height do card. */
+.carousel-stage {
+  position: relative;
+  height: 424px;
+}
+
 .promo-banner-card {
-  flex: 1;
-  min-width: 0;
-  background: #DDE9E1;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 74%;
   min-height: 424px;
+  background: #DDE9E1;
   border-radius: 1rem;
   display: flex;
   color: white;
   overflow: hidden;
+  transform: translateX(-50%);
+  transition: transform 0.55s ease, opacity 0.55s ease, filter 0.55s ease;
+}
+
+/* Empilhamento: a carta central cobre as laterais, que ficam atrás  */
+.promo-banner-card.is-active {
+  z-index: 2;
+  opacity: 1;
+  box-shadow: 0 18px 40px rgba(2, 44, 34, 0.22);
+}
+
+.promo-banner-card.is-prev,
+.promo-banner-card.is-next {
+  z-index: 1;
+  opacity: 0.45;
+  filter: blur(1px);
+  cursor: pointer;
+}
+
+.promo-banner-card.is-prev {
+  transform: translateX(-72%) scale(0.9);
+}
+
+.promo-banner-card.is-next {
+  transform: translateX(-28%) scale(0.9);
+}
+
+.promo-banner-card.is-prev:hover,
+.promo-banner-card.is-next:hover {
+  opacity: 0.7;
+}
+
+/* Cartas fora do deck saem de trás da central em vez de sumir de repente. */
+.promo-banner-card.is-oculto {
+  z-index: 0;
+  opacity: 0;
+  transform: translateX(-50%) scale(0.82);
+  pointer-events: none;
 }
 
 .badge-group {
@@ -146,7 +190,10 @@
 }
 
 .carousel-arrow {
-  flex: none;
+  position: absolute;
+  top: 212px;
+  transform: translateY(-50%);
+  z-index: 3;
   width: 44px;
   height: 44px;
   background: #fff;
@@ -170,33 +217,40 @@
   color: #fff;
 }
 
-.fade-in {
-  animation: fadeIn 0.4s ease-in-out;
+.carousel-arrow--prev {
+  left: 0;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0.3; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
+.carousel-arrow--next {
+  right: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fade-in { animation: none; }
+  .promo-banner-card {
+    transition: none;
+  }
 }
 
 @media (max-width: 992px) {
-  /* talvez remover as setas */
-  .carousel-viewport {
-    display: block;
-    position: relative;
+  .carousel-stage {
+    height: auto;
   }
 
   .promo-banner-card {
     flex-direction: column;
-    /* Passa a ser o bloco de referência do CTA, que sai de cima da imagem. */
     position: relative;
+    left: auto;
+    width: 100%;
+    transform: none;
   }
 
-  /* Com a imagem no topo, um CTA sobre ela apareceria antes do texto;
+  .promo-banner-card.is-prev,
+  .promo-banner-card.is-next,
+  .promo-banner-card.is-oculto {
+    display: none;
+  }
+
+  /* imagem no topo, um CTA sobre ela apareceria antes do texto;
      static devolve o posicionamento do botão para o card inteiro */
   .promo-image {
     position: static;
@@ -219,12 +273,8 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  /* Centradas sobre a imagem (250px de altura), não no meio do card. */
   .carousel-arrow {
-    position: absolute;
     top: 125px;
-    transform: translateY(-50%);
-    z-index: 2;
   }
 
   .carousel-arrow--prev {
