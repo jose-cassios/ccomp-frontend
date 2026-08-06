@@ -1,0 +1,84 @@
+<form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Nome completo</mat-label>
+    <input matInput formControlName="name" type="text" placeholder="Seu nome" />
+    <mat-error *ngIf="name?.hasError('required')">
+      Nome é obrigatório
+    </mat-error>
+    <mat-error *ngIf="name?.hasError('minlength')">
+      Nome deve ter no mínimo 2 caracteres
+    </mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Email</mat-label>
+    <input matInput formControlName="email" type="email" placeholder="seu@email.com" />
+    <mat-error *ngIf="email?.hasError('required')">
+      Email é obrigatório
+    </mat-error>
+    <mat-error *ngIf="email?.hasError('email')">
+      Email inválido
+    </mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Senha</mat-label>
+    <input 
+      matInput 
+      [type]="hidePassword ? 'password' : 'text'" 
+      formControlName="password" 
+      placeholder="Sua senha"
+    />
+    <button 
+      mat-icon-button 
+      matSuffix 
+      (click)="togglePasswordVisibility()" 
+      type="button"
+      [attr.aria-label]="'Hide password'"
+    >
+      <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+    </button>
+    <mat-error *ngIf="password?.hasError('required')">
+      Senha é obrigatória
+    </mat-error>
+    <mat-error *ngIf="password?.hasError('minlength')">
+      Senha deve ter no mínimo 6 caracteres
+    </mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Confirmar Senha</mat-label>
+    <input 
+      matInput 
+      [type]="hideConfirmPassword ? 'password' : 'text'" 
+      formControlName="confirmPassword" 
+      placeholder="Confirme sua senha"
+    />
+    <button 
+      mat-icon-button 
+      matSuffix 
+      (click)="toggleConfirmPasswordVisibility()" 
+      type="button"
+      [attr.aria-label]="'Hide confirm password'"
+    >
+      <mat-icon>{{ hideConfirmPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+    </button>
+    <mat-error *ngIf="confirmPassword?.hasError('required')">
+      Confirmação de senha é obrigatória
+    </mat-error>
+    <mat-error *ngIf="confirmPassword?.hasError('passwordMismatch')">
+      As senhas não coincidem
+    </mat-error>
+  </mat-form-field>
+
+  <button 
+    mat-raised-button 
+    color="primary" 
+    type="submit" 
+    class="full-width submit-button"
+    [disabled]="registerForm.invalid || isLoading"
+  >
+    <span *ngIf="!isLoading">Criar Conta</span>
+    <mat-spinner *ngIf="isLoading" diameter="20"></mat-spinner>
+  </button>
+</form>
