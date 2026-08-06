@@ -1,16 +1,22 @@
 <div class="login-container">
   <mat-card class="login-card">
-    <mat-card-header>
-      <mat-card-title>Entrar</mat-card-title>
-      <mat-card-subtitle>Acesse sua conta CCOMP</mat-card-subtitle>
-    </mat-card-header>
+
+    <div class="login-header">
+      <mat-card-header>
+        <mat-card-title>Entrar</mat-card-title>
+        <mat-card-subtitle>Acesse sua conta CCOMP</mat-card-subtitle>
+      </mat-card-header>
+    </div>
+
     <mat-card-content>
       <app-login-form (login)="onLogin($event)"></app-login-form>
     </mat-card-content>
+    
     <mat-card-actions>
-      <button mat-button (click)="navigateToRegister()" class="register-link">
+      <button (click)="navigateToRegister()" class="register-link" mat-button>
         Não tem uma conta? Cadastre-se
       </button>
     </mat-card-actions>
+
   </mat-card>
 </div>

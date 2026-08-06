@@ -1,6 +1,6 @@
 .footer {
-  background: linear-gradient(135deg, #042f21 0%, #021d17 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--brand-700) 0%, var(--brand-600) 100%);
+  color: var(--white);
   padding: 4rem 1rem 1.5rem;
   font-family: 'Inter', sans-serif;
 }
@@ -36,7 +36,7 @@
   font-weight: 800;
   letter-spacing: -1px;
   margin-bottom: 1rem;
-  color: #6eff94; /* verde destaque */
+  color: var(--brand-accent); /* verde destaque */
 }
 
 .footer .footer-brand .description {
@@ -60,7 +60,7 @@
   bottom: -5px;
   width: 30px;
   height: 2px;
-  background: #6eff94;
+  background: var(--brand-accent);
 }
 
 /* LISTAS */
@@ -84,7 +84,7 @@
 .footer .footer-group ul li a:hover {
   opacity: 1;
   transform: translateX(6px);
-  color: #6eff94;
+  color: var(--brand-accent);
 }
 
 /* ADDRESS */
@@ -141,7 +141,7 @@
 
 .footer .footer-institutional .legal-links a:hover {
   text-decoration: underline;
-  color: #6eff94;
+  color: var(--brand-accent);
 }
 
 .footer .footer-institutional .legal-links .divider {

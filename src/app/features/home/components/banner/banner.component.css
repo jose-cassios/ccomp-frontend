@@ -13,7 +13,7 @@
 .bg-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to right, #f7faf9 30%, rgba(247, 250, 249, 0.9) 60%, rgba(247, 250, 249, 0.4) 100%);
+  background: linear-gradient(to right, var(--gray-100) 30%, rgba(247, 250, 249, 0.9) 60%, rgba(247, 250, 249, 0.4) 100%);
 }
 
 .hero-container {
@@ -34,7 +34,7 @@
 .hero-titles { display: flex; flex-direction: column; gap: 15px; }
 
 .badge-inst {
-  color: #006b1f;
+  color: var(--accent);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -45,17 +45,17 @@
   font-size: 3.5rem;
   line-height: 1.1;
   font-weight: 900;
-  color: #181c1c;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
   margin: 0;
 }
 
-.text-highlight { color: #006b1f; }
+.text-highlight { color: var(--accent); }
 
 .hero-desc {
   font-size: 1.1rem;
   line-height: 1.6;
-  color: #3f4a3c;
+  color: var(--text-secondary);
   max-width: 600px;
   margin: 0;
 }
@@ -72,7 +72,7 @@
 .stat-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #181c1c;
+  color: var(--text-primary);
   margin: 0 0 5px 0;
 }
 
@@ -81,7 +81,7 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-weight: 600;
-  color: #526478;
+  color: var(--text-tertiary);
   margin: 0;
 }
 
@@ -89,8 +89,8 @@
 .hero-actions { display: flex; gap: 15px; flex-wrap: wrap; }
 
 .btn-primary-gradient {
-  background: linear-gradient(135deg, #006b1f 0%, #0b872b 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+  color: var(--white);
   padding: 15px 30px;
   border-radius: 12px;
   font-weight: 700;
@@ -107,8 +107,8 @@
 .btn-primary-gradient:hover { transform: scale(1.05); }
 
 .btn-secondary-light {
-  background: #e0e3e2;
-  color: #181c1c;
+  background: var(--gray-200);
+  color: var(--text-primary);
   padding: 15px 30px;
   border-radius: 12px;
   font-weight: 700;
@@ -120,7 +120,7 @@
   transition: background 0.2s;
 }
 
-.btn-secondary-light:hover { background: #d7dbda; }
+.btn-secondary-light:hover { background: var(--gray-300); }
 
 .icon-text {
   font-size: 1.2rem;
@@ -132,13 +132,13 @@
 .hero-card-area { display: flex; justify-content: flex-end; }
 
 .news-card {
-  background: white;
+  background: var(--white);
   border-radius: 20px;
   width: 100%;
   max-width: 450px;
   overflow: hidden;
-  box-shadow: 0px 32px 64px rgba(24, 28, 28, 0.08);
-  border: 4px solid #ffffff;
+  box-shadow: 0px 32px 64px var(--shadow-lg);
+  border: 4px solid var(--white);
 }
 
 .news-img-container { height: 200px; position: relative; }
@@ -148,8 +148,8 @@
   position: absolute;
   top: 15px;
   left: 15px;
-  background: #006b1f;
-  color: white;
+  background: var(--accent);
+  color: var(--white);
   font-size: 0.65rem;
   font-weight: 900;
   padding: 6px 12px;
@@ -159,10 +159,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 15px var(--shadow-md);
 }
 
-.dot-white { width: 6px; height: 6px; background: white; border-radius: 50%; }
+.dot-white { width: 6px; height: 6px; background: var(--white); border-radius: 50%; }
 
 .news-content { padding: 30px; display: flex; flex-direction: column; gap: 15px; }
 .news-header { display: flex; justify-content: space-between; align-items: center; }
@@ -170,7 +170,7 @@
 .news-tag {
   font-size: 0.75rem;
   font-weight: 900;
-  color: #526478;
+  color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin: 0;
@@ -178,7 +178,7 @@
 
 .news-controls button {
   background: none;
-  border: 1px solid rgba(111, 122, 107, 0.3);
+  border: 1px solid var(--gray-400);
   border-radius: 50%;
   width: 32px;
   height: 32px;
@@ -186,31 +186,31 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #526478;
+  color: var(--text-tertiary);
   margin-left: 5px;
   font-size: 1.2rem;
   font-weight: bold;
   transition: background 0.2s;
 }
 
-.news-controls button:hover { background: #f1f4f3; }
+.news-controls button:hover { background: var(--gray-100); }
 
-.news-title { font-size: 1.25rem; font-weight: 700; color: #181c1c; margin: 0; }
-.news-desc { font-size: 0.9rem; color: #526478; line-height: 1.6; margin: 0 0 10px 0;
+.news-title { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0; }
+.news-desc { font-size: 0.9rem; color: var(--text-tertiary); line-height: 1.6; margin: 0 0 10px 0;
 display: -webkit-box;
   -webkit-line-clamp: 2; 
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.news-footer { border-top: 1px solid #ebeeed; padding-top: 20px; }
+.news-footer { border-top: 1px solid var(--gray-200); padding-top: 20px; }
 
 .link-acessar {
   align-items: center;
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 700;
-  color: #006b1f;
+  color: var(--accent);
 }
 
 .link-doc:hover { text-decoration: underline; }
@@ -235,20 +235,20 @@ display: -webkit-box;
 .dot {
   height: 6px;
   width: 6px;
-  background-color: rgba(111, 122, 107, 0.3);
+  background-color: var(--gray-400);
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .dot.active {
-  background-color: #006b1f;
+  background-color: var(--accent);
   width: 20px;
   border-radius: 4px;
 }
 
 .dot:hover {
-  background-color: #006b1f;
+  background-color: var(--accent);
   opacity: 0.7;
 }
 
@@ -261,7 +261,7 @@ display: -webkit-box;
     padding-bottom: 80px;
   }
   .bg-overlay {
-    background: linear-gradient(to bottom, #f7faf9 30%, rgba(247, 250, 249, 0.95) 70%, rgba(247, 250, 249, 0.8) 100%);
+    background: linear-gradient(to bottom, var(--gray-100) 30%, rgba(247, 250, 249, 0.95) 70%, rgba(247, 250, 249, 0.8) 100%);
   }
   .hero-titles { align-items: center; }
   .hero-title { font-size: 2.8rem; }

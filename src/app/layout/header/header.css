@@ -1,10 +1,10 @@
 .site-header {
-  background-color: #ffffff;
+  background-color: var(--white);
   padding: 0;
   position: sticky;
   top: 0;
   z-index: 1000;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 5px var(--shadow-md);
 }
 
 .header-container {
@@ -31,7 +31,7 @@
 .brand-text {
   display: flex;
   flex-direction: column;
-  color: #2c3e50;
+  color: var(--text-strong);
   font-family: sans-serif;
 }
 
@@ -39,7 +39,7 @@
   font-size: 0.7rem; 
   text-transform: uppercase; 
   letter-spacing: 0.5px;
-  color: #7f8c8d;
+  color: var(--text-muted);
 }
 
 .main-text { 
@@ -58,7 +58,7 @@
 
 .search-box {
   display: flex;
-  background: #f1f1f1;
+  background: var(--gray-200);
   border-radius: 5px;
   padding: 4px 12px;
 }
@@ -78,7 +78,7 @@
 }
 
 .login-button {
-  background-color: #32a041;
+  background-color: var(--brand-500);
   color: white;
   border: none;
   padding: 10px 22px;
@@ -89,12 +89,12 @@
 }
 
 .login-button:hover {
-  background-color: #288a35;
+  background-color: var(--brand-600);
   transform: translateY(-1px);
 }
 
 .header-navigation {
-  background-color: #32a041;
+  background-color: var(--brand-500);
   width: 100%;
 }
 
@@ -169,7 +169,7 @@
 .nav-link {
   display: block;
   padding: 15px 25px;
-  color: #ffffff;
+  color: var(--white);
   text-decoration: none;
   font-weight: 500;
   font-size: 0.95rem;
@@ -178,11 +178,11 @@
 }
 
 .nav-item:hover > .nav-link {
-  background-color: #288a35;
+  background-color: var(--brand-600);
 }
 
 .active-link {
-  background-color: #247a2f !important;
+  background-color: var(--brand-700) !important;
   box-shadow: inset 0 -4px 0 rgba(255, 255, 255, 0.7);
 }
 
@@ -190,21 +190,21 @@
   position: absolute;
   top: 100%;
   left: 0;
-  background-color: #ffffff;
+  background-color: var(--white);
   min-width: 240px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  box-shadow: 0 10px 25px var(--shadow-lg);
   list-style: none;
   padding: 8px 0;
   display: none; /* Escondido por padrão */
   z-index: 1001;
-  border-top: 4px solid #32a041;
+  border-top: 4px solid var(--brand-500);
   border-radius: 0 0 4px 4px;
 }
 
 .dropdown-menu li a {
   padding: 12px 20px;
   display: block;
-  color: #2c3e50;
+  color: var(--text-strong);
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 400;
@@ -212,8 +212,8 @@
 }
 
 .dropdown-menu li a:hover {
-  background-color: #f8f9fa;
-  color: #32a041;
+  background-color: var(--gray-100);
+  color: var(--brand-500);
   padding-left: 25px;
 }
 
