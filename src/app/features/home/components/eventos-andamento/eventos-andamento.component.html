@@ -1,0 +1,92 @@
+<section
+  class="promo-event-section"
+  (mouseenter)="autoplayPausado.set(true)"
+  (mouseleave)="autoplayPausado.set(false)"
+>
+  <div class="section-header">
+    <span class="linha-verde"></span>
+    <h3>EVENTOS EM ANDAMENTO</h3>
+  </div>
+
+  <div class="carousel-viewport">
+    <button
+      type="button"
+      class="carousel-arrow carousel-arrow--prev"
+      aria-label="Evento anterior"
+      (click)="prev()"
+    >
+      ‹
+    </button>
+
+    <div class="carousel-stage">
+      @for (evento of eventos; track evento.id; let i = $index) {
+        <!-- Todos os cards ficam no DOM: a posição no deck é só transform/opacity, permite animar a troca -->
+        <div
+          class="promo-banner-card"
+          [class.is-active]="posicao(i) === 0"
+          [class.is-prev]="posicao(i) === -1"
+          [class.is-next]="posicao(i) === 1"
+          [class.is-oculto]="posicao(i) === null"
+          [attr.inert]="posicao(i) === 0 ? null : ''"
+          [attr.aria-hidden]="posicao(i) === 0 ? null : 'true'"
+          (click)="aoClicarNoCard(i)"
+        >
+          <div class="promo-content">
+            <div class="badge-group">
+              @if (evento.inscricoesAbertas) {
+                <span class="badge status-open">INSC. ABERTAS</span>
+              }
+              <span class="badge">{{ evento.modalidade }}</span>
+            </div>
+
+            <h2 class="promo-title">{{ evento.titulo }}</h2>
+            <p class="promo-description">{{ evento.descricao }}</p>
+
+            <div class="promo-details-grid">
+              @for (item of evento.detalhes; track item.label) {
+                <div class="detail-item">
+                  <span class="label">{{ item.label }}</span>
+                  <span class="value">{{ item.value }}</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="promo-image">
+            <img [src]="evento.imagem" [alt]="evento.titulo" />
+
+            <a
+              class="btn-cta-light btn-ver-evento"
+              [routerLink]="evento.link"
+              [attr.aria-label]="'Ver evento: ' + evento.titulo"
+            >
+              Ver evento <span aria-hidden="true">→</span>
+            </a>
+          </div>
+        </div>
+      }
+    </div>
+
+    <button
+      type="button"
+      class="carousel-arrow carousel-arrow--next"
+      aria-label="Próximo evento"
+      (click)="next()"
+    >
+      ›
+    </button>
+  </div>
+
+  <div class="carousel-indicators">
+    @for (evento of eventos; track evento.id; let i = $index) {
+      <button
+        type="button"
+        class="dot"
+        [class.active]="i === currentIndex()"
+        [attr.aria-label]="'Ir para o evento ' + (i + 1)"
+        [attr.aria-current]="i === currentIndex()"
+        (click)="goTo(i)"
+      ></button>
+    }
+  </div>
+</section>

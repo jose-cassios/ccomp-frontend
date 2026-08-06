@@ -1,0 +1,373 @@
+.todos-clubes-section{
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 20px;
+}
+
+.todos-clubes-layout{
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 40px;
+  align-items: start;
+}
+
+.sidebar{
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  position: sticky;
+  top: 100px;
+}
+
+/* filtros */
+
+.filtro-categorias{
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filtro-header{
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filtro-label{
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color:#16A34A;
+}
+
+.filtro-sublabel{
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.categorias-lista{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.categoria-item{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  text-align: left;
+}
+
+.categoria-item:hover{
+  background: #f3f4f6;
+}
+
+.categoria-item.ativa {
+  background: #16A34A;
+  color: white;
+  font-weight: 600;
+}
+
+.categoria-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 2px solid #9ca3af;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.categoria-item.ativa .categoria-checkbox {
+  border-color: white;
+  background: white;
+}
+
+.categoria-item.ativa .categoria-checkbox::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0px;
+  width: 5px;
+  height: 10px;
+  border: solid #16A34A;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.cat-nome {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+
+/* centro da pagina/conteudo principal */
+
+.conteudo-principal{
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.lista-header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lista-titulo{
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #022C22;;
+  margin: 0;
+}
+
+.btn-ordenar{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  color: #374151;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.btn-ordenar:hover{
+  border-color: #9ca3af;
+}
+
+.seta-baixo {
+  font-size: 1rem;
+}
+
+.ordenar-wrapper {
+  position: relative;
+}
+
+.ordenar-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 10;
+  min-width: 160px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.ordenar-opcao {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #374151;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.ordenar-opcao:hover {
+  background: #f3f4f6;
+}
+
+.ordenar-opcao.ativa {
+  background: var(--brand-600);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* lista com os clubes */
+
+.clubes-lista{
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.clube-card-lista{
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.clube-card-lista:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+/* imagem dos cards */
+
+.card-imagem{
+  width: 180px;
+  min-height: 140px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.card-imagem img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* textos do card */
+
+.card-info{
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 8px;
+}
+
+.card-meta{
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.card-categoria{
+  color: #16A34A;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+.card-separador{
+  color: #d1d5db;
+}
+
+.card-data {
+  color: #6b7280;
+}
+
+.card-titulo{
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #022C22;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.card-descricao{
+  font-size: 0.875rem;
+  color:#6b7280;
+  line-height: 1.6;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+
+/* autores do post - talvez remova*/
+
+.card-autor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.autor-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #374151;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.autor-nome {
+  font-size: 0.8rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+
+ /* marcacao das paginas */
+.paginacao {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.pagina-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #374151;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.pagina-btn:hover {
+  background: #f3f4f6;
+}
+
+.pagina-btn.ativa {
+  background: #16A34A;
+  color: white;
+  border-color: #16A34A;
+}
+
+.pagina-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagina-next {
+  font-size: 1.2rem;
+}
+
+.pagina-ellipsis {
+  color: #6b7280;
+  font-size: 0.85rem;
+  padding: 0 4px;
+}
+
+
