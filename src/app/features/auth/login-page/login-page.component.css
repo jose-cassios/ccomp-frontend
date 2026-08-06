@@ -1,0 +1,47 @@
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+mat-card-header {
+  display: flex;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+mat-card-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+}
+
+mat-card-subtitle {
+  color: #666;
+  margin-top: 8px;
+}
+
+mat-card-actions {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 0 0;
+}
+
+.register-link {
+  color: #667eea;
+  font-weight: 500;
+}
+
+.register-link:hover {
+  background-color: rgba(102, 126, 234, 0.1);
+}

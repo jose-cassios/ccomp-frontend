@@ -21,7 +21,13 @@ export class AuthService {
     private http: HttpClient,
     private apiConfig: ApiConfig
   ) {
-    this.loadFromStorage();
+    if (this.isBrowser()) {
+      this.loadFromStorage();
+    }
+  }
+
+  private isBrowser(): boolean {
+    return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
   }
 
   private loadFromStorage(): void {
@@ -53,8 +59,10 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.USER_KEY);
+    if (this.isBrowser()) {
+      localStorage.removeItem(this.TOKEN_KEY);
+      localStorage.removeItem(this.USER_KEY);
+    }
     this.currentUser.set(null);
     this.isAuthenticated.set(false);
   }
@@ -70,6 +78,9 @@ export class AuthService {
   }
 
   getToken(): string | null {
+    if (!this.isBrowser()) {
+      return null;
+    }
     return localStorage.getItem(this.TOKEN_KEY);
   }
 
@@ -82,13 +93,18 @@ export class AuthService {
   }
 
   private handleAuthSuccess(response: AuthResponse): void {
-    localStorage.setItem(this.TOKEN_KEY, response.accessToken);
-    localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));
+    if (this.isBrowser()) {
+      localStorage.setItem(this.TOKEN_KEY, response.accessToken);
+      localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));
+    }
     this.currentUser.set(response.user);
     this.isAuthenticated.set(true);
   }
 
   private getUserFromStorage(): User | null {
+    if (!this.isBrowser()) {
+      return null;
+    }
     const userStr = localStorage.getItem(this.USER_KEY);
     if (userStr) {
       try {

@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "@angular/build": "^21.1.4",
-    "@angular/cli": "^21.1.4",
+    "@angular/cli": "^21.2.19",
     "@angular/compiler-cli": "^21.1.0",
     "@angular/material": "^21.2.6",
     "@types/express": "^5.0.1",
