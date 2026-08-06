@@ -1,0 +1,26 @@
+<div class="newsletter-card">
+  <h4 class="newsletter-titulo"> Newsletter</h4>
+  <p class="newsletter-desc">
+    Receba as novidades dos clubes no seu e-mail.
+  </p>
+
+  @if (!enviado) {
+    <input type="email"
+    class="newsletter-input"
+    [class.input-erro]="erro"
+    placeholder="seu@email.com"
+    [(ngModel)]="email"
+    (keyup.enter)="assinar()" />
+
+    @if (erro) {
+      <span class="msg-erro">Informe um e-mail válido</span>
+    }
+
+    <button class="btn-assinar" (click)="assinar()">Assinar</button>
+  } @else {
+    <div class="msg-sucesso">
+      <span class="icone-check">&#10003;</span>
+      <span>Inscrição realizada!</span>
+    </div>
+  }
+</div>

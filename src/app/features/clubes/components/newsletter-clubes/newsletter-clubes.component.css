@@ -1,0 +1,64 @@
+.newsletter-card{
+  background: linear-gradient(135deg, #16A34A 0%, #0d6e2a 100%);
+  border-radius: 12px;
+  padding: 24px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.newsletter-titulo{
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.newsletter-desc{
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin:0;
+  opacity: 0.9;
+}
+
+/* input do card */
+
+.newsletter-input{
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  font-size: 0.85rem;
+  color: #374151;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.newsletter-input:focus {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.newsletter-input::placeholder {
+  color: #9ca3af;
+}
+
+.newsletter-input.input-erro {
+  border-color: #fca5a5;
+}
+
+.btn-assinar {
+  padding: 10px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  background: transparent;
+  color: white;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+
+.btn-assinar:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.6);
+}
