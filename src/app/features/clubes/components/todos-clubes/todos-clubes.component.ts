@@ -1,26 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, HostListener, ViewChild } from '@angular/core';
 import { NewsletterClubesComponent } from '../newsletter-clubes/newsletter-clubes.component';
-
-interface Autor{
-  nome: string;
-  avatar: string;
-}
-
-interface Clube{
-  id: number;
-  categoria: string;
-  data: string;
-  titulo: string;
-  descricao: string;
-  imagem: string;
-  autor: Autor;
-}
-
-interface Categoria{
-  nome: string;
-}
-
+import { CATEGORIAS_CLUBES, CLUBES } from '../../data/clubes.mock';
+import { Categoria, Clube } from '../../models/clube.model';
 
 @Component({
   selector: 'app-todos-clubes',
@@ -38,61 +20,9 @@ export class TodosClubesComponent {
   opcoesOrdenacao = ['Recentes', 'A-Z', 'Z-A'];
   paginaAtual = 1;
   itensPorPagina = 4;
-  categorias: Categoria[] = [
-    { nome: 'Geral'},
-    { nome: 'Robótica' },
-    { nome: 'Programação' },
-    { nome: 'Idiomas' },
-    { nome: 'Pesquisa' },
-  ];
+  categorias: Categoria[] = CATEGORIAS_CLUBES;
 
-  clubes: Clube[] = [
-    {
-      id: 1,
-      categoria: 'IDIOMAS',
-      data: 'Outubro 18, 2024',
-      titulo: 'Clube de Inglês — Conversação sem medo',
-      descricao: 'Um espaço para a prática de conversação do idioma sem medo, com dinâmicas semanais e rodadas temáticas guiadas por monitores do curso.',
-      imagem: '/img1.png',
-      autor: { nome: 'Coordenação de Extensão', avatar: '' },
-    },
-    {
-      id: 2,
-      categoria: 'PESQUISA',
-      data: 'Outubro 15, 2024',
-      titulo: 'Grupo de Estudos em IA aplicada',
-      descricao: 'Encontros quinzenais com leitura de papers, reprodução de experimentos e discussões sobre modelos de linguagem e visão computacional.',
-      imagem: '/img2.png',
-      autor: { nome: 'Núcleo de Tecnologia', avatar: '' },
-    },
-    {
-      id: 3,
-      categoria: 'ROBÓTICA',
-      data: 'Outubro 12, 2024',
-      titulo: 'Equipe de Competição — Robótica IFMA',
-      descricao: 'Preparação para torneios regionais e nacionais com foco em projeto mecânico, eletrônica embarcada e programação de estratégias.',
-      imagem: '/img3.png',
-      autor: { nome: 'Ascom Pesquisa', avatar: '' },
-    },
-    {
-      id: 4,
-      categoria: 'PROGRAMAÇÃO',
-      data: 'Outubro 10, 2024',
-      titulo: 'Maratona de Programação — Treinos Semanais',
-      descricao: 'Sessões de resolução de problemas com foco em algoritmos, estruturas de dados e preparação para competições regionais.',
-      imagem: '/img1.png',
-      autor: { nome: 'Coordenação de Curso', avatar: '' },
-    },
-    {
-      id: 5,
-      categoria: 'IDIOMAS',
-      data: 'Outubro 08, 2024',
-      titulo: 'Clube de Espanhol — Hablemos Juntos',
-      descricao: 'Prática de conversação em espanhol com dinâmicas temáticas, músicas e filmes para imersão cultural.',
-      imagem: '/img2.png',
-      autor: { nome: 'Coordenação de Extensão', avatar: '' },
-    },
-  ];
+  clubes: Clube[] = CLUBES;
 
   get clubesFiltrados(): Clube[]{
     const filtrados = this.categoriaAtiva === 'Geral'
