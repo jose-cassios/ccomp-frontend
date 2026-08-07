@@ -1,0 +1,101 @@
+<section class="todos-clubes-section">
+  <div class="todos-clubes-layout">
+
+    <aside class="sidebar">
+      <div class="filtro-categorias">
+        <div class="filtro-header">
+          <span class="filtro-label">CATEGORIAS</span>
+          <span class="filtro-sublabel">Filtrar clubes</span>
+        </div>
+        <nav class="categorias-lista">
+          @for (categoria of  categorias; track categoria) {
+            <label class="categoria-item" [class.ativa]="categoriaAtiva === categoria.nome">
+              <input type="checkbox"
+                class="categoria-checkbox"
+                [checked]="categoriaAtiva===categoria.nome"
+                (change)="selecionarCategoria(categoria.nome)"/>
+                <span class="cat-nome">{{categoria.nome}}</span>
+            </label>
+          }
+        </nav>
+      </div>
+
+      <app-newsletter-clubes></app-newsletter-clubes>
+    </aside>
+
+    <div class="conteudo-principal">
+      <div class="lista-header">
+        <h2 class="lista-titulo">Todos os Clubes</h2>
+        <div class="ordenar-wrapper" #ordenarWrapper>
+          <button class="btn-ordenar" (click)="toggleMenuOrdenacao()">{{ordenacao}}
+            <span class="seta-baixo">&#9662;</span>
+          </button>
+          @if(menuOrdenacaoAberto){
+            <ul class="ordenar-menu">
+              @for(opcao of opcoesOrdenacao; track opcao){
+                <li>
+                  <button
+                    class="ordenar-opcao"
+                    [class.ativa]="opcao === ordenacao"
+                    (click)="selecionarOrdenacao(opcao)">
+                    {{opcao}}
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+
+      <div class="clubes-lista">
+        @for (clube of clubesPaginados; track clube) {
+          <article class="clube-card-lista">
+            <div class="card-imagem">
+              <img [src]="clube.imagem" [alt]="clube.titulo"/>
+            </div>
+            <div class="card-info">
+              <div class="card-meta">
+                <span class="card-categoria">
+                  {{clube.categoria}}
+                </span>
+                <span class="card-separador">
+                  -
+                </span>
+                <span class="card-data">
+                  {{clube.data}}
+                </span>
+              </div>
+
+              <h3 class="card-titulo">{{clube.titulo}}</h3>
+              <p class="card-descricao">{{clube.descricao}}</p>
+
+              <div class="card-autor">
+                <span class="autor-avatar">{{getIniciais(clube.autor.nome)}}</span>
+                <span class="autor-nome">{{clube.autor.nome}}</span>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+
+      @if (totalPaginas > 1) {
+        <nav class="paginacao">
+          @for (pagina of paginas; track pagina) {
+            <button
+              class="pagina-btn"
+              [class.ativa]="paginaAtual === pagina"
+              (click)="isParaPagina(pagina)"
+            >{{pagina}}</button>
+          }
+          <span class="pagina-elipsis">...</span>
+          <button
+            class="pagina-btn pagina-next"
+            [disabled]="paginaAtual === totalPaginas"
+            (click)="isParaPagina(paginaAtual+1)"
+          >&#8250;</button>
+        </nav>
+      }
+    </div>
+  </div>
+</section>
+

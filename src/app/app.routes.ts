@@ -5,6 +5,7 @@ import { EventsPageComponent } from './features/events-page/events-page.componen
 import { EmConstrucao } from './shared/components/em-construcao/em-construcao';
 import { LoginPageComponent } from './features/auth/pages/login-page/login-page.component';
 import { RegisterPageComponent } from './features/auth/pages/register-page/register-page.component';
+import { Clubes } from './features/clubes/clubes';
 
 export const routes: Routes = [
     // Rotas fora do layout principal (sem header/footer)
@@ -16,7 +17,9 @@ export const routes: Routes = [
         children: [
         { path: '', component: Home },
         { path: 'eventos', component: EventsPageComponent },
-        { path: '**', component: EmConstrucao },
-      ]
+        { path: 'projetos/clubes', component: Clubes },
+        { path: 'clubes', redirectTo: 'projetos/clubes', pathMatch: 'full' },
+        { path: '**', component: EmConstrucao }
+        ]
     },
 ];

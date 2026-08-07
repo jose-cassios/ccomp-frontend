@@ -1,0 +1,36 @@
+<section class="clubes-destaque-section">
+  <div class="section-header">
+    <div class="header-left">
+      <span class="linha-verde"></span>
+      <h3>Clubes em Destaque</h3>
+    </div>
+    <button class="btn-agendar">
+      Agendar visita
+    </button>
+  </div>
+
+  <div class="clubes-grid">
+    @for(clube of clubes; track clube.titulo){
+      <div class="clube-card">
+        <div class="card-image">
+          <img [src]="clube.imagem" [alt]="clube.titulo"/>
+          <div class="card-overlay"></div>
+        </div>
+
+        <div class="card-content">
+          <span class="card-categoria">{{clube.categoria}}</span>
+          <h4 class="card-titulo">{{clube.titulo}}</h4>
+          <p class="card-descricao">{{clube.descricao}}</p>
+
+          <div class="card-footer">
+            <span class="card-horario">
+              <span class="icon-clock">&#128339;</span>
+              {{clube.horario}}
+            </span>
+            <button class="btn-inscrever">Inscrever-se</button>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</section>

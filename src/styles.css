@@ -60,6 +60,23 @@
   transform: translateY(-2px);
 }
 
+/* Variante clara, para uso sobre fundo escuro (foto ou seção escura). */
+.btn-cta-light {
+  background-color: #e0e3e2;
+  color: #055023;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.btn-cta-light:hover {
+  background-color: #d7dbda;
+  transform: translateY(-2px);
+}
+
 .btn-text {
   background: none;
   border: none;
