@@ -65,6 +65,8 @@ export class NoticiasClubeComponent {
   clubeAtual = computed(() => this.clubes[this.currentIndex()]);
 
   constructor() {
+    // O timer só existe no browser: no SSR ele nunca dispararia change detection
+    // e ainda manteria o processo de renderização vivo.
     afterNextRender(() => {
       const timer = setInterval(() => {
         if (!this.autoplayPausado()) {
