@@ -37,7 +37,7 @@ export class LoginPageComponent {
   onLogin(credentials: { email: string; password: string }): void {
     this.authService.login(credentials).subscribe({
       next: () => {
-        this.router.navigate(['/dashboard']);
+        this.router.navigate(['/']);
       },
       error: (error) => {
         console.error('Login failed:', error);

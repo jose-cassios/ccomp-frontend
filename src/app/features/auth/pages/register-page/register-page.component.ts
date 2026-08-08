@@ -39,7 +39,7 @@ export class RegisterPageComponent {
   onRegister(data: { name: string; email: string; password: string; confirmPassword?: string }): void {
     this.authService.register(data).subscribe({
       next: () => {
-        this.router.navigate(['/dashboard']);
+        this.router.navigate(['/']);
       },
       error: (error) => {
         console.error('Registration failed:', error);

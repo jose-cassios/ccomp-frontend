@@ -40,7 +40,7 @@ export class AuthService {
   }
 
   login(credentials: LoginRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiConfig.authUrl}/login`, credentials).pipe(
+    return this.http.post<AuthResponse>(`${this.apiConfig.authUrl}/sign-in`, credentials).pipe(
       tap((response) => this.handleAuthSuccess(response)),
       catchError((error) => {
         this.logout();
@@ -50,7 +50,7 @@ export class AuthService {
   }
 
   register(data: RegisterRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiConfig.authUrl}/register`, data).pipe(
+    return this.http.post<AuthResponse>(`${this.apiConfig.authUrl}/sign-up`, data).pipe(
       tap((response) => this.handleAuthSuccess(response)),
       catchError((error) => {
         throw error;
