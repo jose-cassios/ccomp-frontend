@@ -1,7 +1,14 @@
 <section class="news-page-section">
   <div class="news-page-layout">
-
     <div class="news-main">
+      <div class="news-header">
+        <h1 class="page-title">Notícias</h1>
+        <button class="btn-create-news" (click)="openModal()">
+          <span class="btn-icon">+</span>
+          Nova Notícia
+        </button>
+      </div>
+
       <app-news-hero [news]="noticiaDestaque"></app-news-hero>
       
       <div class="news-list-header">
@@ -19,4 +26,10 @@
     <app-news-sidebar></app-news-sidebar>
     
   </div>
+
+  <app-news-modal 
+    [isOpen]="modalOpen()" 
+    (close)="closeModal()" 
+    (save)="onSaveNews($event)"
+  ></app-news-modal>
 </section>
