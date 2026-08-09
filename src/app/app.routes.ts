@@ -6,7 +6,8 @@ import { EmConstrucao } from './shared/components/em-construcao/em-construcao';
 import { LoginPageComponent } from './features/auth/pages/login-page/login-page.component';
 import { RegisterPageComponent } from './features/auth/pages/register-page/register-page.component';
 import { Clubes } from './features/clubes/clubes';
-import { NewsComponent } from './features/home/components/destaques-semana/news/news.component';
+import { NewsComponent } from './features/news-page/news/news.component';
+import { NewsPageComponent } from './features/news-page/news-page.component';
 
 export const routes: Routes = [
     // Rotas fora do layout principal (sem header/footer)
@@ -20,6 +21,7 @@ export const routes: Routes = [
         { path: 'eventos', component: EventsPageComponent },
         { path: 'projetos/clubes', component: Clubes },
         { path: 'clubes', redirectTo: 'projetos/clubes', pathMatch: 'full' },
+        { path: 'noticias', component: NewsPageComponent },
         { path: 'news/:slug', component: NewsComponent },
         { path: '**', component: EmConstrucao }
         ]

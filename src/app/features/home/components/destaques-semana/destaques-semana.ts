@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { CardNewsComponent, type Destaque } from './card-news/card-news.component';
-import { NEWS_ITEMS } from './data/news.mock';
+import { NEWS_ITEMS } from '../../../news-page/data/news.mock';
 
 @Component({
   selector: 'app-destaques-semana',
