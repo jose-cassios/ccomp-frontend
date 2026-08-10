@@ -96,8 +96,8 @@
 
       <div class="modal-footer">
         <button class="btn-secondary" (click)="onClose()">Cancelar</button>
-        <button class="btn-primary" (click)="onSave()" [disabled]="newsForm.invalid">
-          Criar Notícia
+        <button class="btn-primary" (click)="onSave()" [disabled]="newsForm.invalid || isSubmitting">
+          {{ isSubmitting ? 'Criando...' : 'Criar Notícia' }}
         </button>
       </div>
     </div>
