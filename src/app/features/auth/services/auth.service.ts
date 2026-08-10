@@ -25,7 +25,8 @@ export class AuthService {
   }
 
   private isBrowser(): boolean {
-    return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+    const isBrowser = typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+    return isBrowser;
   }
 
   private loadFromStorage(): void {
@@ -99,7 +100,7 @@ export class AuthService {
 
   private handleAuthSuccess(response: AuthResponse): void {
     if (this.isBrowser()) {
-      localStorage.setItem(this.TOKEN_KEY, response.accessToken);
+      localStorage.setItem(this.TOKEN_KEY, response.access_token);
       localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));
     }
     this.currentUser.set(response.user);
