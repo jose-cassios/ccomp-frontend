@@ -9,17 +9,21 @@
         </button>
       </div>
 
-      <app-news-hero [news]="noticiaDestaque"></app-news-hero>
-      
-      <div class="news-list-header">
-        <h2 class="news-list-title">Mais Notícias</h2>
-      </div>
-      
-      <div class="news-grid">
-        @for (noticia of noticiasLista; track noticia.id) {
-          <app-news-card [news]="noticia"></app-news-card>
-        }
-      </div>
+      @if (!isLoading()) {
+        <app-news-hero [news]="noticiaDestaque()"></app-news-hero>
+        
+        <div class="news-list-header">
+          <h2 class="news-list-title">Mais Notícias</h2>
+        </div>
+        
+        <div class="news-grid">
+          @for (noticia of noticiasLista(); track noticia.id) {
+            <app-news-card [news]="noticia"></app-news-card>
+          }
+        </div>
+      } @else {
+        <p>Carregando notícias...</p>
+      }
       
     </div>
     
