@@ -45,14 +45,14 @@
           <label class="form-label">URL da Imagem *</label>
           <input 
             type="url" 
-            formControlName="coverImageUrl" 
+            formControlName="cover_image_url" 
             class="form-input"
             placeholder="https://exemplo.com/imagem.jpg"
           />
-          @if (coverImageUrl?.hasError('required') && coverImageUrl?.touched) {
+          @if (cover_image_url?.hasError('required') && cover_image_url?.touched) {
             <span class="form-error">URL da imagem é obrigatória</span>
           }
-          @if (coverImageUrl?.hasError('pattern') && coverImageUrl?.touched) {
+          @if (cover_image_url?.hasError('pattern') && cover_image_url?.touched) {
             <span class="form-error">URL inválida</span>
           }
         </div>

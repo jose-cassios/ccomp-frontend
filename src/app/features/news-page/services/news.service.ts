@@ -33,8 +33,8 @@ export class NewsService {
     return this.api.get<NewsItemType>(`/news/${slug}`);
   }
 
-  create(newsData: Partial<NewsItemType>): Observable<NewsItemType> {
-    return this.api.post<NewsItemType>('/news/create', newsData, {
+  create(): Observable<{ id: number }> {
+    return this.api.post<{ id: number }>('/news/create', {}, {
       headers: this.getAuthHeaders()
     });
   }

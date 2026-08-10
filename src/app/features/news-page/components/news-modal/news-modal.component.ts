@@ -25,7 +25,7 @@ export class NewsModalComponent {
     this.newsForm = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(5)]],
       summary: ['', [Validators.required, Validators.minLength(10)]],
-      coverImageUrl: ['', [Validators.required, Validators.pattern(/^https?:\/\/.+/)]],
+      cover_image_url: ['', [Validators.required, Validators.pattern(/^https?:\/\/.+/)]],
       autorId: ['', [Validators.required]],
       content: ['', [Validators.required, Validators.minLength(20)]],
       featured: [false]
@@ -39,20 +39,33 @@ export class NewsModalComponent {
   onSave(): void {
     if (this.newsForm.valid) {
       this.isSubmitting = true;
-      this.newsService.create(this.newsForm.value).subscribe({
-        next: (response) => {
-          const newsData = {
-            ...this.newsForm.value,
-            ...(response ?? {}),
-            id: response?.id ?? Date.now().toString(),
-            slug: response?.slug ?? this.generateSlug(this.newsForm.value.title),
-            publishedAt: response?.publishedAt ?? new Date(),
-            updatedAt: response?.updatedAt ?? new Date()
-          };
-          this.save.emit(newsData);
-          console.log('Notícia criada com sucesso', newsData);
-          this.newsForm.reset();
-          this.isSubmitting = false;
+      
+      // Step 1: Create news without payload to get id
+      this.newsService.create().subscribe({
+        next: (createResponse) => {
+          const newsId = createResponse.id;
+          
+          // Step 2: Patch with the form data using the id
+          this.newsService.patch(String(newsId), this.newsForm.value).subscribe({
+            next: (patchResponse) => {
+              const newsData = {
+                ...this.newsForm.value,
+                ...(patchResponse ?? {}),
+                id: patchResponse?.id ?? newsId,
+                slug: patchResponse?.slug ?? this.generateSlug(this.newsForm.value.title),
+                publishedAt: patchResponse?.publishedAt ?? patchResponse?.published_at ?? new Date(),
+                updatedAt: patchResponse?.updatedAt ?? patchResponse?.updated_at ?? new Date()
+              };
+              this.save.emit(newsData);
+              console.log('Notícia criada com sucesso', newsData);
+              this.newsForm.reset();
+              this.isSubmitting = false;
+            },
+            error: (error) => {
+              console.error('Erro ao atualizar notícia', error);
+              this.isSubmitting = false;
+            }
+          });
         },
         error: (error) => {
           console.error('Erro ao criar notícia', error);
@@ -79,8 +92,8 @@ export class NewsModalComponent {
     return this.newsForm.get('summary');
   }
 
-  get coverImageUrl() {
-    return this.newsForm.get('coverImageUrl');
+  get cover_image_url() {
+    return this.newsForm.get('cover_image_url');
   }
 
   get autorId() {

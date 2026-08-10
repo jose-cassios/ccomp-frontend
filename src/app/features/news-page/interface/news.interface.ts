@@ -3,8 +3,7 @@ export interface NewsItemType {
   title: string;
   slug: string;
   summary: string;
-  coverImageUrl?: string;
-  cover_image_url?: string;
+  cover_image_url: string;
   featured: boolean;
   autorId?: string;
   publishedAt?: Date | string;
