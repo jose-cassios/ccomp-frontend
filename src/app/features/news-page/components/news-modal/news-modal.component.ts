@@ -39,7 +39,7 @@ export class NewsModalComponent {
   onSave(): void {
     if (this.newsForm.valid) {
       this.isSubmitting = true;
-      this.newsService.createNewsTemplate().subscribe({
+      this.newsService.create(this.newsForm.value).subscribe({
         next: (response) => {
           const newsData = {
             ...this.newsForm.value,

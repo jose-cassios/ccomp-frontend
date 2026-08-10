@@ -1,10 +1,9 @@
 import { Injectable, signal, computed, effect } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Observable, tap, catchError } from 'rxjs';
 import { LoginRequest, RegisterRequest } from '../models/auth-requests.model';
 import { AuthResponse } from '../models/auth-response.model';
 import { User } from '../models/user.model';
-import { ApiConfig } from '../../../core/api/api.config';
+import { ApiService } from '../../../core/api/api.service';
 
 
 @Injectable({
@@ -18,8 +17,7 @@ export class AuthService {
   private isAuthenticated = signal<boolean>(false);
 
   constructor(
-    private http: HttpClient,
-    private apiConfig: ApiConfig
+    private api: ApiService
   ) {
     if (this.isBrowser()) {
       this.loadFromStorage();
@@ -39,8 +37,19 @@ export class AuthService {
     }
   }
 
+  // /api/auth/sign-up
+  register(data: RegisterRequest): Observable<AuthResponse> {
+    return this.api.post<AuthResponse>('/auth/sign-up', data).pipe(
+      tap((response) => this.handleAuthSuccess(response)),
+      catchError((error) => {
+        throw error;
+      })
+    );
+  }
+
+  // /api/auth/sign-in
   login(credentials: LoginRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiConfig.authUrl}/sign-in`, credentials).pipe(
+    return this.api.post<AuthResponse>('/auth/sign-in', credentials).pipe(
       tap((response) => this.handleAuthSuccess(response)),
       catchError((error) => {
         this.logout();
@@ -49,15 +58,20 @@ export class AuthService {
     );
   }
 
-  register(data: RegisterRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiConfig.authUrl}/sign-up`, data).pipe(
+  // /api/auth/reset-password - TODO: Implementar endpoint
+  
+  // /api/auth/refresh
+  refreshToken(): Observable<AuthResponse> {
+    return this.api.post<AuthResponse>('/auth/refresh', {}).pipe(
       tap((response) => this.handleAuthSuccess(response)),
       catchError((error) => {
+        this.logout();
         throw error;
       })
     );
   }
 
+  // /api/auth/logout 
   logout(): void {
     if (this.isBrowser()) {
       localStorage.removeItem(this.TOKEN_KEY);
@@ -67,15 +81,6 @@ export class AuthService {
     this.isAuthenticated.set(false);
   }
 
-  refreshToken(): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiConfig.authUrl}/refresh`, {}).pipe(
-      tap((response) => this.handleAuthSuccess(response)),
-      catchError((error) => {
-        this.logout();
-        throw error;
-      })
-    );
-  }
 
   getToken(): string | null {
     if (!this.isBrowser()) {
