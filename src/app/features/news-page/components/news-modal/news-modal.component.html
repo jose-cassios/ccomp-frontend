@@ -1,0 +1,105 @@
+@if (isOpen()) {
+  <div class="modal-overlay" (click)="onClose()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">Criar Nova Notícia</h2>
+        <button class="modal-close" (click)="onClose()" aria-label="Fechar">
+          <span>&times;</span>
+        </button>
+      </div>
+      
+      <form [formGroup]="newsForm" (ngSubmit)="onSave()" class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Título *</label>
+          <input 
+            type="text" 
+            formControlName="title" 
+            class="form-input"
+            placeholder="Título da notícia"
+          />
+          @if (title?.hasError('required') && title?.touched) {
+            <span class="form-error">Título é obrigatório</span>
+          }
+          @if (title?.hasError('minlength') && title?.touched) {
+            <span class="form-error">Mínimo de 5 caracteres</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Resumo *</label>
+          <textarea 
+            formControlName="summary" 
+            class="form-textarea"
+            rows="3"
+            placeholder="Resumo breve da notícia"
+          ></textarea>
+          @if (summary?.hasError('required') && summary?.touched) {
+            <span class="form-error">Resumo é obrigatório</span>
+          }
+          @if (summary?.hasError('minlength') && summary?.touched) {
+            <span class="form-error">Mínimo de 10 caracteres</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">URL da Imagem *</label>
+          <input 
+            type="url" 
+            formControlName="coverImageUrl" 
+            class="form-input"
+            placeholder="https://exemplo.com/imagem.jpg"
+          />
+          @if (coverImageUrl?.hasError('required') && coverImageUrl?.touched) {
+            <span class="form-error">URL da imagem é obrigatória</span>
+          }
+          @if (coverImageUrl?.hasError('pattern') && coverImageUrl?.touched) {
+            <span class="form-error">URL inválida</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Autor *</label>
+          <input 
+            type="text" 
+            formControlName="autorId" 
+            class="form-input"
+            placeholder="Nome do autor"
+          />
+          @if (autorId?.hasError('required') && autorId?.touched) {
+            <span class="form-error">Autor é obrigatório</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Conteúdo *</label>
+          <textarea 
+            formControlName="content" 
+            class="form-textarea"
+            rows="6"
+            placeholder="Conteúdo completo da notícia"
+          ></textarea>
+          @if (content?.hasError('required') && content?.touched) {
+            <span class="form-error">Conteúdo é obrigatório</span>
+          }
+          @if (content?.hasError('minlength') && content?.touched) {
+            <span class="form-error">Mínimo de 20 caracteres</span>
+          }
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="featured" class="checkbox-input" />
+            <span>Marcar como destaque</span>
+          </label>
+        </div>
+      </form>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="onClose()">Cancelar</button>
+        <button class="btn-primary" (click)="onSave()" [disabled]="newsForm.invalid || isSubmitting">
+          {{ isSubmitting ? 'Criando...' : 'Criar Notícia' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
