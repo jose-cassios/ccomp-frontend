@@ -1,6 +1,6 @@
 <article class="news-hero">
   <div class="hero-image">
-    <img [src]="news().coverImageUrl" [alt]="news().title" />
+    <img [src]="news().coverImageUrl ?? news().cover_image_url" [alt]="news().title" />
     <div class="hero-overlay"></div>
   </div>
   <div class="hero-content">
@@ -10,7 +10,7 @@
     <div class="hero-meta">
       <span class="meta-author">{{ news().autorId }}</span>
       <span class="meta-separator">•</span>
-      <span class="meta-date">{{ news().publishedAt }}</span>
+      <span class="meta-date">{{ news().publishedAt ?? news().published_at }}</span>
     </div>
     <a [routerLink]="['/news', news().slug]" class="hero-link">
       Ler mais

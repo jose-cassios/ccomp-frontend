@@ -3,12 +3,12 @@ import { RouterLink } from '@angular/router';
 
 export interface Destaque {
   id: string;
-  coverImageUrl: string;
+  coverImageUrl?: string;
   slug: string;
   title: string;
   summary: string;
   featured: boolean;
-  autorId: string;
+  autorId?: string;
 }
 
 @Component({

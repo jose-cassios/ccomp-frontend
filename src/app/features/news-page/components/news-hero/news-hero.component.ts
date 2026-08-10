@@ -1,6 +1,6 @@
 import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { NewsItem } from '../../data/news.mock';
+import { NewsItemType } from '../../interface/news.interface';
 
 @Component({
   selector: 'app-news-hero',
@@ -10,5 +10,5 @@ import { NewsItem } from '../../data/news.mock';
   styleUrl: './news-hero.component.css'
 })
 export class NewsHeroComponent {
-  readonly news = input.required<NewsItem>();
+  readonly news = input.required<NewsItemType>();
 }

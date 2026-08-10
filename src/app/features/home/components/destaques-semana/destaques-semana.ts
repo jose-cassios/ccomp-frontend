@@ -1,6 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, input, computed } from '@angular/core';
 import { CardNewsComponent, type Destaque } from './card-news/card-news.component';
-import { NEWS_ITEMS } from '../../../news-page/data/news.mock';
+import { NewsItemType } from '../../../news-page/interface/news.interface';
 
 @Component({
   selector: 'app-destaques-semana',
@@ -9,13 +9,17 @@ import { NEWS_ITEMS } from '../../../news-page/data/news.mock';
   styleUrl: './destaques-semana.css',
 })
 export class DestaquesSemana {
-  readonly destaques: Destaque[] = NEWS_ITEMS.filter((item) => item.featured).map((item) => ({
-    id: item.id,
-    coverImageUrl: item.coverImageUrl,
-    slug: item.slug,
-    title: item.title,
-    summary: item.summary,
-    featured: item.featured,
-    autorId: item.autorId,
-  }));
+  readonly newsItems = input.required<NewsItemType[]>();
+
+  readonly destaques = computed<Destaque[]>(() => {
+    return this.newsItems().filter((item) => item.featured).map((item) => ({
+      id: String(item.id),
+      coverImageUrl: item.coverImageUrl ?? item.cover_image_url,
+      slug: item.slug,
+      title: item.title,
+      summary: item.summary,
+      featured: item.featured,
+      autorId: item.autorId,
+    }));
+  });
 }

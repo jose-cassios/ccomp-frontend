@@ -5,7 +5,7 @@
   </div>
 
   <div class="cards-grid">
-    @for (item of destaques; track item.id) {
+    @for (item of destaques(); track item.id) {
       <app-card-news [destaque]="item" />
     }
   </div>
