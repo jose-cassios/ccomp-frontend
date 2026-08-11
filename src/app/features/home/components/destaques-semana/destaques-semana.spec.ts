@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { DestaquesSemana } from './destaques-semana';
 
@@ -8,11 +9,13 @@ describe('DestaquesSemana', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DestaquesSemana]
+      imports: [DestaquesSemana],
+      providers: [provideRouter([])],
     })
     .compileComponents();
 
     fixture = TestBed.createComponent(DestaquesSemana);
+    fixture.componentRef.setInput('newsItems', []);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

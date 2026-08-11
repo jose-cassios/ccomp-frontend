@@ -14,12 +14,11 @@ export class DestaquesSemana {
   readonly destaques = computed<Destaque[]>(() => {
     return this.newsItems().filter((item) => item.featured).map((item) => ({
       id: String(item.id),
-      cover_image_url: item.cover_image_url,
+      coverImageUrl: item.coverImageUrl,
       slug: item.slug,
       title: item.title,
       summary: item.summary,
       featured: item.featured,
-      autorId: item.autorId,
     }));
   });
 }

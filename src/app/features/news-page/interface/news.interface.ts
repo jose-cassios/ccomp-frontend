@@ -1,14 +1,30 @@
 export interface NewsItemType {
-  id: number | string;
+  id: number;
   title: string;
   slug: string;
-  summary: string;
-  cover_image_url: string;
+  summary: string | null;
+  coverImageUrl: string | null;
   featured: boolean;
-  autorId?: string;
-  publishedAt?: Date | string;
-  published_at?: string;
-  updatedAt?: Date | string;
-  updated_at?: string;
-  content?: string[];
+  publishedAt: string | null;
+  updatedAt?: string | null;
+  content?: string | null;
+}
+
+export interface NewsUpdatePayload {
+  title?: string;
+  summary?: string;
+  coverImageUrl?: string;
+  featured?: boolean;
+  content?: string;
+}
+
+export interface NewsPageResponse {
+  content: NewsItemType[];
+  nextCursor: string | null;
+  previousCursor: string | null;
+}
+
+export interface UserNewsResponse {
+  author: NewsItemType[];
+  editor: NewsItemType[];
 }

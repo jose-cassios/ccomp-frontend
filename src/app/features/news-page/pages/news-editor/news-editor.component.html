@@ -1,0 +1,147 @@
+<section class="editor-page">
+  <header class="editor-header">
+    <div>
+      <a routerLink="/noticias" class="back-link">← Voltar para notícias</a>
+      <div class="title-row">
+        <h1>{{ news() ? 'Editar notícia' : 'Nova notícia' }}</h1>
+        @if (isPublished()) {
+          <span class="status-badge status-badge--published">Publicada</span>
+        } @else if (news()) {
+          <span class="status-badge">Rascunho #{{ news()?.id }}</span>
+        }
+        @if (hasUnsavedChanges()) {
+          <span class="unsaved-indicator"><span></span> Alterações não salvas</span>
+        }
+      </div>
+      <p>Edite o conteúdo, salve, confira a prévia e publique quando estiver pronto.</p>
+    </div>
+
+    <div class="editor-actions">
+      <button type="button" class="button button--secondary mobile-view-button" [class.active]="activeView() === 'edit'" (click)="setView('edit')">
+        Editar
+      </button>
+      <button type="button" class="button button--secondary" [class.active]="activeView() === 'preview'" (click)="setView('preview')">
+        Pré-visualizar
+      </button>
+      <button type="button" class="button button--primary" [disabled]="isBusy() || form.invalid || isPublished()" (click)="save()">
+        @if (operation() === 'creating' || operation() === 'saving') {
+          Salvando...
+        } @else {
+          {{ news() ? 'Salvar alterações' : 'Criar e salvar' }}
+        }
+      </button>
+      <button type="button" class="button button--publish" [disabled]="!canPublish()" [title]="publishDisabledReason()" (click)="publish()">
+        {{ operation() === 'publishing' ? 'Publicando...' : 'Publicar' }}
+      </button>
+    </div>
+  </header>
+
+  @if (operationLabel()) {
+    <div class="notice notice--loading" role="status"><span class="spinner"></span>{{ operationLabel() }}</div>
+  }
+  @if (errorMessage()) {
+    <div class="notice notice--error" role="alert">{{ errorMessage() }}</div>
+  }
+  @if (successMessage()) {
+    <div class="notice notice--success" role="status">{{ successMessage() }}</div>
+  }
+
+  @if (operation() !== 'loading') {
+    @if (isPublished()) {
+      <div class="published-message">
+        Esta notícia já está publicada. Os campos foram bloqueados para deixar claro qual versão está disponível ao público.
+      </div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="save()">
+      <section class="metadata-card" aria-labelledby="metadata-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Informações principais</span>
+            <h2 id="metadata-title">Metadados da notícia</h2>
+          </div>
+          <label class="featured-toggle">
+            <input type="checkbox" formControlName="featured" />
+            <span>Marcar como destaque</span>
+          </label>
+        </div>
+
+        <div class="form-grid">
+          <label class="field field--wide">
+            <span>Título *</span>
+            <input type="text" formControlName="title" maxlength="255" placeholder="Título claro e informativo" />
+            <small>{{ form.controls.title.value.length }}/255 caracteres</small>
+            @if (form.controls.title.touched && form.controls.title.invalid) {
+              <strong>Informe um título com pelo menos 5 caracteres.</strong>
+            }
+          </label>
+
+          <label class="field field--wide">
+            <span>Resumo *</span>
+            <textarea formControlName="summary" rows="3" placeholder="Apresente a notícia em poucas linhas"></textarea>
+            @if (form.controls.summary.touched && form.controls.summary.invalid) {
+              <strong>Informe um resumo com pelo menos 10 caracteres.</strong>
+            }
+          </label>
+
+          <label class="field field--wide">
+            <span>URL da imagem de capa *</span>
+            <input type="url" formControlName="coverImageUrl" placeholder="https://exemplo.com/imagem.jpg" />
+            @if (form.controls.coverImageUrl.touched && form.controls.coverImageUrl.invalid) {
+              <strong>Informe uma URL completa iniciada por http:// ou https://.</strong>
+            }
+          </label>
+        </div>
+      </section>
+
+      <section class="content-section" aria-labelledby="content-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Corpo da publicação</span>
+            <h2 id="content-title">Conteúdo em Markdown</h2>
+          </div>
+          <span class="content-help">Use a barra de ferramentas ou a sintaxe Markdown.</span>
+        </div>
+
+        <div class="editor-workspace" [class.editor-workspace--preview]="activeView() === 'preview'">
+          <div class="editor-panel">
+            <div class="panel-label">Editar</div>
+            <app-markdown-editor
+              [content]="form.controls.content.value"
+              [disabled]="isPublished()"
+              (contentChange)="updateContent($event)"
+            ></app-markdown-editor>
+            @if (form.controls.content.touched && form.controls.content.invalid) {
+              <strong class="content-error">Escreva pelo menos 20 caracteres de conteúdo.</strong>
+            }
+          </div>
+
+          <div class="preview-panel">
+            <div class="panel-label">Pré-visualização</div>
+            <app-news-preview [news]="preview()" [editorPreview]="true"></app-news-preview>
+          </div>
+        </div>
+      </section>
+    </form>
+
+    <footer class="editor-footer">
+      <div>
+        @if (hasUnsavedChanges()) {
+          <strong>Há alterações não salvas.</strong>
+          <span>Salve antes de publicar.</span>
+        } @else if (news() && !isPublished()) {
+          <strong>Rascunho salvo.</strong>
+          <span>Revise a prévia antes de publicar.</span>
+        }
+      </div>
+      <div class="editor-actions">
+        <button type="button" class="button button--primary" [disabled]="isBusy() || form.invalid || isPublished()" (click)="save()">
+          {{ news() ? 'Salvar alterações' : 'Criar e salvar' }}
+        </button>
+        <button type="button" class="button button--publish" [disabled]="!canPublish()" [title]="publishDisabledReason()" (click)="publish()">
+          Publicar
+        </button>
+      </div>
+    </footer>
+  }
+</section>

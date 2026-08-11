@@ -1,7 +1,13 @@
 import { User } from './user.model';
 
 export interface AuthResponse {
-  access_token: string;
+  accessToken?: string;
+  refreshToken?: string;
+  access_token?: string;
   refresh_token?: string;
-  user: User;
+  user?: User;
+}
+
+export interface MessageResponse {
+  message: string;
 }

@@ -6,7 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { LoginFormComponent } from './components/login-form/login-form.component';
 
@@ -29,15 +29,15 @@ import { LoginFormComponent } from './components/login-form/login-form.component
 export class LoginPageComponent {
   constructor(
     private authService: AuthService,
-    private router: Router
-  ) {
-    console.log("LoginPageComponent")
-  }
+    private router: Router,
+    private route: ActivatedRoute,
+  ) {}
 
   onLogin(credentials: { email: string; password: string }): void {
     this.authService.login(credentials).subscribe({
       next: () => {
-        this.router.navigate(['/']);
+        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+        this.router.navigateByUrl(returnUrl?.startsWith('/') ? returnUrl : '/');
       },
       error: (error) => {
         console.error('Login failed:', error);

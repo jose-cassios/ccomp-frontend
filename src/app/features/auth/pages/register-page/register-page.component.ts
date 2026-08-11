@@ -32,14 +32,12 @@ export class RegisterPageComponent {
   constructor(
     private authService: AuthService,
     private router: Router
-  ) {
-    console.log("RegisterPageComponent")
-  }
+  ) {}
 
   onRegister(data: { name: string; email: string; password: string; confirmPassword?: string }): void {
     this.authService.register(data).subscribe({
       next: () => {
-        this.router.navigate(['/']);
+        this.router.navigate(['/login']);
       },
       error: (error) => {
         console.error('Registration failed:', error);

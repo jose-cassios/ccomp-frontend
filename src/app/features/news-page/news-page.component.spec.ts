@@ -1,23 +1,39 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
+import { AuthService } from '../auth/services/auth.service';
+import { NewsService } from './services/news.service';
 import { NewsPageComponent } from './news-page.component';
 
 describe('NewsPageComponent', () => {
-  let component: NewsPageComponent;
   let fixture: ComponentFixture<NewsPageComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [NewsPageComponent]
-    })
-    .compileComponents();
+      imports: [NewsPageComponent],
+      providers: [
+        provideRouter([]),
+        {
+          provide: AuthService,
+          useValue: { hasAnyRole: () => false },
+        },
+        {
+          provide: NewsService,
+          useValue: {
+            getAll: () => of({ content: [], nextCursor: null, previousCursor: null }),
+            getMine: () => of({ author: [], editor: [] }),
+          },
+        },
+      ],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(NewsPageComponent);
-    component = fixture.componentInstance;
+    fixture.detectChanges();
     await fixture.whenStable();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('should render an empty public state without showing editorial actions', () => {
+    expect(fixture.nativeElement.querySelector('.empty-state')?.textContent).toContain('Nenhuma notícia');
+    expect(fixture.nativeElement.querySelector('.btn-create-news')).toBeNull();
   });
 });

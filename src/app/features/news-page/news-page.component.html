@@ -3,37 +3,74 @@
     <div class="news-main">
       <div class="news-header">
         <h1 class="page-title">Notícias</h1>
-        <button class="btn-create-news" (click)="openModal()">
-          <span class="btn-icon">+</span>
-          Nova Notícia
-        </button>
+        @if (canManageNews()) {
+          <a class="btn-create-news" routerLink="/noticias/nova">
+            <span class="btn-icon">+</span>
+            Nova notícia
+          </a>
+        }
       </div>
 
       @if (!isLoading()) {
-        <app-news-hero [news]="noticiaDestaque()"></app-news-hero>
-        
-        <div class="news-list-header">
-          <h2 class="news-list-title">Mais Notícias</h2>
-        </div>
-        
-        <div class="news-grid">
-          @for (noticia of noticiasLista(); track noticia.id) {
-            <app-news-card [news]="noticia"></app-news-card>
-          }
-        </div>
+        @if (noticiaDestaque(); as destaque) {
+          <app-news-hero [news]="destaque"></app-news-hero>
+        } @else if (!errorMessage()) {
+          <div class="empty-state">Nenhuma notícia publicada até o momento.</div>
+        }
+
+        @if (errorMessage()) {
+          <div class="page-message page-message--error" role="alert">{{ errorMessage() }}</div>
+        }
+
+        @if (noticiasLista().length) {
+          <div class="news-list-header">
+            <h2 class="news-list-title">Mais notícias</h2>
+          </div>
+
+          <div class="news-grid">
+            @for (noticia of noticiasLista(); track noticia.id) {
+              <app-news-card [news]="noticia"></app-news-card>
+            }
+          </div>
+        }
       } @else {
         <p>Carregando notícias...</p>
       }
-      
-    </div>
-    
-    <app-news-sidebar></app-news-sidebar>
-    
-  </div>
 
-  <app-news-modal 
-    [isOpen]="modalOpen()" 
-    (close)="closeModal()" 
-    (save)="onSaveNews($event)"
-  ></app-news-modal>
+      @if (canManageNews()) {
+        <section class="drafts-section" aria-labelledby="drafts-title">
+          <div class="drafts-heading">
+            <div>
+              <span>Área editorial</span>
+              <h2 id="drafts-title">Meus rascunhos</h2>
+            </div>
+            <a routerLink="/noticias/nova">Criar novo</a>
+          </div>
+
+          @if (draftsLoading()) {
+            <p class="drafts-feedback">Carregando rascunhos...</p>
+          } @else if (draftsError()) {
+            <p class="drafts-feedback drafts-feedback--error">{{ draftsError() }}</p>
+          } @else if (drafts().length) {
+            <div class="drafts-list">
+              @for (draft of drafts(); track draft.id) {
+                <article class="draft-item">
+                  <div>
+                    <span>Rascunho #{{ draft.id }}</span>
+                    <h3>{{ draft.title }}</h3>
+                    <p>{{ draft.summary || 'Sem resumo salvo.' }}</p>
+                  </div>
+                  <a [routerLink]="['/noticias', draft.id, 'editar']">Continuar edição →</a>
+                </article>
+              }
+            </div>
+          } @else {
+            <p class="drafts-feedback">Você não possui notícias não publicadas.</p>
+          }
+        </section>
+      }
+    </div>
+
+    <app-news-sidebar></app-news-sidebar>
+  </div>
 </section>

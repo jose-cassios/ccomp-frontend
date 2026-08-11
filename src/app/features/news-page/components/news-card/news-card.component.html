@@ -1,17 +1,16 @@
 <article class="news-card">
   <div class="card-image">
-    <img [src]="news().cover_image_url" [alt]="news().title" />
+    <img [src]="news().coverImageUrl" [alt]="news().title" />
   </div>
   <div class="card-content">
     <div class="card-meta">
       <span class="meta-category">Notícia</span>
       <span class="meta-separator">•</span>
-      <span class="meta-date">{{ news().publishedAt ?? news().published_at }}</span>
+      <span class="meta-date">{{ news().publishedAt }}</span>
     </div>
     <h3 class="card-title">{{ news().title }}</h3>
     <p class="card-summary">{{ news().summary }}</p>
     <div class="card-footer">
-      <span class="card-author">{{ news().autorId }}</span>
       <a [routerLink]="['/news', news().slug]" class="card-link">
         Ler mais
         <span class="arrow">→</span>

@@ -26,7 +26,6 @@ export class Home implements OnInit {
   loadFeaturedNews(): void {
     this.newsService.getAll({ featured: true }).subscribe({
       next: (response) => {
-        console.log(response);
         this.newsItems.set(response.content);
       },
       error: (error) => {

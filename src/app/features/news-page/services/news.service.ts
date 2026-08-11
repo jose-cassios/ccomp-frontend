@@ -1,65 +1,49 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
-import { NewsItemType } from '../interface/news.interface';
-import { AuthService } from '../../auth/services/auth.service';
-import { HttpHeaders, HttpParams } from '@angular/common/http';
+import {
+  NewsItemType,
+  NewsPageResponse,
+  NewsUpdatePayload,
+  UserNewsResponse,
+} from '../interface/news.interface';
+import { HttpParams } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root',
 })
 export class NewsService {
-  constructor(
-    private api: ApiService,
-    private authService: AuthService
-  ) {}
+  constructor(private api: ApiService) {}
 
-  private getAuthHeaders(): HttpHeaders {
-    const token = this.authService.getToken();
-    return new HttpHeaders({
-      'Authorization': token ? `Bearer ${token}` : ''
-    });
-  }
-
-  getAll(filter?: { featured?: boolean }): Observable<{ content: NewsItemType[] }> {
+  getAll(filter?: { featured?: boolean }): Observable<NewsPageResponse> {
     let params: HttpParams | undefined;
     if (filter && filter.featured !== undefined) {
       params = new HttpParams().set('featured', filter.featured.toString());
     }
-    return this.api.get<{ content: NewsItemType[] }>('/news', { params });
+    return this.api.get<NewsPageResponse>('/news', { params });
   }
 
   getBySlug(slug: string): Observable<NewsItemType> {
     return this.api.get<NewsItemType>(`/news/${slug}`);
   }
 
-  create(): Observable<{ id: number }> {
-    return this.api.post<{ id: number }>('/news/create', {}, {
-      headers: this.getAuthHeaders()
-    });
+  getById(id: number | string): Observable<NewsItemType> {
+    return this.api.get<NewsItemType>(`/news/admin/${id}`);
   }
 
-  update(id: string, newsData: Partial<NewsItemType>): Observable<NewsItemType> {
-    return this.api.put<NewsItemType>(`/news/${id}`, newsData, {
-      headers: this.getAuthHeaders()
-    });
+  getMine(): Observable<UserNewsResponse> {
+    return this.api.get<UserNewsResponse>('/news/me');
   }
 
-  patch(id: string, newsData: Partial<NewsItemType>): Observable<NewsItemType> {
-    return this.api.patch<NewsItemType>(`/news/${id}`, newsData, {
-      headers: this.getAuthHeaders()
-    });
+  create(): Observable<NewsItemType> {
+    return this.api.post<NewsItemType>('/news/create', {});
   }
 
-  publish(id: string): Observable<NewsItemType> {
-    return this.api.post<NewsItemType>(`/news/${id}/publish`, {}, {
-      headers: this.getAuthHeaders()
-    });
+  update(id: number | string, newsData: NewsUpdatePayload): Observable<NewsItemType> {
+    return this.api.patch<NewsItemType>(`/news/${id}`, newsData);
   }
 
-  delete(id: string): Observable<void> {
-    return this.api.delete<void>(`/news/${id}`, {
-      headers: this.getAuthHeaders()
-    });
+  publish(id: number | string): Observable<void> {
+    return this.api.post<void>(`/news/${id}/publish`, {});
   }
 }

@@ -1,0 +1,281 @@
+import { Location } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { finalize, switchMap, tap } from 'rxjs';
+import { MarkdownEditorComponent } from '../../components/markdown-editor/markdown-editor.component';
+import {
+  NewsPreviewComponent,
+  NewsPreviewData,
+} from '../../components/news-preview/news-preview.component';
+import { NewsItemType, NewsUpdatePayload } from '../../interface/news.interface';
+import { NewsService } from '../../services/news.service';
+
+type EditorOperation = 'idle' | 'loading' | 'creating' | 'saving' | 'publishing';
+type EditorView = 'edit' | 'preview';
+
+interface EditorFormValue {
+  title: string;
+  summary: string;
+  coverImageUrl: string;
+  featured: boolean;
+  content: string;
+}
+
+const EMPTY_FORM: EditorFormValue = {
+  title: '',
+  summary: '',
+  coverImageUrl: '',
+  featured: false,
+  content: '',
+};
+
+@Component({
+  selector: 'app-news-editor',
+  standalone: true,
+  imports: [ReactiveFormsModule, RouterLink, MarkdownEditorComponent, NewsPreviewComponent],
+  templateUrl: './news-editor.component.html',
+  styleUrl: './news-editor.component.css',
+})
+export class NewsEditorComponent implements OnInit {
+  private readonly fb = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
+  private readonly location = inject(Location);
+  private readonly newsService = inject(NewsService);
+  readonly form = this.fb.nonNullable.group({
+    title: ['', [Validators.required, Validators.minLength(5)]],
+    summary: ['', [Validators.required, Validators.minLength(10)]],
+    coverImageUrl: ['', [Validators.required, Validators.pattern(/^https?:\/\/.+/)]],
+    featured: [false],
+    content: ['', [Validators.required, Validators.minLength(20)]],
+  });
+
+  readonly news = signal<NewsItemType | null>(null);
+  readonly operation = signal<EditorOperation>('idle');
+  readonly activeView = signal<EditorView>('edit');
+  readonly errorMessage = signal<string | null>(null);
+  readonly successMessage = signal<string | null>(null);
+  readonly hasUnsavedChanges = signal(false);
+  readonly formValue = signal<EditorFormValue>(EMPTY_FORM);
+  readonly formIsValid = signal(false);
+
+  readonly isBusy = computed(() => this.operation() !== 'idle');
+  readonly isPublished = computed(() => Boolean(this.news()?.publishedAt));
+  readonly preview = computed<NewsPreviewData>(() => ({
+    ...this.formValue(),
+    publishedAt: this.news()?.publishedAt,
+    updatedAt: this.news()?.updatedAt,
+  }));
+  readonly canPublish = computed(
+    () =>
+      Boolean(this.news()?.id) &&
+      this.formIsValid() &&
+      !this.hasUnsavedChanges() &&
+      !this.isPublished() &&
+      !this.isBusy(),
+  );
+  readonly operationLabel = computed(() => {
+    switch (this.operation()) {
+      case 'loading': return 'Carregando notícia...';
+      case 'creating': return 'Criando rascunho...';
+      case 'saving': return 'Salvando alterações...';
+      case 'publishing': return 'Publicando notícia...';
+      default: return '';
+    }
+  });
+  readonly publishDisabledReason = computed(() => {
+    if (this.isPublished()) return 'Esta notícia já foi publicada.';
+    if (!this.news()) return 'Salve a notícia antes de publicar.';
+    if (this.hasUnsavedChanges()) return 'Salve as alterações antes de publicar.';
+    if (!this.formIsValid()) return 'Preencha todos os campos obrigatórios.';
+    return '';
+  });
+
+  constructor() {
+    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
+      this.formValue.set(value as EditorFormValue);
+      this.formIsValid.set(this.form.valid);
+      this.hasUnsavedChanges.set(true);
+      this.successMessage.set(null);
+    });
+    this.form.statusChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.formIsValid.set(this.form.valid);
+    });
+  }
+
+  ngOnInit(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) {
+      this.formIsValid.set(this.form.valid);
+      return;
+    }
+
+    if (!/^\d+$/.test(id)) {
+      this.errorMessage.set('O identificador da notícia é inválido.');
+      return;
+    }
+
+    this.loadNews(id);
+  }
+
+  save(): void {
+    if (this.isBusy() || this.isPublished()) {
+      return;
+    }
+
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.errorMessage.set('Revise os campos obrigatórios antes de salvar.');
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    const payload: NewsUpdatePayload = this.form.getRawValue();
+    const currentNews = this.news();
+
+    if (currentNews) {
+      this.updateNews(currentNews.id, payload);
+      return;
+    }
+
+    this.createNews(payload);
+  }
+
+  publish(): void {
+    const currentNews = this.news();
+    if (!currentNews || !this.canPublish()) {
+      if (this.hasUnsavedChanges()) {
+        this.errorMessage.set('Salve as alterações antes de publicar para garantir que a prévia seja a versão enviada.');
+      }
+      return;
+    }
+
+    this.operation.set('publishing');
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+
+    this.newsService.publish(currentNews.id).pipe(
+      switchMap(() => this.newsService.getById(currentNews.id)),
+      finalize(() => this.operation.set('idle')),
+    ).subscribe({
+      next: (publishedNews) => {
+        this.applyNews(publishedNews);
+        this.successMessage.set('Notícia publicada com sucesso. A versão exibida é a que foi salva e revisada.');
+      },
+      error: (error: unknown) => {
+        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível publicar a notícia.'));
+      },
+    });
+  }
+
+  setView(view: EditorView): void {
+    this.activeView.set(view);
+  }
+
+  updateContent(content: string): void {
+    this.form.controls.content.setValue(content);
+    this.form.controls.content.markAsTouched();
+  }
+
+  canDeactivate(): boolean {
+    if (!this.hasUnsavedChanges() || typeof window === 'undefined') {
+      return true;
+    }
+    return window.confirm('Há alterações não salvas. Deseja sair mesmo assim?');
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  preventUnsavedUnload(event: BeforeUnloadEvent): void {
+    if (this.hasUnsavedChanges()) {
+      event.preventDefault();
+    }
+  }
+
+  private loadNews(id: string): void {
+    this.operation.set('loading');
+    this.newsService.getById(id).pipe(
+      finalize(() => this.operation.set('idle')),
+    ).subscribe({
+      next: (news) => this.applyNews(news),
+      error: (error: unknown) => {
+        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível carregar a notícia para edição.'));
+      },
+    });
+  }
+
+  private createNews(payload: NewsUpdatePayload): void {
+    this.operation.set('creating');
+    this.newsService.create().pipe(
+      tap((createdNews) => {
+        this.news.set(createdNews);
+        this.location.replaceState(`/noticias/${createdNews.id}/editar`);
+      }),
+      switchMap((createdNews) => this.newsService.update(createdNews.id, payload)),
+      finalize(() => this.operation.set('idle')),
+    ).subscribe({
+      next: (savedNews) => this.handleSaveSuccess(savedNews, 'Rascunho criado e salvo com sucesso.'),
+      error: (error: unknown) => {
+        const id = this.news()?.id;
+        const fallback = id
+          ? `O rascunho #${id} foi criado, mas não foi possível salvar o conteúdo. Tente salvar novamente.`
+          : 'Não foi possível criar a notícia.';
+        this.errorMessage.set(this.getErrorMessage(error, fallback));
+      },
+    });
+  }
+
+  private updateNews(id: number, payload: NewsUpdatePayload): void {
+    this.operation.set('saving');
+    this.newsService.update(id, payload).pipe(
+      finalize(() => this.operation.set('idle')),
+    ).subscribe({
+      next: (savedNews) => this.handleSaveSuccess(savedNews, 'Alterações salvas com sucesso.'),
+      error: (error: unknown) => {
+        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível salvar as alterações.'));
+      },
+    });
+  }
+
+  private handleSaveSuccess(news: NewsItemType, message: string): void {
+    this.applyNews(news);
+    this.successMessage.set(message);
+  }
+
+  private applyNews(news: NewsItemType): void {
+    const value: EditorFormValue = {
+      title: news.title ?? '',
+      summary: news.summary ?? '',
+      coverImageUrl: news.coverImageUrl ?? '',
+      featured: news.featured ?? false,
+      content: news.content ?? '',
+    };
+
+    this.news.set(news);
+    this.form.reset(value, { emitEvent: false });
+    this.formValue.set(value);
+    this.formIsValid.set(this.form.valid);
+    this.hasUnsavedChanges.set(false);
+    if (news.publishedAt) {
+      this.form.disable({ emitEvent: false });
+    }
+  }
+
+  private getErrorMessage(error: unknown, fallback: string): string {
+    if (error instanceof HttpErrorResponse) {
+      const apiMessage = error.error?.message;
+      if (typeof apiMessage === 'string' && apiMessage.trim()) {
+        return apiMessage;
+      }
+      if (error.status === 403) {
+        return 'Você não tem permissão para alterar esta notícia.';
+      }
+      if (error.status === 404) {
+        return 'A notícia solicitada não foi encontrada.';
+      }
+    }
+    return fallback;
+  }
+}

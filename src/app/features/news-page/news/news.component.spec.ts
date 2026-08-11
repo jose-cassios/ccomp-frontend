@@ -1,38 +1,50 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, RouterTestingModule } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-
+import { NewsItemType } from '../interface/news.interface';
+import { NewsService } from '../services/news.service';
 import { NewsComponent } from './news.component';
 
 describe('NewsComponent', () => {
-  let component: NewsComponent;
   let fixture: ComponentFixture<NewsComponent>;
+
+  const news: NewsItemType = {
+    id: 7,
+    title: 'Notícia carregada pelo slug',
+    slug: 'noticia-carregada',
+    summary: 'Resumo da notícia carregada.',
+    coverImageUrl: 'https://example.com/capa.jpg',
+    featured: false,
+    publishedAt: '2026-08-11T12:00:00',
+    updatedAt: '2026-08-11T12:00:00',
+    content: '## Conteúdo\n\nTexto em **Markdown**.',
+  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [NewsComponent, RouterTestingModule],
+      imports: [NewsComponent],
       providers: [
+        provideRouter([]),
         {
           provide: ActivatedRoute,
-          useValue: {
-            paramMap: of(convertToParamMap({ id: 'ccomp-programacao' })),
-          },
+          useValue: { paramMap: of(convertToParamMap({ slug: news.slug })) },
+        },
+        {
+          provide: NewsService,
+          useValue: { getBySlug: () => of(news) },
         },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(NewsComponent);
-    component = fixture.componentInstance;
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-
-  it('should render the selected news from the mock data', () => {
-    const title = fixture.nativeElement.querySelector('.news-title');
-    expect(title?.textContent).toContain('Maratona de programação reúne estudantes em uma semana de desafios');
+  it('should load and render the public news by slug', () => {
+    const title = fixture.nativeElement.querySelector('.preview-heading h1');
+    expect(title?.textContent).toContain(news.title);
+    expect(fixture.nativeElement.querySelector('.markdown-content strong')?.textContent).toBe('Markdown');
   });
 });

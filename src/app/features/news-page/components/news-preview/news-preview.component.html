@@ -1,0 +1,35 @@
+<article class="news-preview" [class.news-preview--editor]="editorPreview()">
+  <header class="preview-hero" [class.preview-hero--empty]="!news().coverImageUrl">
+    @if (news().coverImageUrl) {
+      <img [src]="news().coverImageUrl" [alt]="news().title || 'Imagem de capa da notícia'" />
+    }
+    <div class="preview-overlay"></div>
+    <div class="preview-heading">
+      <div class="preview-badges">
+        @if (news().featured) {
+          <span class="preview-badge">Destaque</span>
+        }
+        @if (editorPreview() && !news().publishedAt) {
+          <span class="preview-badge preview-badge--draft">Rascunho</span>
+        }
+      </div>
+      <h1>{{ news().title || 'Título da notícia' }}</h1>
+      <p>{{ news().summary || 'O resumo da notícia aparecerá nesta área.' }}</p>
+    </div>
+  </header>
+
+  @if (news().publishedAt || news().updatedAt) {
+    <div class="preview-meta">
+      @if (news().publishedAt) {
+        <span>Publicado em {{ news().publishedAt | date: 'dd/MM/yyyy, HH:mm' }}</span>
+      }
+      @if (editorPreview() && news().updatedAt) {
+        <span>Atualizado em {{ news().updatedAt | date: 'dd/MM/yyyy, HH:mm' }}</span>
+      }
+    </div>
+  }
+
+  <div class="preview-body">
+    <app-markdown-content [content]="news().content"></app-markdown-content>
+  </div>
+</article>

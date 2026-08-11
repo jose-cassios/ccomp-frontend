@@ -8,6 +8,10 @@ import { RegisterPageComponent } from './features/auth/pages/register-page/regis
 import { Clubes } from './features/clubes/clubes';
 import { NewsComponent } from './features/news-page/news/news.component';
 import { NewsPageComponent } from './features/news-page/news-page.component';
+import { authGuard } from './features/auth/guards/auth.guard';
+import { roleGuard } from './features/auth/guards/role.guard';
+import { NEWS_MANAGEMENT_ROLES } from './features/auth/config/auth.config';
+import { pendingNewsChangesGuard } from './features/news-page/guards/pending-news-changes.guard';
 
 export const routes: Routes = [
     // Rotas fora do layout principal (sem header/footer)
@@ -21,6 +25,26 @@ export const routes: Routes = [
         { path: 'eventos', component: EventsPageComponent },
         { path: 'projetos/clubes', component: Clubes },
         { path: 'clubes', redirectTo: 'projetos/clubes', pathMatch: 'full' },
+        {
+          path: 'noticias/nova',
+          loadComponent: () =>
+            import('./features/news-page/pages/news-editor/news-editor.component').then(
+              (module) => module.NewsEditorComponent,
+            ),
+          canActivate: [authGuard, roleGuard],
+          canDeactivate: [pendingNewsChangesGuard],
+          data: { roles: NEWS_MANAGEMENT_ROLES },
+        },
+        {
+          path: 'noticias/:id/editar',
+          loadComponent: () =>
+            import('./features/news-page/pages/news-editor/news-editor.component').then(
+              (module) => module.NewsEditorComponent,
+            ),
+          canActivate: [authGuard, roleGuard],
+          canDeactivate: [pendingNewsChangesGuard],
+          data: { roles: NEWS_MANAGEMENT_ROLES },
+        },
         { path: 'noticias', component: NewsPageComponent },
         { path: 'news/:slug', component: NewsComponent },
         { path: '**', component: EmConstrucao }

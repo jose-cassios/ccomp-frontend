@@ -6,3 +6,5 @@ export const AUTH_CONFIG = {
 } as const;
 
 export type AuthConfig = typeof AUTH_CONFIG;
+
+export const NEWS_MANAGEMENT_ROLES = ['ADM', 'MODERATOR'] as const;
