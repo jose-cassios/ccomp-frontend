@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
+import { AuthService } from '../../features/auth/services/auth.service';
 
 @Component({
   selector: 'app-header',
@@ -8,7 +9,11 @@ import { Router, RouterModule } from '@angular/router';
   styleUrl: './header.css',
 })
 export class Header {
+  private readonly authService = inject(AuthService);
+
   constructor(private router: Router) {}
+
+  readonly canAccessAdministration = computed(() => this.authService.hasAnyRole(['ADM']));
 
   onLogin() {
     // No MVP, redireciona para a página de login com opções Google/Github

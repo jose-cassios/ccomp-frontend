@@ -26,6 +26,15 @@ export const routes: Routes = [
         { path: 'projetos/clubes', component: Clubes },
         { path: 'clubes', redirectTo: 'projetos/clubes', pathMatch: 'full' },
         {
+          path: 'admin/usuarios',
+          loadComponent: () =>
+            import('./features/admin/pages/admin-users/admin-users.component').then(
+              (module) => module.AdminUsersComponent,
+            ),
+          canActivate: [authGuard, roleGuard],
+          data: { roles: ['ADM'] },
+        },
+        {
           path: 'noticias/nova',
           loadComponent: () =>
             import('./features/news-page/pages/news-editor/news-editor.component').then(
