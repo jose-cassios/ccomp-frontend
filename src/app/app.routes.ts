@@ -5,6 +5,7 @@ import { EventsPageComponent } from './features/events-page/events-page.componen
 import { EmConstrucao } from './shared/components/em-construcao/em-construcao';
 import { LoginPageComponent } from './features/auth/pages/login-page/login-page.component';
 import { RegisterPageComponent } from './features/auth/pages/register-page/register-page.component';
+import { PasswordRecoveryComponent } from './features/auth/pages/password-recovery/password-recovery.component';
 import { Clubes } from './features/clubes/clubes';
 import { NewsComponent } from './features/news-page/news/news.component';
 import { NewsPageComponent } from './features/news-page/news-page.component';
@@ -17,6 +18,8 @@ export const routes: Routes = [
     // Rotas fora do layout principal (sem header/footer)
     { path: 'login', component: LoginPageComponent },
     { path: 'register', component: RegisterPageComponent },
+    { path: 'recuperar-senha', component: PasswordRecoveryComponent },
+    { path: 'reset-password', component: PasswordRecoveryComponent },
     {
         path: '',
         component: MainLayoutComponent,

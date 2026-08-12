@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
-import { Observable, catchError, tap, throwError } from 'rxjs';
-import { LoginRequest, RegisterRequest } from '../models/auth-requests.model';
+import { Observable, catchError, finalize, map, of, switchMap, tap, throwError } from 'rxjs';
+import { ForgotPasswordRequest, LoginRequest, RegisterRequest, ResetPasswordRequest } from '../models/auth-requests.model';
 import { AuthResponse, MessageResponse } from '../models/auth-response.model';
 import { User } from '../models/user.model';
 import { ApiService } from '../../../core/api/api.service';
@@ -12,12 +12,20 @@ interface JwtPayload {
   exp?: number;
 }
 
+interface CurrentUserResponse {
+  id: string;
+  name: string;
+  email_address: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
   private readonly currentUser = signal<User | null>(null);
   private readonly isAuthenticated = signal(false);
+  readonly currentUserState = this.currentUser.asReadonly();
+  readonly isAuthenticatedState = this.isAuthenticated.asReadonly();
 
   constructor(
     private api: ApiService
@@ -36,6 +44,9 @@ export class AuthService {
     if (token && !this.isExpired(token)) {
       this.currentUser.set(this.getUserFromStorage() ?? this.getUserFromToken(token));
       this.isAuthenticated.set(true);
+      if (!this.currentUser()?.name) {
+        this.loadCurrentUser().subscribe({ error: () => undefined });
+      }
       return;
     }
 
@@ -55,6 +66,13 @@ export class AuthService {
   login(credentials: LoginRequest): Observable<AuthResponse> {
     return this.api.post<AuthResponse>('/auth/sign-in', credentials).pipe(
       tap((response) => this.handleAuthSuccess(response)),
+      switchMap((response) =>
+        this.loadCurrentUser().pipe(
+          map(() => response),
+          // A sessão continua válida caso a consulta opcional de dados falhe.
+          catchError(() => of(response)),
+        ),
+      ),
       catchError((error) => {
         this.logout();
         throw error;
@@ -62,7 +80,13 @@ export class AuthService {
     );
   }
 
-  // /api/auth/reset-password - TODO: Implementar endpoint
+  forgotPassword(data: ForgotPasswordRequest): Observable<void> {
+    return this.api.post<void>('/auth/forgot-password', data);
+  }
+
+  resetPassword(data: ResetPasswordRequest): Observable<void> {
+    return this.api.post<void>('/auth/reset-password', data);
+  }
   
   // /api/auth/refresh
   refreshToken(): Observable<AuthResponse> {
@@ -71,7 +95,7 @@ export class AuthService {
       return throwError(() => new Error('Refresh token não disponível.'));
     }
 
-    return this.api.post<AuthResponse>('/auth/refresh', { refreshToken }).pipe(
+    return this.api.post<AuthResponse>('/auth/refresh', { refresh_token: refreshToken }).pipe(
       tap((response) => this.handleAuthSuccess(response)),
       catchError((error) => {
         this.logout();
@@ -83,6 +107,19 @@ export class AuthService {
   // /api/auth/logout 
   logout(): void {
     this.clearSession();
+  }
+
+  logoutRemote(): Observable<void> {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      this.clearSession();
+      return of(void 0);
+    }
+
+    return this.api.post<void>('/auth/logout', { refresh_token: refreshToken }).pipe(
+      // Local logout must always happen, including when the token was already invalidated.
+      finalize(() => this.clearSession()),
+    );
   }
 
 
@@ -126,6 +163,19 @@ export class AuthService {
     return token ? this.getRolesFromToken(token) : [];
   }
 
+  loadCurrentUser(): Observable<User> {
+    return this.api.get<CurrentUserResponse>('/users/me').pipe(
+      map((response) => ({
+        ...this.currentUser(),
+        id: response.id,
+        name: response.name,
+        email: response.email_address,
+        email_address: response.email_address,
+      })),
+      tap((user) => this.persistUser(user)),
+    );
+  }
+
   private handleAuthSuccess(response: AuthResponse): void {
     const token = response.accessToken ?? response.access_token;
     if (!token) {
@@ -140,9 +190,7 @@ export class AuthService {
       if (refreshToken) {
         localStorage.setItem(AUTH_CONFIG.REFRESH_TOKEN_KEY, refreshToken);
       }
-      if (user) {
-        localStorage.setItem(AUTH_CONFIG.USER_KEY, JSON.stringify(user));
-      }
+      if (user) this.persistUser(user);
     }
 
     this.currentUser.set(user);
@@ -230,5 +278,12 @@ export class AuthService {
     }
     this.currentUser.set(null);
     this.isAuthenticated.set(false);
+  }
+
+  private persistUser(user: User): void {
+    if (this.isBrowser()) {
+      localStorage.setItem(AUTH_CONFIG.USER_KEY, JSON.stringify(user));
+    }
+    this.currentUser.set(user);
   }
 }

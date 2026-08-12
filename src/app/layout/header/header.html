@@ -16,9 +16,24 @@
         <button (click)="onSearch(searchInput.value)">🔍</button>
       </div>
       
-      <button class="login-button" (click)="onLogin()">
-        Entrar
-      </button>
+      @if (isAuthenticated()) {
+        <div class="user-summary" aria-label="Usuário autenticado">
+          <span class="user-avatar" aria-hidden="true">{{ userInitials() }}</span>
+          <div class="user-data">
+            <strong>{{ currentUser()?.name || 'Usuário conectado' }}</strong>
+            <span>{{ currentUser()?.email || currentUser()?.email_address || 'Sessão ativa' }}</span>
+          </div>
+          <button class="login-button" type="button" [disabled]="isLoggingOut()" (click)="logout()">
+            {{ isLoggingOut() ? 'Saindo...' : 'Sair' }}
+          </button>
+        </div>
+      } @else {
+        <a class="guest-user" routerLink="/login" aria-label="Acessar conta">
+          <button class="login-button" (click)="onLogin()"> 
+            Entrar
+          </button>
+        </a>
+      }
     </div>
     
   </div>
