@@ -8,3 +8,4 @@ export const AUTH_CONFIG = {
 export type AuthConfig = typeof AUTH_CONFIG;
 
 export const NEWS_MANAGEMENT_ROLES = ['ADM', 'MODERATOR'] as const;
+export const ADMINISTRATION_ROLES = ['ADM', 'MODERATOR'] as const;

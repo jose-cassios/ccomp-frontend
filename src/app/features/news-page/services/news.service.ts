@@ -15,12 +15,17 @@ import { HttpParams } from '@angular/common/http';
 export class NewsService {
   constructor(private api: ApiService) {}
 
-  getAll(filter?: { featured?: boolean }): Observable<NewsPageResponse> {
-    let params: HttpParams | undefined;
-    if (filter && filter.featured !== undefined) {
-      params = new HttpParams().set('featured', filter.featured.toString());
+  getAll(
+    filter: { featured?: boolean } = {},
+    nextCursor?: string,
+    pageSize = 10,
+  ): Observable<NewsPageResponse> {
+    let params = new HttpParams().set('pageSize', pageSize.toString());
+    if (nextCursor) {
+      params = params.set('nextCursor', nextCursor);
     }
-    return this.api.get<NewsPageResponse>('/news', { params });
+
+    return this.api.post<NewsPageResponse>('/news/search', filter, { params });
   }
 
   getBySlug(slug: string): Observable<NewsItemType> {
@@ -45,5 +50,9 @@ export class NewsService {
 
   publish(id: number | string): Observable<void> {
     return this.api.post<void>(`/news/${id}/publish`, {});
+  }
+
+  delete(id: number | string): Observable<{ message: string }> {
+    return this.api.delete<{ message: string }>(`/news/${id}`);
   }
 }

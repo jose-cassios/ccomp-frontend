@@ -23,6 +23,11 @@
       <button type="button" class="button button--secondary mobile-view-button" [class.active]="activeView() === 'preview'" (click)="setView('preview')">
         Pré-visualizar
       </button>
+      @if (news()) {
+        <button type="button" class="button button--danger" [disabled]="isBusy()" (click)="deleteNews()">
+          {{ operation() === 'deleting' ? 'Excluindo...' : 'Excluir' }}
+        </button>
+      }
       <button type="button" class="button button--primary" [disabled]="isBusy() || form.invalid || isPublished()" (click)="save()">
         @if (operation() === 'creating' || operation() === 'saving') {
           Salvando...

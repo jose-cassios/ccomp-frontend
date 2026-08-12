@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, switchMap, tap } from 'rxjs';
 import { MarkdownEditorComponent } from '../../components/markdown-editor/markdown-editor.component';
 import {
@@ -13,7 +13,7 @@ import {
 import { NewsItemType, NewsUpdatePayload } from '../../interface/news.interface';
 import { NewsService } from '../../services/news.service';
 
-type EditorOperation = 'idle' | 'loading' | 'creating' | 'saving' | 'publishing';
+type EditorOperation = 'idle' | 'loading' | 'creating' | 'saving' | 'publishing' | 'deleting';
 type EditorView = 'edit' | 'preview';
 
 interface EditorFormValue {
@@ -42,6 +42,7 @@ const EMPTY_FORM: EditorFormValue = {
 export class NewsEditorComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly newsService = inject(NewsService);
   readonly form = this.fb.nonNullable.group({
@@ -82,6 +83,7 @@ export class NewsEditorComponent implements OnInit {
       case 'creating': return 'Criando rascunho...';
       case 'saving': return 'Salvando alterações...';
       case 'publishing': return 'Publicando notícia...';
+      case 'deleting': return 'Excluindo notícia...';
       default: return '';
     }
   });
@@ -167,6 +169,31 @@ export class NewsEditorComponent implements OnInit {
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível publicar a notícia.'));
+      },
+    });
+  }
+
+  deleteNews(): void {
+    const currentNews = this.news();
+    if (!currentNews || this.isBusy()) return;
+
+    const itemType = this.isPublished() ? 'a notícia publicada' : 'o rascunho';
+    if (typeof window !== 'undefined' && !window.confirm(`Excluir ${itemType} “${currentNews.title}”?`)) {
+      return;
+    }
+
+    this.operation.set('deleting');
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.newsService.delete(currentNews.id).pipe(
+      finalize(() => this.operation.set('idle')),
+    ).subscribe({
+      next: () => {
+        this.hasUnsavedChanges.set(false);
+        void this.router.navigate(['/noticias']);
+      },
+      error: (error: unknown) => {
+        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível excluir a notícia.'));
       },
     });
   }

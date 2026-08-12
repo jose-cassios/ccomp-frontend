@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { NewsItemType } from '../../interface/news.interface';
 import { NewsService } from '../../services/news.service';
@@ -32,6 +32,7 @@ describe('NewsEditorComponent', () => {
     create: vi.fn(() => of(createdNews)),
     update: vi.fn(() => of(savedNews)),
     publish: vi.fn(() => of(void 0)),
+    delete: vi.fn(() => of({ message: 'Notícia deletada com sucesso.' })),
     getById: vi.fn(() => of({ ...savedNews, published_at: '2026-08-11T15:00:00' })),
   };
 
@@ -98,5 +99,16 @@ describe('NewsEditorComponent', () => {
     expect(newsService.publish).toHaveBeenCalledWith(createdNews.id);
     expect(newsService.getById).toHaveBeenCalledWith(createdNews.id);
     expect(component.isPublished()).toBe(true);
+  });
+
+  it('should delete the current draft after confirmation', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    component.news.set(savedNews);
+
+    component.deleteNews();
+
+    expect(newsService.delete).toHaveBeenCalledWith(savedNews.id);
+    expect(component.hasUnsavedChanges()).toBe(false);
   });
 });

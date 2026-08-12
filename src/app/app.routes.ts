@@ -11,7 +11,7 @@ import { NewsComponent } from './features/news-page/news/news.component';
 import { NewsPageComponent } from './features/news-page/news-page.component';
 import { authGuard } from './features/auth/guards/auth.guard';
 import { roleGuard } from './features/auth/guards/role.guard';
-import { NEWS_MANAGEMENT_ROLES } from './features/auth/config/auth.config';
+import { ADMINISTRATION_ROLES, NEWS_MANAGEMENT_ROLES } from './features/auth/config/auth.config';
 import { pendingNewsChangesGuard } from './features/news-page/guards/pending-news-changes.guard';
 
 export const routes: Routes = [
@@ -35,7 +35,7 @@ export const routes: Routes = [
               (module) => module.AdminUsersComponent,
             ),
           canActivate: [authGuard, roleGuard],
-          data: { roles: ['ADM'] },
+          data: { roles: ADMINISTRATION_ROLES },
         },
         {
           path: 'noticias/nova',

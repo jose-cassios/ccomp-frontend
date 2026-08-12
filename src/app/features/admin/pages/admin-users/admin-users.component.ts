@@ -3,7 +3,13 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize, forkJoin } from 'rxjs';
 import { AuthService } from '../../../auth/services/auth.service';
-import { AdminUser, ApiUserRole, USER_ROLE_OPTIONS } from '../../models/admin-user.model';
+import {
+  AdminUser,
+  AdminUserSearchFilter,
+  AdminUserStatus,
+  ApiUserRole,
+  USER_ROLE_OPTIONS,
+} from '../../models/admin-user.model';
 import { AdminUsersService } from '../../services/admin-users.service';
 
 interface RoleOperation {
@@ -23,11 +29,15 @@ export class AdminUsersComponent implements OnInit {
   readonly users = signal<AdminUser[]>([]);
   readonly currentUser = signal<AdminUser | null>(null);
   readonly search = signal('');
+  readonly statusFilter = signal<AdminUserStatus | ''>('');
   readonly loading = signal(false);
+  readonly loadingMore = signal(false);
+  readonly nextCursor = signal<string | null>(null);
   readonly pendingUserId = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly selectedRoles = signal<Record<string, ApiUserRole>>({});
+  readonly accountReasons = signal<Record<string, string>>({});
   readonly recentOperations = signal<RoleOperation[]>([]);
   readonly roleOptions = USER_ROLE_OPTIONS;
   readonly filteredUsers = computed(() => {
@@ -38,6 +48,7 @@ export class AdminUsersComponent implements OnInit {
   });
   readonly isBusy = computed(() => this.pendingUserId() !== null);
   readonly currentRoles = computed(() => this.authService.getCurrentRoles());
+  readonly canManageRoles = computed(() => this.authService.hasAnyRole(['ADM']));
 
   ngOnInit(): void { this.reload(); }
 
@@ -45,15 +56,41 @@ export class AdminUsersComponent implements OnInit {
     if (this.loading()) return;
     this.loading.set(true);
     this.errorMessage.set(null);
-    forkJoin({ users: this.usersService.getAll(), currentUser: this.usersService.getMe() })
+    const filter = this.buildFilter();
+    forkJoin({ page: this.usersService.search(filter), currentUser: this.usersService.getMe() })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: ({ users, currentUser }) => {
-          this.users.set([...users].sort((a, b) => a.name.localeCompare(b.name)));
+        next: ({ page, currentUser }) => {
+          this.users.set(this.sortUsers(page.content));
+          this.nextCursor.set(page.next_cursor);
           this.currentUser.set(currentUser);
         },
         error: () => this.errorMessage.set('Não foi possível carregar os usuários. Confirme suas permissões e tente novamente.'),
       });
+  }
+
+  loadMore(): void {
+    const cursor = this.nextCursor();
+    if (!cursor || this.loadingMore() || this.isBusy()) return;
+
+    this.loadingMore.set(true);
+    this.errorMessage.set(null);
+    this.usersService.search(this.buildFilter(), cursor).pipe(
+      finalize(() => this.loadingMore.set(false)),
+    ).subscribe({
+      next: (page) => {
+        const usersById = new Map(this.users().map((user) => [user.id, user]));
+        page.content.forEach((user) => usersById.set(user.id, user));
+        this.users.set(this.sortUsers([...usersById.values()]));
+        this.nextCursor.set(page.next_cursor);
+      },
+      error: () => this.errorMessage.set('Não foi possível carregar mais usuários.'),
+    });
+  }
+
+  filterByStatus(status: AdminUserStatus | ''): void {
+    this.statusFilter.set(status);
+    this.reload();
   }
 
   selectRole(userId: string, role: ApiUserRole): void {
@@ -61,6 +98,10 @@ export class AdminUsersComponent implements OnInit {
   }
 
   selectedRole(userId: string): ApiUserRole { return this.selectedRoles()[userId] ?? 'USER'; }
+
+  setAccountReason(userId: string, reason: string): void {
+    this.accountReasons.update((reasons) => ({ ...reasons, [userId]: reason }));
+  }
 
   changeRole(user: AdminUser, action: 'assign' | 'remove'): void {
     if (this.isBusy()) return;
@@ -85,5 +126,52 @@ export class AdminUsersComponent implements OnInit {
     });
   }
 
+  changeAccountStatus(user: AdminUser, action: 'block' | 'unlock'): void {
+    if (this.isBusy()) return;
+
+    const reason = (this.accountReasons()[user.id] ?? '').trim();
+    if (!reason) {
+      this.errorMessage.set('Informe o motivo antes de bloquear ou desbloquear uma conta.');
+      return;
+    }
+    if (action === 'block' && user.id === this.currentUser()?.id) {
+      this.errorMessage.set('Você não pode bloquear a própria conta durante esta sessão.');
+      return;
+    }
+
+    this.pendingUserId.set(user.id);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    const request = action === 'block'
+      ? this.usersService.block(user.id, reason)
+      : this.usersService.unlock(user.id, reason);
+
+    request.pipe(finalize(() => this.pendingUserId.set(null))).subscribe({
+      next: (response) => {
+        const status: AdminUserStatus = action === 'block' ? 'BLOCKED' : 'ACTIVE';
+        this.users.update((users) => users.map((item) =>
+          item.id === user.id ? { ...item, status_account: status } : item,
+        ));
+        this.accountReasons.update((reasons) => ({ ...reasons, [user.id]: '' }));
+        this.successMessage.set(response.message);
+      },
+      error: () => this.errorMessage.set(
+        `Não foi possível ${action === 'block' ? 'bloquear' : 'desbloquear'} esta conta.`,
+      ),
+    });
+  }
+
   roleLabel(role: ApiUserRole): string { return this.roleOptions.find((option) => option.value === role)?.label ?? role; }
+
+  statusLabel(status: AdminUserStatus): string {
+    return { ACTIVE: 'Ativa', DEACTIVATED: 'Desativada', BLOCKED: 'Bloqueada' }[status];
+  }
+
+  private buildFilter(): AdminUserSearchFilter {
+    return this.statusFilter() ? { status_account: this.statusFilter() as AdminUserStatus } : {};
+  }
+
+  private sortUsers(users: AdminUser[]): AdminUser[] {
+    return [...users].sort((a, b) => a.name.localeCompare(b.name));
+  }
 }

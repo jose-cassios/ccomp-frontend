@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { HttpParams } from '@angular/common/http';
 import { of } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
 import { NewsUpdatePayload } from '../interface/news.interface';
@@ -6,9 +7,12 @@ import { NewsService } from './news.service';
 
 describe('NewsService', () => {
   const api = {
-    get: vi.fn(() => of({})),
-    post: vi.fn(() => of({})),
-    patch: vi.fn(() => of({})),
+    get: vi.fn((_endpoint: string) => of({})),
+    post: vi.fn(
+      (_endpoint: string, _body: unknown, _options?: { params?: HttpParams }) => of({}),
+    ),
+    patch: vi.fn((_endpoint: string, _body: unknown) => of({})),
+    delete: vi.fn((_endpoint: string) => of({})),
   };
   let service: NewsService;
 
@@ -25,6 +29,19 @@ describe('NewsService', () => {
     expect(api.get).toHaveBeenCalledWith('/news/admin/9');
   });
 
+  it('should search news with the filter in the request body and cursor pagination in params', () => {
+    service.getAll({ featured: true }, 'cursor-2', 20).subscribe();
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/news/search',
+      { featured: true },
+      { params: expect.objectContaining({}) },
+    );
+    const params = api.post.mock.calls[0]?.[2]?.params;
+    expect(params?.get('nextCursor')).toBe('cursor-2');
+    expect(params?.get('pageSize')).toBe('20');
+  });
+
   it('should send the exact update DTO through PATCH and publish with POST', () => {
     const payload: NewsUpdatePayload = {
       title: 'Título válido',
@@ -39,5 +56,10 @@ describe('NewsService', () => {
 
     expect(api.patch).toHaveBeenCalledWith('/news/9', payload);
     expect(api.post).toHaveBeenCalledWith('/news/9/publish', {});
+  });
+
+  it('should delete a news item by id', () => {
+    service.delete(9).subscribe();
+    expect(api.delete).toHaveBeenCalledWith('/news/9');
   });
 });

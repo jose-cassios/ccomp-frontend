@@ -16,7 +16,7 @@ describe('Home', () => {
         provideRouter([]),
         {
           provide: NewsService,
-          useValue: { getAll: () => of({ content: [], nextCursor: null, previousCursor: null }) },
+          useValue: { getAll: () => of({ content: [], next_cursor: null, previous_cursor: null }) },
         },
       ],
     })

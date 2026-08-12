@@ -18,6 +18,7 @@
 .button--secondary.active { border-color: var(--brand-500); color: var(--brand-700); background: #f0fdf4; }
 .button--primary { background: var(--brand-600); color: #fff; }
 .button--publish { background: #17251c; color: #fff; }
+.button--danger { border-color: #fecdd3; background: #fff1f2; color: #9f1239; }
 .mobile-view-button { display: none; }
 .notice { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; padding: 13px 16px; border-radius: 9px; font-size: 0.9rem; }
 .notice--loading { background: #eef6ff; color: #245684; }

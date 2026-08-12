@@ -51,7 +51,11 @@
             <p class="drafts-feedback">Carregando rascunhos...</p>
           } @else if (draftsError()) {
             <p class="drafts-feedback drafts-feedback--error">{{ draftsError() }}</p>
-          } @else if (drafts().length) {
+          } @else if (draftsSuccess()) {
+            <p class="drafts-feedback drafts-feedback--success" role="status">{{ draftsSuccess() }}</p>
+          }
+
+          @if (!draftsLoading() && drafts().length) {
             <div class="drafts-list">
               @for (draft of drafts(); track draft.id) {
                 <article class="draft-item">
@@ -60,11 +64,20 @@
                     <h3>{{ draft.title }}</h3>
                     <p>{{ draft.summary || 'Sem resumo salvo.' }}</p>
                   </div>
-                  <a [routerLink]="['/noticias', draft.id, 'editar']">Continuar edição →</a>
+                  <div class="draft-actions">
+                    <a [routerLink]="['/noticias', draft.id, 'editar']">Continuar edição →</a>
+                    <button
+                      type="button"
+                      [disabled]="deletingNewsId() !== null"
+                      (click)="deleteDraft(draft)"
+                    >
+                      {{ deletingNewsId() === draft.id ? 'Excluindo...' : 'Excluir' }}
+                    </button>
+                  </div>
                 </article>
               }
             </div>
-          } @else {
+          } @else if (!draftsLoading() && !draftsError()) {
             <p class="drafts-feedback">Você não possui notícias não publicadas.</p>
           }
         </section>

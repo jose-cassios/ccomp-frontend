@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
+import { ADMINISTRATION_ROLES } from '../../features/auth/config/auth.config';
 import { AuthService } from '../../features/auth/services/auth.service';
 
 @Component({
@@ -13,7 +14,9 @@ export class Header {
 
   constructor(private router: Router) {}
 
-  readonly canAccessAdministration = computed(() => this.authService.hasAnyRole(['ADM']));
+  readonly canAccessAdministration = computed(() =>
+    this.authService.hasAnyRole(ADMINISTRATION_ROLES),
+  );
   readonly currentUser = this.authService.currentUserState;
   readonly isAuthenticated = this.authService.isAuthenticatedState;
   readonly isLoggingOut = signal(false);

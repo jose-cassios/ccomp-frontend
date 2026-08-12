@@ -20,7 +20,7 @@ describe('NewsPageComponent', () => {
         {
           provide: NewsService,
           useValue: {
-            getAll: () => of({ content: [], nextCursor: null, previousCursor: null }),
+            getAll: () => of({ content: [], next_cursor: null, previous_cursor: null }),
             getMine: () => of({ author: [], editor: [] }),
           },
         },

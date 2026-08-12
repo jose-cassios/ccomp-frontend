@@ -20,8 +20,8 @@ export interface NewsUpdatePayload {
 
 export interface NewsPageResponse {
   content: NewsItemType[];
-  nextCursor: string | null;
-  previousCursor: string | null;
+  next_cursor: string | null;
+  previous_cursor: string | null;
 }
 
 export interface UserNewsResponse {
