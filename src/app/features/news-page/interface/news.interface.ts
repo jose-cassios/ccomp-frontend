@@ -3,17 +3,17 @@ export interface NewsItemType {
   title: string;
   slug: string;
   summary: string | null;
-  coverImageUrl: string | null;
+  cover_image_url: string | null;
   featured: boolean;
-  publishedAt: string | null;
-  updatedAt?: string | null;
+  published_at: string | null;
+  updated_at?: string | null;
   content?: string | null;
 }
 
 export interface NewsUpdatePayload {
   title?: string;
   summary?: string;
-  coverImageUrl?: string;
+  cover_image_url?: string;
   featured?: boolean;
   content?: string;
 }

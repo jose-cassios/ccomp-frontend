@@ -1,7 +1,7 @@
 <article class="news-preview" [class.news-preview--editor]="editorPreview()">
-  <header class="preview-hero" [class.preview-hero--empty]="!news().coverImageUrl">
-    @if (news().coverImageUrl) {
-      <img [src]="news().coverImageUrl" [alt]="news().title || 'Imagem de capa da notícia'" />
+  <header class="preview-hero" [class.preview-hero--empty]="!news().cover_image_url">
+    @if (news().cover_image_url) {
+      <img [src]="news().cover_image_url" [alt]="news().title || 'Imagem de capa da notícia'" />
     }
     <div class="preview-overlay"></div>
     <div class="preview-heading">
@@ -9,7 +9,7 @@
         @if (news().featured) {
           <span class="preview-badge">Destaque</span>
         }
-        @if (editorPreview() && !news().publishedAt) {
+        @if (editorPreview() && !news().published_at) {
           <span class="preview-badge preview-badge--draft">Rascunho</span>
         }
       </div>
@@ -18,13 +18,13 @@
     </div>
   </header>
 
-  @if (news().publishedAt || news().updatedAt) {
+  @if (news().published_at || news().updated_at) {
     <div class="preview-meta">
-      @if (news().publishedAt) {
-        <span>Publicado em {{ news().publishedAt | date: 'dd/MM/yyyy, HH:mm' }}</span>
+      @if (news().published_at) {
+        <span>Publicado em {{ news().published_at | date: 'dd/MM/yyyy, HH:mm' }}</span>
       }
-      @if (editorPreview() && news().updatedAt) {
-        <span>Atualizado em {{ news().updatedAt | date: 'dd/MM/yyyy, HH:mm' }}</span>
+      @if (editorPreview() && news().updated_at) {
+        <span>Atualizado em {{ news().updated_at | date: 'dd/MM/yyyy, HH:mm' }}</span>
       }
     </div>
   }

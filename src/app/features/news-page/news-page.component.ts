@@ -60,7 +60,7 @@ export class NewsPageComponent implements OnInit {
     this.draftsLoading.set(true);
     this.newsService.getMine().subscribe({
       next: (response) => {
-        this.drafts.set(response.author.filter((news) => !news.publishedAt));
+        this.drafts.set(response.author.filter((news) => !news.published_at));
         this.draftsLoading.set(false);
       },
       error: () => {

@@ -14,17 +14,17 @@ describe('NewsEditorComponent', () => {
     title: 'News Title',
     slug: 'news-title-a1b2c3',
     summary: null,
-    coverImageUrl: null,
+    cover_image_url: null,
     featured: false,
-    publishedAt: null,
-    updatedAt: '2026-08-11T12:00:00',
+    published_at: null,
+    updated_at: '2026-08-11T12:00:00',
     content: 'Default content',
   };
   const savedNews: NewsItemType = {
     ...createdNews,
     title: 'Título completo da notícia',
     summary: 'Resumo suficientemente completo.',
-    coverImageUrl: 'https://example.com/capa.jpg',
+    cover_image_url: 'https://example.com/capa.jpg',
     content: '## Conteúdo\n\nTexto suficientemente completo para salvar.',
   };
 
@@ -32,7 +32,7 @@ describe('NewsEditorComponent', () => {
     create: vi.fn(() => of(createdNews)),
     update: vi.fn(() => of(savedNews)),
     publish: vi.fn(() => of(void 0)),
-    getById: vi.fn(() => of({ ...savedNews, publishedAt: '2026-08-11T15:00:00' })),
+    getById: vi.fn(() => of({ ...savedNews, published_at: '2026-08-11T15:00:00' })),
   };
 
   beforeEach(async () => {
@@ -58,7 +58,7 @@ describe('NewsEditorComponent', () => {
     component.form.setValue({
       title: savedNews.title,
       summary: savedNews.summary ?? '',
-      coverImageUrl: savedNews.coverImageUrl ?? '',
+      cover_image_url: savedNews.cover_image_url ?? '',
       featured: savedNews.featured,
       content: savedNews.content ?? '',
     });
@@ -69,7 +69,7 @@ describe('NewsEditorComponent', () => {
     expect(newsService.update).toHaveBeenCalledWith(createdNews.id, {
       title: savedNews.title,
       summary: savedNews.summary,
-      coverImageUrl: savedNews.coverImageUrl,
+      cover_image_url: savedNews.cover_image_url,
       featured: savedNews.featured,
       content: savedNews.content,
     });
@@ -82,7 +82,7 @@ describe('NewsEditorComponent', () => {
     component.form.setValue({
       title: savedNews.title,
       summary: savedNews.summary ?? '',
-      coverImageUrl: savedNews.coverImageUrl ?? '',
+      cover_image_url: savedNews.cover_image_url ?? '',
       featured: savedNews.featured,
       content: savedNews.content ?? '',
     });

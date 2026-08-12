@@ -20,7 +20,7 @@
       <button type="button" class="button button--secondary mobile-view-button" [class.active]="activeView() === 'edit'" (click)="setView('edit')">
         Editar
       </button>
-      <button type="button" class="button button--secondary" [class.active]="activeView() === 'preview'" (click)="setView('preview')">
+      <button type="button" class="button button--secondary mobile-view-button" [class.active]="activeView() === 'preview'" (click)="setView('preview')">
         Pré-visualizar
       </button>
       <button type="button" class="button button--primary" [disabled]="isBusy() || form.invalid || isPublished()" (click)="save()">
@@ -86,8 +86,8 @@
 
           <label class="field field--wide">
             <span>URL da imagem de capa *</span>
-            <input type="url" formControlName="coverImageUrl" placeholder="https://exemplo.com/imagem.jpg" />
-            @if (form.controls.coverImageUrl.touched && form.controls.coverImageUrl.invalid) {
+            <input type="url" formControlName="cover_image_url" placeholder="https://exemplo.com/imagem.jpg" />
+            @if (form.controls.cover_image_url.touched && form.controls.cover_image_url.invalid) {
               <strong>Informe uma URL completa iniciada por http:// ou https://.</strong>
             }
           </label>

@@ -1,12 +1,12 @@
 <article class="news-card">
   <div class="card-image">
-    <img [src]="news().coverImageUrl" [alt]="news().title" />
+    <img [src]="news().cover_image_url" [alt]="news().title" />
   </div>
   <div class="card-content">
     <div class="card-meta">
       <span class="meta-category">Notícia</span>
       <span class="meta-separator">•</span>
-      <span class="meta-date">{{ news().publishedAt }}</span>
+      <span class="meta-date">{{ news().published_at }}</span>
     </div>
     <h3 class="card-title">{{ news().title }}</h3>
     <p class="card-summary">{{ news().summary }}</p>

@@ -13,10 +13,10 @@ describe('NewsComponent', () => {
     title: 'Notícia carregada pelo slug',
     slug: 'noticia-carregada',
     summary: 'Resumo da notícia carregada.',
-    coverImageUrl: 'https://example.com/capa.jpg',
+    cover_image_url: 'https://example.com/capa.jpg',
     featured: false,
-    publishedAt: '2026-08-11T12:00:00',
-    updatedAt: '2026-08-11T12:00:00',
+    published_at: '2026-08-11T12:00:00',
+    updated_at: '2026-08-11T12:00:00',
     content: '## Conteúdo\n\nTexto em **Markdown**.',
   };
 

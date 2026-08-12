@@ -19,7 +19,7 @@ type EditorView = 'edit' | 'preview';
 interface EditorFormValue {
   title: string;
   summary: string;
-  coverImageUrl: string;
+  cover_image_url: string;
   featured: boolean;
   content: string;
 }
@@ -27,7 +27,7 @@ interface EditorFormValue {
 const EMPTY_FORM: EditorFormValue = {
   title: '',
   summary: '',
-  coverImageUrl: '',
+  cover_image_url: '',
   featured: false,
   content: '',
 };
@@ -47,7 +47,7 @@ export class NewsEditorComponent implements OnInit {
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.minLength(5)]],
     summary: ['', [Validators.required, Validators.minLength(10)]],
-    coverImageUrl: ['', [Validators.required, Validators.pattern(/^https?:\/\/.+/)]],
+    cover_image_url: ['', [Validators.required, Validators.pattern(/^https?:\/\/.+/)]],
     featured: [false],
     content: ['', [Validators.required, Validators.minLength(20)]],
   });
@@ -62,11 +62,11 @@ export class NewsEditorComponent implements OnInit {
   readonly formIsValid = signal(false);
 
   readonly isBusy = computed(() => this.operation() !== 'idle');
-  readonly isPublished = computed(() => Boolean(this.news()?.publishedAt));
+  readonly isPublished = computed(() => Boolean(this.news()?.published_at));
   readonly preview = computed<NewsPreviewData>(() => ({
     ...this.formValue(),
-    publishedAt: this.news()?.publishedAt,
-    updatedAt: this.news()?.updatedAt,
+    published_at: this.news()?.published_at,
+    updated_at: this.news()?.updated_at,
   }));
   readonly canPublish = computed(
     () =>
@@ -248,7 +248,7 @@ export class NewsEditorComponent implements OnInit {
     const value: EditorFormValue = {
       title: news.title ?? '',
       summary: news.summary ?? '',
-      coverImageUrl: news.coverImageUrl ?? '',
+      cover_image_url: news.cover_image_url ?? '',
       featured: news.featured ?? false,
       content: news.content ?? '',
     };
@@ -258,7 +258,7 @@ export class NewsEditorComponent implements OnInit {
     this.formValue.set(value);
     this.formIsValid.set(this.form.valid);
     this.hasUnsavedChanges.set(false);
-    if (news.publishedAt) {
+    if (news.published_at) {
       this.form.disable({ emitEvent: false });
     }
   }

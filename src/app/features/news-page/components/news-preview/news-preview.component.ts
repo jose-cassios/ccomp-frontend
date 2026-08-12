@@ -5,10 +5,10 @@ import { MarkdownContentComponent } from '../markdown-content/markdown-content.c
 export interface NewsPreviewData {
   title: string;
   summary: string | null;
-  coverImageUrl: string | null;
+  cover_image_url: string | null;
   featured: boolean;
-  publishedAt?: string | null;
-  updatedAt?: string | null;
+  published_at?: string | null;
+  updated_at?: string | null;
   content?: string | null;
 }
 

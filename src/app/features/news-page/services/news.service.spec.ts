@@ -29,7 +29,7 @@ describe('NewsService', () => {
     const payload: NewsUpdatePayload = {
       title: 'Título válido',
       summary: 'Resumo válido',
-      coverImageUrl: 'https://example.com/capa.jpg',
+      cover_image_url: 'https://example.com/capa.jpg',
       featured: true,
       content: 'Conteúdo válido da notícia.',
     };

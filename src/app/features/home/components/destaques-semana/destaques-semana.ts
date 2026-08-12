@@ -14,7 +14,7 @@ export class DestaquesSemana {
   readonly destaques = computed<Destaque[]>(() => {
     return this.newsItems().filter((item) => item.featured).map((item) => ({
       id: String(item.id),
-      coverImageUrl: item.coverImageUrl,
+      cover_image_url: item.cover_image_url,
       slug: item.slug,
       title: item.title,
       summary: item.summary,

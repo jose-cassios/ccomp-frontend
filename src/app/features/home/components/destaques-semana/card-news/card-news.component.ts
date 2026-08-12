@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 
 export interface Destaque {
   id: string;
-  coverImageUrl: string | null;
+  cover_image_url: string | null;
   slug: string;
   title: string;
   summary: string | null;
