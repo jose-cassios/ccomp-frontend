@@ -1,87 +1,23 @@
 import { Component, DestroyRef, afterNextRender, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
-
-interface DetalheEvento {
-  label: string;
-  value: string;
-}
-
-interface EventoAndamento {
-  id: number;
-  titulo: string;
-  descricao: string;
-  imagem: string;
-  inscricoesAbertas: boolean;
-  modalidade: string;
-  link: string;
-  detalhes: DetalheEvento[];
-}
+import { Router } from '@angular/router';
+import { EVENTOS, type EventoItem } from '../../../events-page/data/eventos.mock';
 
 const INTERVALO_AUTOPLAY = 6000;
 
 @Component({
   selector: 'app-eventos-andamento',
   standalone: true,
-  imports: [RouterLink],
   templateUrl: './eventos-andamento.component.html',
   styleUrl: './eventos-andamento.component.css',
 })
 export class EventosAndamentoComponent {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   currentIndex = signal(0);
   autoplayPausado = signal(false);
 
-  eventos: EventoAndamento[] = [
-    {
-      id: 1,
-      titulo: 'Hackathon IFMA 2026: Green Solutions',
-      descricao:
-        'O maior evento de programação do IFMA, focado em sustentabilidade e algoritmos verdes. Traga sua mente criativa para encontrar soluções inovadoras.',
-      imagem: '/img2.png',
-      inscricoesAbertas: true,
-      modalidade: 'PRESENCIAL',
-      link: '/eventos',
-      detalhes: [
-        { label: 'DATA', value: '10-12 Out' },
-        { label: 'VAGAS', value: '40 Equipes' },
-        { label: 'LOCAL', value: 'Auditório II' },
-        { label: 'STATUS', value: 'Disponível' },
-      ],
-    },
-    {
-      id: 2,
-      titulo: 'Semana de Tecnologia 2026',
-      descricao:
-        'Uma semana inteira de palestras, minicursos e rodas de conversa com profissionais do mercado e pesquisadores do departamento.',
-      imagem: '/img3.png',
-      inscricoesAbertas: true,
-      modalidade: 'HÍBRIDO',
-      link: '/eventos',
-      detalhes: [
-        { label: 'DATA', value: '18-22 Nov' },
-        { label: 'VAGAS', value: '200 Alunos' },
-        { label: 'LOCAL', value: 'Bloco de Informática' },
-        { label: 'STATUS', value: 'Disponível' },
-      ],
-    },
-    {
-      id: 3,
-      titulo: 'Maratona de Programação',
-      descricao:
-        'Etapa regional da maratona: cinco horas de desafios algorítmicos em equipes de três. Treinos abertos toda quinta-feira.',
-      imagem: '/img1.png',
-      inscricoesAbertas: false,
-      modalidade: 'PRESENCIAL',
-      link: '/eventos',
-      detalhes: [
-        { label: 'DATA', value: '05 Dez' },
-        { label: 'VAGAS', value: '30 Equipes' },
-        { label: 'LOCAL', value: 'Laboratório 3' },
-        { label: 'STATUS', value: 'Encerrado' },
-      ],
-    },
-  ];
+  eventos: EventoItem[] = EVENTOS;
 
   // Distância de cada evento até o atual pelo caminho mais curto do círculo:
   // -1 (esquerda), 0 (centro), 1 (direita) e null para quem fica fora do deck.
@@ -132,11 +68,14 @@ export class EventosAndamentoComponent {
     this.currentIndex.set(index);
   }
 
-  // Cards laterais são `inert`
-  // trazer a carta para o centro é seguro
+  // Cards laterais são `inert`: o primeiro clique só traz a carta para o centro.
+  // Já no card central, o clique abre a página do evento.
   aoClicarNoCard(index: number) {
     if (this.posicao(index) !== 0) {
       this.goTo(index);
+      return;
     }
+
+    this.router.navigate(['/eventos', this.eventos[index].id]);
   }
 }

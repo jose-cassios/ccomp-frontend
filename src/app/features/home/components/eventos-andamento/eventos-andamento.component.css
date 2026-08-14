@@ -27,9 +27,11 @@
 }
 
 /* Empilhamento: a carta central cobre as laterais, que ficam atrás  */
+/* o card inteiro leva para a página do evento */
 .promo-banner-card.is-active {
   z-index: 2;
   opacity: 1;
+  cursor: pointer;
   box-shadow: 0 18px 40px rgba(2, 44, 34, 0.22);
 }
 
@@ -60,26 +62,6 @@
   opacity: 0;
   transform: translateX(-50%) scale(0.82);
   pointer-events: none;
-}
-
-.badge-group {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.badge {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  background-color: var(--brand-100);
-  color: var(--brand-600);
-}
-
-.badge.status-open {
-  background-color: var(--brand-600);
-  color: white;
 }
 
 .promo-content{
@@ -123,21 +105,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: 20px;
-}
-
-/* Aparência vem do .btn-cta-light global; aqui só posição e ajustes de link. */
-.btn-ver-evento {
-  position: absolute;
-  color: #078E30;
-  right: 24px;
-  bottom: 24px;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
-  font-size: 1rem;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
 .detail-item {
@@ -250,23 +217,11 @@
     display: none;
   }
 
-  /* imagem no topo, um CTA sobre ela apareceria antes do texto;
-     static devolve o posicionamento do botão para o card inteiro */
+  /* imagem no topo, antes do texto */
   .promo-image {
     position: static;
     order: -1;
     height: 250px;
-  }
-
-  .promo-content {
-    padding-bottom: 96px;
-  }
-
-  .btn-ver-evento {
-    left: 24px;
-    right: 24px;
-    justify-content: center;
-    box-shadow: 0 4px 12px rgba(2, 44, 34, 0.2);
   }
 
   .promo-details-grid {

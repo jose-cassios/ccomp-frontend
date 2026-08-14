@@ -32,13 +32,6 @@
           (click)="aoClicarNoCard(i)"
         >
           <div class="promo-content">
-            <div class="badge-group">
-              @if (evento.inscricoesAbertas) {
-                <span class="badge status-open">INSC. ABERTAS</span>
-              }
-              <span class="badge">{{ evento.modalidade }}</span>
-            </div>
-
             <h2 class="promo-title">{{ evento.titulo }}</h2>
             <p class="promo-description">{{ evento.descricao }}</p>
 
@@ -54,14 +47,6 @@
 
           <div class="promo-image">
             <img [src]="evento.imagem" [alt]="evento.titulo" />
-
-            <a
-              class="btn-cta-light btn-ver-evento"
-              [routerLink]="evento.link"
-              [attr.aria-label]="'Ver evento: ' + evento.titulo"
-            >
-              Ver evento <span aria-hidden="true">→</span>
-            </a>
           </div>
         </div>
       }
