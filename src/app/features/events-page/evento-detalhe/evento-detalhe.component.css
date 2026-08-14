@@ -1,0 +1,139 @@
+.evento-page {
+  padding: 48px 20px 72px;
+  background: linear-gradient(180deg, #f7fdf8 0%, #eef8f0 100%);
+}
+
+.evento-card {
+  max-width: 960px;
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 1.5rem;
+  box-shadow: 0 18px 45px rgba(4, 46, 20, 0.12);
+  overflow: hidden;
+}
+
+.evento-hero {
+  position: relative;
+  min-height: 320px;
+}
+
+.evento-hero img {
+  width: 100%;
+  height: 320px;
+  object-fit: cover;
+}
+
+.evento-hero__content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 32px;
+  background: linear-gradient(90deg, rgba(7, 17, 10, 0.9) 0%, rgba(7, 17, 10, 0.35) 100%);
+  color: #ffffff;
+}
+
+.evento-title {
+  margin: 0 0 10px;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  line-height: 1.2;
+}
+
+.evento-summary {
+  margin: 0;
+  max-width: 700px;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #e2e8f0;
+}
+
+.evento-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 20px;
+  padding: 28px 32px 0;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-item .label {
+  font-size: 0.75rem;
+  color: #16a34a;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.detail-item .value {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #022c22;
+}
+
+.evento-body {
+  padding: 24px 32px 8px;
+  color: #334155;
+  line-height: 1.9;
+}
+
+.evento-body p {
+  margin: 0 0 16px;
+}
+
+.evento-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 32px 32px;
+}
+
+.evento-encerrado {
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.evento-page--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
+
+.evento-page--empty .evento-card {
+  padding: 40px 32px;
+  text-align: center;
+}
+
+.evento-page--empty .evento-title {
+  color: #022c22;
+}
+
+@media (max-width: 700px) {
+  .evento-page {
+    padding: 24px 12px 48px;
+  }
+
+  .evento-hero__content,
+  .evento-details-grid,
+  .evento-body,
+  .evento-actions {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .evento-hero img {
+    height: 280px;
+  }
+
+  .evento-details-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

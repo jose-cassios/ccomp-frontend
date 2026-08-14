@@ -11,25 +11,25 @@ import { Router } from '@angular/router';
   styleUrl: './proximos-eventos.component.css',
 })
 export class ProximosEventosComponent {
-  //Mock
+
   filtroAtivo = 'Todos';
   filtros = ['Todos', 'Palestras', 'Cursos'];
 
-  // Array de eventos limitado a 3 itens para a Home, ordenado por data [cite: 79]
+  //  3 itens na Home, ordenado por data
   eventos = [
     {
-      id: 1,
+      id: 4,
       titulo: 'Workshop de Inteligência Artificial Generativa',
       descricao:
         'Explorando LLMs e integração de APIs inteligentes em aplicações modernas de Ciência da Computação.',
       data: '22/11/2025',
-      inscritos: 45,                                                                                                                                                                              
+      inscritos: 45,
       statusClass: 'tag-aberto',
       status: 'Inscrições Abertas',
       imagemUrl: 'img1.png',
     },
     {
-      id: 2,
+      id: 5,
       titulo: 'Palestra: Carreira em Dev Web no Mercado Global',
       descricao:
         'Estratégias para desenvolvedores brasileiros trabalharem para empresas do exterior.',
@@ -40,7 +40,7 @@ export class ProximosEventosComponent {
       imagemUrl: 'img2.png',
     },
     {
-      id: 3,
+      id: 6,
       titulo: 'Seminário de Segurança da Informação e LGPD',
       descricao:
         'Entendendo as implicações jurídicas e técnicas da proteção de dados no ecossistema acadêmico.',
