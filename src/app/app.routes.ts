@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { MainLayoutComponent } from './layout/main-layout.component';
 import { Home } from './features/home/home';
 import { EventsPageComponent } from './features/events-page/events-page.component';
+import { EventoDetalheComponent } from './features/events-page/evento-detalhe/evento-detalhe.component';
 import { EmConstrucao } from './shared/components/em-construcao/em-construcao';
 import { LoginPageComponent } from './features/auth/pages/login-page/login-page.component';
 import { RegisterPageComponent } from './features/auth/pages/register-page/register-page.component';
@@ -19,8 +20,9 @@ export const routes: Routes = [
         children: [
         { path: '', component: Home },
         { path: 'eventos', component: EventsPageComponent },
-        { path: 'projetos/clubes', component: Clubes },
-        { path: 'clubes', redirectTo: 'projetos/clubes', pathMatch: 'full' },
+        { path: 'eventos/calendario', component: EmConstrucao },
+        { path: 'eventos/:id', component: EventoDetalheComponent },
+        { path: 'clubes', component: Clubes },
         { path: 'noticias', component: NewsPageComponent },
         { path: 'news/:slug', component: NewsComponent },
         { path: '**', component: EmConstrucao }

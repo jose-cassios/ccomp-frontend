@@ -1,10 +1,10 @@
 <section
-  class="noticias-container"
-  (mouseenter)="autoplayPausado.set(true)"
-  (mouseleave)="autoplayPausado.set(false)"
->
+  class="noticias-container">
   <div class="noticias-wrapper">
-    <div class="carousel-viewport">
+    <div class="carousel-viewport"
+      (mouseenter)="autoplayPausado.set(true)"
+      (mouseleave)="autoplayPausado.set(false)"
+      >
       <div class="carousel-stage">
         @for (clube of clubes; track clube.id; let i = $index) {
           <!-- Todos os cards ficam no DOM: só o ativo é visível, o resto faz o crossfade -->
