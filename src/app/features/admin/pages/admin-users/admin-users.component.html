@@ -28,8 +28,8 @@
       <strong>{{ users().length }}</strong>
     </article>
     <article class="metric-card">
-      <span>Seu acesso atual</span>
-      <strong>{{ currentRoles().join(', ') || 'Sem papel identificado' }}</strong>
+      <span>Seu papel atual</span>
+      <strong>{{ roleLabel(currentUser()?.role) }}</strong>
     </article>
     <article class="metric-card">
       <span>Usuário conectado</span>
@@ -69,9 +69,8 @@
     </div>
 
     <p class="api-note">
-      O painel exibe o status confirmado pela API. A gestão de papéis é exclusiva de
-      administradores e, como a listagem não informa os papéis atuais, as alterações feitas
-      nesta sessão são registradas abaixo.
+      O painel exibe o status e o papel atual de cada usuário, conforme informado pela API.
+      A gestão de papéis é exclusiva de administradores.
     </p>
 
     @if (loading()) {
@@ -88,6 +87,7 @@
                 <span class="status-badge" [class.status-badge--blocked]="user.status_account === 'BLOCKED'">
                   {{ statusLabel(user.status_account) }}
                 </span>
+                <span class="role-badge">{{ roleLabel(user.role) }}</span>
               </div>
               <span>{{ user.email_address }}</span>
               <small>ID: {{ user.id }}</small>
@@ -95,14 +95,6 @@
 
             <div class="management-actions" role="cell">
               <div class="account-actions">
-                <label>
-                  <span class="sr-only">Motivo da alteração para {{ user.name }}</span>
-                  <input
-                    [ngModel]="accountReasons()[user.id] || ''"
-                    (ngModelChange)="setAccountReason(user.id, $event)"
-                    placeholder="Motivo da alteração"
-                  />
-                </label>
                 @if (user.status_account === 'BLOCKED') {
                   <button
                     type="button"
@@ -129,7 +121,7 @@
                   <label>
                     <span class="sr-only">Papel para {{ user.name }}</span>
                     <select
-                      [ngModel]="selectedRole(user.id)"
+                      [ngModel]="selectedRole(user)"
                       (ngModelChange)="selectRole(user.id, $event)"
                     >
                       @for (role of roleOptions; track role.value) {
@@ -141,17 +133,9 @@
                     type="button"
                     class="assign-button"
                     [disabled]="isBusy()"
-                    (click)="changeRole(user, 'assign')"
+                    (click)="changeRole(user)"
                   >
                     {{ pendingUserId() === user.id ? 'Processando...' : 'Atribuir' }}
-                  </button>
-                  <button
-                    type="button"
-                    class="remove-button"
-                    [disabled]="isBusy()"
-                    (click)="changeRole(user, 'remove')"
-                  >
-                    Remover
                   </button>
                 </div>
               }
@@ -182,7 +166,7 @@
         <ul>
           @for (operation of recentOperations(); track operation.at) {
             <li>
-              <strong>{{ operation.action }}</strong> {{ roleLabel(operation.role) }} para
+              Papel <strong>{{ roleLabel(operation.role) }}</strong> atribuído para
               {{ operation.userName }} às {{ operation.at | date: 'HH:mm' }}.
             </li>
           }

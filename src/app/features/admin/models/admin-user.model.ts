@@ -4,6 +4,7 @@ export interface AdminUser {
   name: string;
   email_address: string;
   status_account: AdminUserStatus;
+  role: ApiUserRole;
   created_at: string;
   updated_at: string;
 }

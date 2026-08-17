@@ -15,7 +15,6 @@ import { AdminUsersService } from '../../services/admin-users.service';
 interface RoleOperation {
   userName: string;
   role: ApiUserRole;
-  action: 'Atribuído' | 'Removido';
   at: Date;
 }
 
@@ -37,7 +36,6 @@ export class AdminUsersComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly selectedRoles = signal<Record<string, ApiUserRole>>({});
-  readonly accountReasons = signal<Record<string, string>>({});
   readonly recentOperations = signal<RoleOperation[]>([]);
   readonly roleOptions = USER_ROLE_OPTIONS;
   readonly filteredUsers = computed(() => {
@@ -47,7 +45,6 @@ export class AdminUsersComponent implements OnInit {
       .some((value) => value.toLocaleLowerCase().includes(term)));
   });
   readonly isBusy = computed(() => this.pendingUserId() !== null);
-  readonly currentRoles = computed(() => this.authService.getCurrentRoles());
   readonly canManageRoles = computed(() => this.authService.hasAnyRole(['ADM']));
 
   ngOnInit(): void { this.reload(); }
@@ -97,43 +94,36 @@ export class AdminUsersComponent implements OnInit {
     this.selectedRoles.update((roles) => ({ ...roles, [userId]: role }));
   }
 
-  selectedRole(userId: string): ApiUserRole { return this.selectedRoles()[userId] ?? 'USER'; }
-
-  setAccountReason(userId: string, reason: string): void {
-    this.accountReasons.update((reasons) => ({ ...reasons, [userId]: reason }));
+  selectedRole(user: AdminUser): ApiUserRole {
+    return this.selectedRoles()[user.id] ?? user.role;
   }
 
-  changeRole(user: AdminUser, action: 'assign' | 'remove'): void {
+  changeRole(user: AdminUser): void {
     if (this.isBusy()) return;
-    const role = this.selectedRole(user.id);
-    if (action === 'remove' && role === 'ADMIN' && user.id === this.currentUser()?.id) {
-      this.errorMessage.set('Para evitar perder o acesso ao painel, você não pode remover seu próprio papel de administrador aqui.');
-      return;
-    }
+    const role = this.selectedRole(user);
     this.pendingUserId.set(user.id);
     this.errorMessage.set(null);
     this.successMessage.set(null);
-    const request = action === 'assign' ? this.usersService.assignRole(user.id, role) : this.usersService.removeRole(user.id, role);
-    request.pipe(finalize(() => this.pendingUserId.set(null))).subscribe({
+    this.usersService.assignRole(user.id, role).pipe(finalize(() => this.pendingUserId.set(null))).subscribe({
       next: () => {
-        const actionLabel: RoleOperation['action'] = action === 'assign' ? 'Atribuído' : 'Removido';
-        this.successMessage.set(`${actionLabel} o papel ${this.roleLabel(role)} para ${user.name}.`);
+        this.users.update((users) => users.map((item) =>
+          item.id === user.id ? { ...item, role } : item,
+        ));
+        if (user.id === this.currentUser()?.id) {
+          this.currentUser.update((currentUser) => currentUser ? { ...currentUser, role } : currentUser);
+        }
+        this.successMessage.set(`Atribuído o papel ${this.roleLabel(role)} para ${user.name}.`);
         this.recentOperations.update((operations) => [
-          { userName: user.name, role, action: actionLabel, at: new Date() }, ...operations,
+          { userName: user.name, role, at: new Date() }, ...operations,
         ].slice(0, 8));
       },
-      error: () => this.errorMessage.set(`Não foi possível ${action === 'assign' ? 'atribuir' : 'remover'} este papel. Tente novamente.`),
+      error: () => this.errorMessage.set('Não foi possível atribuir este papel. Tente novamente.'),
     });
   }
 
   changeAccountStatus(user: AdminUser, action: 'block' | 'unlock'): void {
     if (this.isBusy()) return;
 
-    const reason = (this.accountReasons()[user.id] ?? '').trim();
-    if (!reason) {
-      this.errorMessage.set('Informe o motivo antes de bloquear ou desbloquear uma conta.');
-      return;
-    }
     if (action === 'block' && user.id === this.currentUser()?.id) {
       this.errorMessage.set('Você não pode bloquear a própria conta durante esta sessão.');
       return;
@@ -143,8 +133,8 @@ export class AdminUsersComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
     const request = action === 'block'
-      ? this.usersService.block(user.id, reason)
-      : this.usersService.unlock(user.id, reason);
+      ? this.usersService.block(user.id)
+      : this.usersService.unlock(user.id);
 
     request.pipe(finalize(() => this.pendingUserId.set(null))).subscribe({
       next: (response) => {
@@ -152,7 +142,6 @@ export class AdminUsersComponent implements OnInit {
         this.users.update((users) => users.map((item) =>
           item.id === user.id ? { ...item, status_account: status } : item,
         ));
-        this.accountReasons.update((reasons) => ({ ...reasons, [user.id]: '' }));
         this.successMessage.set(response.message);
       },
       error: () => this.errorMessage.set(
@@ -161,7 +150,9 @@ export class AdminUsersComponent implements OnInit {
     });
   }
 
-  roleLabel(role: ApiUserRole): string { return this.roleOptions.find((option) => option.value === role)?.label ?? role; }
+  roleLabel(role?: ApiUserRole): string {
+    return role ? this.roleOptions.find((option) => option.value === role)?.label ?? role : 'Não informado';
+  }
 
   statusLabel(status: AdminUserStatus): string {
     return { ACTIVE: 'Ativa', DEACTIVATED: 'Desativada', BLOCKED: 'Bloqueada' }[status];

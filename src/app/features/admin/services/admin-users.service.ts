@@ -34,21 +34,17 @@ export class AdminUsersService {
     return this.api.post<void>(`/admin/users/${encodeURIComponent(userId)}/roles/${role}`, null);
   }
 
-  removeRole(userId: string, role: ApiUserRole): Observable<void> {
-    return this.api.delete<void>(`/admin/users/${encodeURIComponent(userId)}/roles/${role}`);
-  }
-
-  block(userId: string, reason: string): Observable<{ message: string }> {
+  block(userId: string): Observable<{ message: string }> {
     return this.api.post<{ message: string }>(
       `/admin/users/${encodeURIComponent(userId)}/block`,
-      { reason },
+      null,
     );
   }
 
-  unlock(userId: string, reason: string): Observable<{ message: string }> {
+  unlock(userId: string): Observable<{ message: string }> {
     return this.api.post<{ message: string }>(
       `/admin/users/${encodeURIComponent(userId)}/unlock`,
-      { reason },
+      null,
     );
   }
 }
