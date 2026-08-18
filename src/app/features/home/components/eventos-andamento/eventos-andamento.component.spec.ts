@@ -15,6 +15,28 @@ describe('EventosAndamentoComponent', () => {
     .compileComponents();
 
     fixture = TestBed.createComponent(EventosAndamentoComponent);
+    fixture.componentRef.setInput('eventos', [
+      {
+        id: 1,
+        title: 'Evento 1',
+        slug: 'evento-1',
+        description: null,
+        format: 'IN_PERSON',
+        category: 'ACADEMIC_EDUCATIONAL',
+        start_date: '2026-09-01T09:00:00',
+        end_date: '2026-09-01T12:00:00',
+      },
+      {
+        id: 2,
+        title: 'Evento 2',
+        slug: 'evento-2',
+        description: null,
+        format: 'ONLINE',
+        category: 'OTHER',
+        start_date: '2026-09-02T09:00:00',
+        end_date: '2026-09-02T12:00:00',
+      },
+    ]);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
@@ -24,7 +46,7 @@ describe('EventosAndamentoComponent', () => {
   });
 
   it('avança para o próximo evento e volta ao primeiro no fim da lista', () => {
-    component.goTo(component.eventos.length - 1);
+    component.goTo(component.eventos().length - 1);
 
     component.next();
 
@@ -34,6 +56,6 @@ describe('EventosAndamentoComponent', () => {
   it('volta para o último evento ao retroceder a partir do primeiro', () => {
     component.prev();
 
-    expect(component.currentIndex()).toBe(component.eventos.length - 1);
+    expect(component.currentIndex()).toBe(component.eventos().length - 1);
   });
 });

@@ -13,7 +13,18 @@ describe('EventoDestaqueComponent', () => {
     .compileComponents();
 
     fixture = TestBed.createComponent(EventoDestaqueComponent);
+    fixture.componentRef.setInput('evento', {
+      id: 1,
+      title: 'Semana da Computação',
+      slug: 'semana-da-computacao',
+      description: 'Evento acadêmico',
+      format: 'IN_PERSON',
+      category: 'ACADEMIC_EDUCATIONAL',
+      start_date: '2026-09-01T09:00:00',
+      end_date: '2026-09-01T18:00:00',
+    });
     component = fixture.componentInstance;
+    fixture.detectChanges();
     await fixture.whenStable();
   });
 

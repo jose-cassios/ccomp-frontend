@@ -1,61 +1,84 @@
-<section class="calendario-section">
-  <div class="header-flex">
-    <div class="titulo-area">
-      <h2 class="section-title">Próximos Eventos</h2>
-      <p class="section-subtitle">Explore as próximas oportunidades de aprendizado e networking agendadas para este semestre.</p>
+<section class="events-list" aria-labelledby="events-list-title">
+  <div class="section-heading">
+    <div>
+      <span>Agenda acadêmica</span>
+      <h2 id="events-list-title">Todos os eventos</h2>
+      <p>Explore eventos, palestras e atividades publicados na plataforma.</p>
     </div>
-    
-    <div class="filtros-container">
-      @for (filtro of filtros; track filtro) {
-        <button 
-          [class.active]="filtroAtivo === filtro" 
-          (click)="filtroAtivo = filtro">
-          {{ filtro }}
-        </button>
-      }
+    <div class="filters">
+      <label>
+        <span>Período</span>
+        <select
+          [value]="selectedTiming() || ''"
+          (change)="timingChanged.emit($any($event.target).value || null)"
+        >
+          <option value="">Todos</option>
+          @for (timing of timings; track timing.value) {
+            <option [value]="timing.value">{{ timing.label }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        <span>Formato</span>
+        <select
+          [value]="selectedFormat() || ''"
+          (change)="formatChanged.emit($any($event.target).value || null)"
+        >
+          <option value="">Todos</option>
+          @for (format of formats; track format.value) {
+            <option [value]="format.value">{{ format.label }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        <span>Categoria</span>
+        <select
+          [value]="selectedCategory() || ''"
+          (change)="categoryChanged.emit($any($event.target).value || null)"
+        >
+          <option value="">Todas</option>
+          @for (category of categories; track category.value) {
+            <option [value]="category.value">{{ category.label }}</option>
+          }
+        </select>
+      </label>
     </div>
   </div>
 
-  <div class="eventos-grid">
-    @for (item of eventos; track item.id) {
-      <div class="evento-card">
-
-        <div class="card-media">
-          <span class="status-tag" [ngClass]="item.statusClass">{{ item.status }}</span>
-          <img [src]="item.imagemUrl" [alt]="item.titulo">
-        </div>
-
-        <div class="card-content">
-          <h3 class="evento-titulo">{{ item.titulo }}</h3>
-          <p class="evento-desc">{{ item.descricao }}</p>
-
-          <div class="evento-footer">
-            <div class="meta-info">
-              <span><mat-icon>calendar_today</mat-icon> {{ item.data }}</span>
-              
-              @if (item.inscritos) {
-                <span><mat-icon>group</mat-icon> {{ item.inscritos }} inscritos</span>
-              } @else if (item.local) {
-                <span><mat-icon>place</mat-icon> {{ item.local }}</span>
-              } @else {
-                <span><mat-icon>priority_high</mat-icon> {{ item.vagasRestantes }}/{{ item.vagasTotal }} vagas</span>
-              }
-            </div>
-
-            <button class="btn-detalhes" (click)="verDetalhes(item.id)">
-              Ver Detalhes <mat-icon>open_in_new</mat-icon>
-            </button>
+  <div class="events-grid">
+    @for (event of eventos(); track event.id) {
+      <article class="event-card">
+        <div class="event-card__accent" aria-hidden="true"></div>
+        <div class="event-card__body">
+          <div class="tags">
+            <span>{{ categoryLabel(event.category) }}</span>
+            <span>{{ formatLabel(event.format) }}</span>
           </div>
+          <h3>{{ event.title }}</h3>
+          <p>{{ event.description || 'Acesse os detalhes para conferir a programação.' }}</p>
+          <dl>
+            <div>
+              <dt>Início</dt>
+              <dd>{{ event.start_date | date: 'dd/MM/yyyy, HH:mm' }}</dd>
+            </div>
+            <div>
+              <dt>Término</dt>
+              <dd>{{ event.end_date | date: 'dd/MM/yyyy, HH:mm' }}</dd>
+            </div>
+          </dl>
+          <button type="button" (click)="selected.emit(event.id)">Ver detalhes</button>
         </div>
-        
-      </div>
+      </article>
     }
   </div>
 
-  <div class="footer-action">
-    <button class="btn-link" (click)="irParaCalendario()">
-      Ver Calendário Completo <mat-icon>arrow_forward</mat-icon>
-    </button>
-  </div>
+  @if (!eventos().length) {
+    <p class="no-results">Nenhum evento encontrado com estes filtros.</p>
+  }
 
+  @if (hasMore()) {
+    <button class="load-more" type="button" [disabled]="loadingMore()" (click)="loadMore.emit()">
+      {{ loadingMore() ? 'Carregando...' : 'Carregar mais eventos' }}
+    </button>
+  }
 </section>

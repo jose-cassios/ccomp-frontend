@@ -5,7 +5,7 @@
 >
   <div class="section-header">
     <span class="linha-verde"></span>
-    <h3>EVENTOS EM ANDAMENTO</h3>
+    <a routerLink="/eventos"><h3>EVENTOS EM ANDAMENTO</h3></a>
   </div>
 
   <div class="carousel-viewport">
@@ -19,7 +19,7 @@
     </button>
 
     <div class="carousel-stage">
-      @for (evento of eventos; track evento.id; let i = $index) {
+      @for (evento of eventos(); track evento.id; let i = $index) {
         <!-- Todos os cards ficam no DOM: a posição no deck é só transform/opacity, permite animar a troca -->
         <div
           class="promo-banner-card"
@@ -33,37 +33,46 @@
         >
           <div class="promo-content">
             <div class="badge-group">
-              @if (evento.inscricoesAbertas) {
-                <span class="badge status-open">INSC. ABERTAS</span>
-              }
-              <span class="badge">{{ evento.modalidade }}</span>
+              <span class="badge status-open">DISPONÍVEL</span>
+              <span class="badge">{{ formatLabel(evento.format) }}</span>
             </div>
 
-            <h2 class="promo-title">{{ evento.titulo }}</h2>
-            <p class="promo-description">{{ evento.descricao }}</p>
+            <h2 class="promo-title">{{ evento.title }}</h2>
+            <p class="promo-description">{{ evento.description || 'Confira a programação completa deste evento.' }}</p>
 
             <div class="promo-details-grid">
-              @for (item of evento.detalhes; track item.label) {
-                <div class="detail-item">
-                  <span class="label">{{ item.label }}</span>
-                  <span class="value">{{ item.value }}</span>
-                </div>
-              }
+              <div class="detail-item">
+                <span class="label">INÍCIO</span>
+                <span class="value">{{ evento.start_date | date: 'dd/MM, HH:mm' }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">TÉRMINO</span>
+                <span class="value">{{ evento.end_date | date: 'dd/MM, HH:mm' }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">CATEGORIA</span>
+                <span class="value">{{ categoryLabel(evento.category) }}</span>
+              </div>
             </div>
           </div>
 
           <div class="promo-image">
-            <img [src]="evento.imagem" [alt]="evento.titulo" />
+            <div class="event-visual" aria-hidden="true">
+              <span>{{ evento.start_date | date: 'dd' }}</span>
+              <small>{{ evento.start_date | date: 'MMM' }}</small>
+            </div>
 
             <a
               class="btn-cta-light btn-ver-evento"
-              [routerLink]="evento.link"
-              [attr.aria-label]="'Ver evento: ' + evento.titulo"
+              [routerLink]="['/eventos', evento.id]"
+              [attr.aria-label]="'Ver evento: ' + evento.title"
             >
               Ver evento <span aria-hidden="true">→</span>
             </a>
           </div>
         </div>
+      } @empty {
+        <p class="empty-events">Nenhum evento disponível no momento.</p>
       }
     </div>
 
@@ -78,7 +87,7 @@
   </div>
 
   <div class="carousel-indicators">
-    @for (evento of eventos; track evento.id; let i = $index) {
+    @for (evento of eventos(); track evento.id; let i = $index) {
       <button
         type="button"
         class="dot"

@@ -1,0 +1,52 @@
+@if (open()) {
+  <div class="backdrop" role="presentation" (click)="closed.emit()">
+    <section
+      class="editor"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="hero-highlight-editor-title"
+      (click)="$event.stopPropagation()"
+    >
+      <header>
+        <div>
+          <span>Destaques globais</span>
+          <h2 id="hero-highlight-editor-title">Atualizar destaque</h2>
+          <p>Escolha até oito notícias, eventos ou clubes públicos para exibir na hero.</p>
+        </div>
+        <button type="button" aria-label="Fechar" (click)="closed.emit()">×</button>
+      </header>
+
+      @if (loading()) {
+        <p class="notice" role="status">Carregando entidades disponíveis...</p>
+      } @else if (errorMessage()) {
+        <p class="notice notice--error" role="alert">{{ errorMessage() }}</p>
+      } @else if (candidates().length) {
+        <p class="selection-count">{{ selectedCount() }}/8 selecionados</p>
+        <div class="candidate-list">
+          @for (candidate of candidates(); track candidate.source_type + ':' + candidate.source_id) {
+            <label [class.selected]="isSelected(candidate)">
+              <input
+                type="checkbox"
+                [checked]="isSelected(candidate)"
+                [disabled]="!isSelected(candidate) && selectedCount() >= 8"
+                (change)="toggle(candidate)"
+              />
+              <span class="candidate-type">{{ candidate.label }}</span>
+              <strong>{{ candidate.title }}</strong>
+              <small>{{ candidate.summary || 'Sem resumo disponível.' }}</small>
+            </label>
+          }
+        </div>
+      } @else {
+        <p class="notice">Ainda não há notícias, eventos ou clubes públicos disponíveis para destacar.</p>
+      }
+
+      <footer>
+        <button class="secondary" type="button" [disabled]="saving()" (click)="closed.emit()">Cancelar</button>
+        <button class="primary" type="button" [disabled]="loading() || saving()" (click)="save()">
+          {{ saving() ? 'Salvando...' : 'Salvar destaques' }}
+        </button>
+      </footer>
+    </section>
+  </div>
+}

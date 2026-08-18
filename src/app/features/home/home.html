@@ -1,14 +1,20 @@
 <div class="page-wrapper">
   <section class="full-width-section">
-    <app-banner></app-banner>
+    <app-banner
+      [highlights]="highlights()"
+      [eventsCount]="events().length"
+      [newsCount]="newsItems().length"
+      [canManageHighlights]="canManageHighlights()"
+      (manageHighlights)="openHighlightEditor()"
+    ></app-banner>
   </section>
 
   <section class="section-container">
-    <app-agenda-mes></app-agenda-mes>
+    <app-agenda-mes [events]="events()"></app-agenda-mes>
   </section>
 
   <section class="section-container">
-    <app-eventos-andamento></app-eventos-andamento>
+    <app-eventos-andamento [eventos]="ongoingEvents()"></app-eventos-andamento>
   </section>
 
   <section class="full-width-section">
@@ -18,4 +24,15 @@
   <section class="section-container">
     <app-destaques-semana [newsItems]="newsItems()"></app-destaques-semana>
   </section>
+
+  <app-hero-highlight-editor
+    [open]="highlightEditorOpen()"
+    [loading]="highlightCandidatesLoading()"
+    [saving]="highlightSaving()"
+    [errorMessage]="highlightError()"
+    [candidates]="highlightCandidates()"
+    [selectedItems]="highlights()"
+    (closed)="closeHighlightEditor()"
+    (saved)="saveHighlights($event)"
+  />
 </div>

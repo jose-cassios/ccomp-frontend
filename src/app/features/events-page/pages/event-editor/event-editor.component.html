@@ -1,0 +1,188 @@
+<main class="editor-page">
+  <header class="editor-header">
+    <div>
+      <a routerLink="/eventos">← Voltar para eventos</a>
+      <h1>{{ editingExisting() ? 'Editar evento' : 'Novo evento' }}</h1>
+      <p>Cadastre os dados principais, a programação e os moderadores que poderão colaborar.</p>
+    </div>
+    <div class="header-actions">
+      @if (event() && isOwner()) {
+        <button class="button button--danger" type="button" [disabled]="isBusy()" (click)="deleteEvent()">
+          {{ operation() === 'deleting' ? 'Excluindo...' : 'Excluir evento' }}
+        </button>
+      }
+      <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="save()">
+        {{ operation() === 'saving' ? 'Salvando...' : editingExisting() ? 'Salvar alterações' : 'Criar evento' }}
+      </button>
+    </div>
+  </header>
+
+  @if (operation() === 'loading') {
+    <p class="notice" role="status">Carregando evento...</p>
+  }
+  @if (errorMessage()) {
+    <p class="notice notice--error" role="alert">{{ errorMessage() }}</p>
+  }
+  @if (successMessage()) {
+    <p class="notice notice--success" role="status">{{ successMessage() }}</p>
+  }
+
+  @if (operation() !== 'loading' && (!editingExisting() || event())) {
+    <form class="card" [formGroup]="form" (ngSubmit)="save()">
+      <div class="section-heading">
+        <div>
+          <span>Informações principais</span>
+          <h2>Dados do evento</h2>
+        </div>
+        @if (hasUnsavedChanges()) {
+          <strong class="unsaved">Alterações não salvas</strong>
+        }
+      </div>
+
+      <div class="form-grid">
+        <label class="field field--wide">
+          <span>Título *</span>
+          <input type="text" formControlName="title" maxlength="255" />
+          @if (form.controls.title.touched && form.controls.title.invalid) {
+            <strong>Informe um título entre 4 e 255 caracteres.</strong>
+          }
+        </label>
+
+        <label class="field field--wide">
+          <span>Descrição</span>
+          <textarea formControlName="description" rows="5" maxlength="1000"></textarea>
+        </label>
+
+        <label class="field">
+          <span>Categoria *</span>
+          <select formControlName="category">
+            @for (category of categories; track category.value) {
+              <option [value]="category.value">{{ category.label }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Formato *</span>
+          <select formControlName="format">
+            @for (format of formats; track format.value) {
+              <option [value]="format.value">{{ format.label }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Início *</span>
+          <input type="datetime-local" formControlName="start_date" />
+        </label>
+
+        <label class="field">
+          <span>Término *</span>
+          <input type="datetime-local" formControlName="end_date" />
+        </label>
+
+        @if (isInPerson()) {
+          <label class="field field--wide">
+            <span>Endereço</span>
+            <input type="text" formControlName="address" placeholder="Campus, prédio e sala" />
+          </label>
+        }
+
+        @if (isOnline()) {
+          <label class="field field--wide">
+            <span>Link online</span>
+            <input type="url" formControlName="online_url" placeholder="https://..." />
+            @if (form.controls.online_url.touched && form.controls.online_url.invalid) {
+              <strong>Informe uma URL iniciada por http:// ou https://.</strong>
+            }
+          </label>
+        }
+      </div>
+
+      <div class="form-footer">
+        <button class="button button--primary" type="submit" [disabled]="isBusy()">
+          {{ editingExisting() ? 'Salvar alterações' : 'Criar evento' }}
+        </button>
+      </div>
+    </form>
+
+    @if (event()) {
+      <section class="card" aria-labelledby="activities-editor-title">
+        <div class="section-heading">
+          <div>
+            <span>Programação</span>
+            <h2 id="activities-editor-title">Atividades</h2>
+          </div>
+        </div>
+
+        <form class="inline-form" [formGroup]="activityForm" (ngSubmit)="saveActivity()">
+          <label class="field">
+            <span>Título *</span>
+            <input type="text" formControlName="title" maxlength="255" />
+          </label>
+          <label class="field field--grow">
+            <span>Descrição</span>
+            <input type="text" formControlName="description" maxlength="2000" />
+          </label>
+          <button class="button button--primary" type="submit" [disabled]="isBusy()">
+            {{ editingActivityId() ? 'Atualizar' : 'Adicionar' }}
+          </button>
+          @if (editingActivityId()) {
+            <button class="button button--secondary" type="button" (click)="cancelActivityEdit()">Cancelar</button>
+          }
+        </form>
+
+        <div class="item-list">
+          @for (activity of activities(); track activity.id) {
+            <article>
+              <div>
+                <h3>{{ activity.title }}</h3>
+                <p>{{ activity.description || 'Sem descrição.' }}</p>
+              </div>
+              <div>
+                <button type="button" (click)="editActivity(activity)">Editar</button>
+                <button class="danger-link" type="button" (click)="deleteActivity(activity)">Excluir</button>
+              </div>
+            </article>
+          } @empty {
+            <p>Nenhuma atividade cadastrada.</p>
+          }
+        </div>
+      </section>
+    }
+
+    @if (event() && isOwner()) {
+      <section class="card" aria-labelledby="editors-title">
+        <div class="section-heading">
+          <div>
+            <span>Colaboração</span>
+            <h2 id="editors-title">Editores do evento</h2>
+          </div>
+        </div>
+        <p class="section-copy">Informe o ID de outro moderador. Apenas o proprietário pode conceder ou remover esse acesso.</p>
+
+        <form class="inline-form" [formGroup]="editorForm" (ngSubmit)="addEditor()">
+          <label class="field field--grow">
+            <span>ID do moderador *</span>
+            <input type="text" formControlName="userId" placeholder="00000000-0000-0000-0000-000000000000" />
+            @if (editorForm.controls.userId.touched && editorForm.controls.userId.invalid) {
+              <strong>Informe um UUID válido.</strong>
+            }
+          </label>
+          <button class="button button--primary" type="submit" [disabled]="isBusy()">Adicionar editor</button>
+        </form>
+
+        <div class="item-list">
+          @for (editorId of editors(); track editorId) {
+            <article>
+              <code>{{ editorId }}</code>
+              <button class="danger-link" type="button" (click)="removeEditor(editorId)">Remover</button>
+            </article>
+          } @empty {
+            <p>Somente você pode editar este evento no momento.</p>
+          }
+        </div>
+      </section>
+    }
+  }
+</main>

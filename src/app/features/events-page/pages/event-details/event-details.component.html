@@ -1,0 +1,86 @@
+<main class="details-page">
+  <a class="back-link" routerLink="/eventos">← Voltar para eventos</a>
+
+  @if (loading()) {
+    <p class="notice" role="status">Carregando evento...</p>
+  } @else if (errorMessage() && !event()) {
+    <p class="notice notice--error" role="alert">{{ errorMessage() }}</p>
+  } @else if (event(); as currentEvent) {
+    <article class="event-hero">
+      <div>
+        <div class="tags">
+          <span>{{ categoryLabel(currentEvent.category) }}</span>
+          <span>{{ formatLabel(currentEvent.format) }}</span>
+        </div>
+        <h1>{{ currentEvent.title }}</h1>
+        <p>{{ currentEvent.description || 'A descrição deste evento ainda não foi informada.' }}</p>
+      </div>
+
+      <aside>
+        <dl>
+          <div>
+            <dt>Início</dt>
+            <dd>{{ currentEvent.start_date | date: 'dd/MM/yyyy, HH:mm' }}</dd>
+          </div>
+          <div>
+            <dt>Término</dt>
+            <dd>{{ currentEvent.end_date | date: 'dd/MM/yyyy, HH:mm' }}</dd>
+          </div>
+          @if (currentEvent.address) {
+            <div>
+              <dt>Local</dt>
+              <dd>{{ currentEvent.address }}</dd>
+            </div>
+          }
+          @if (currentEvent.online_url) {
+            <div>
+              <dt>Acesso online</dt>
+              <dd><a [href]="currentEvent.online_url" target="_blank" rel="noopener">Abrir transmissão</a></dd>
+            </div>
+          }
+        </dl>
+        <button type="button" [disabled]="subscriptionBusy()" (click)="toggleSubscription()">
+          @if (subscriptionBusy()) {
+            Processando...
+          } @else if (subscribed()) {
+            Cancelar inscrição
+          } @else {
+            Inscrever-se
+          }
+        </button>
+        @if (canEdit()) {
+          <a class="edit-link" [routerLink]="['/eventos', currentEvent.id, 'editar']">Editar evento</a>
+        }
+      </aside>
+    </article>
+
+    @if (errorMessage()) {
+      <p class="notice notice--error" role="alert">{{ errorMessage() }}</p>
+    }
+    @if (successMessage()) {
+      <p class="notice notice--success" role="status">{{ successMessage() }}</p>
+    }
+
+    <section class="activities" aria-labelledby="activities-title">
+      <div>
+        <span>Programação</span>
+        <h2 id="activities-title">Atividades</h2>
+      </div>
+      @if (currentEvent.activities.length) {
+        <div class="activity-list">
+          @for (activity of currentEvent.activities; track activity.id) {
+            <article>
+              <span>{{ $index + 1 }}</span>
+              <div>
+                <h3>{{ activity.title }}</h3>
+                <p>{{ activity.description || 'Sem descrição adicional.' }}</p>
+              </div>
+            </article>
+          }
+        </div>
+      } @else {
+        <p class="empty-activities">A programação detalhada ainda não foi cadastrada.</p>
+      }
+    </section>
+  }
+</main>
