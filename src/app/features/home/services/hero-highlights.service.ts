@@ -5,6 +5,7 @@ import {
   GlobalHighlight,
   HighlightCandidate,
   HighlightSelection,
+  HighlightSourceType,
 } from '../models/global-highlight.model';
 
 @Injectable({ providedIn: 'root' })
@@ -15,8 +16,8 @@ export class HeroHighlightsService {
     return this.api.get<GlobalHighlight[]>('/highlights');
   }
 
-  getCandidates(): Observable<HighlightCandidate[]> {
-    return this.api.get<HighlightCandidate[]>('/highlights/candidates');
+  getCandidates(sourceType: HighlightSourceType): Observable<HighlightCandidate[]> {
+    return this.api.get<HighlightCandidate[]>(`/highlights/candidates/${sourceType}`);
   }
 
   update(selections: HighlightSelection[]): Observable<GlobalHighlight[]> {

@@ -27,11 +27,13 @@
 
   <app-hero-highlight-editor
     [open]="highlightEditorOpen()"
-    [loading]="highlightCandidatesLoading()"
+    [loadingCategories]="highlightCandidatesLoading()"
     [saving]="highlightSaving()"
-    [errorMessage]="highlightError()"
+    [categoryErrors]="highlightCandidateErrors()"
+    [saveError]="highlightSaveError()"
     [candidates]="highlightCandidates()"
     [selectedItems]="highlights()"
+    (categoryRequested)="loadHighlightCandidates($event)"
     (closed)="closeHighlightEditor()"
     (saved)="saveHighlights($event)"
   />

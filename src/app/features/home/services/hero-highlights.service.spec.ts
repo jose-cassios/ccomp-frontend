@@ -17,11 +17,11 @@ describe('HeroHighlightsService', () => {
 
   it('should use the global highlight endpoints', () => {
     service.getAll().subscribe();
-    service.getCandidates().subscribe();
+    service.getCandidates('NEWS').subscribe();
     service.update([{ source_type: 'EVENT', source_id: 4 }]).subscribe();
 
     expect(api.get).toHaveBeenCalledWith('/highlights');
-    expect(api.get).toHaveBeenCalledWith('/highlights/candidates');
+    expect(api.get).toHaveBeenCalledWith('/highlights/candidates/NEWS');
     expect(api.put).toHaveBeenCalledWith('/highlights', [{ source_type: 'EVENT', source_id: 4 }]);
   });
 });

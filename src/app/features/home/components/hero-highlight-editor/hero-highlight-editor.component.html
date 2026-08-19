@@ -16,14 +16,34 @@
         <button type="button" aria-label="Fechar" (click)="closed.emit()">×</button>
       </header>
 
+      <nav class="category-tabs" aria-label="Categorias de destaque">
+        @for (category of categories; track category.type) {
+          <button
+            type="button"
+            role="tab"
+            [class.active]="activeCategory() === category.type"
+            [attr.aria-selected]="activeCategory() === category.type"
+            (click)="selectCategory(category.type)"
+          >
+            {{ category.label }}
+            @if (loadingCategories()[category.type]) {
+              <span class="tab-loading" aria-hidden="true"></span>
+            }
+          </button>
+        }
+      </nav>
+
       @if (loading()) {
-        <p class="notice" role="status">Carregando entidades disponíveis...</p>
+        <p class="notice" role="status">Carregando {{ activeCategoryLabel().toLowerCase() }}...</p>
       } @else if (errorMessage()) {
-        <p class="notice notice--error" role="alert">{{ errorMessage() }}</p>
-      } @else if (candidates().length) {
+        <div class="notice notice--error" role="alert">
+          <span>{{ errorMessage() }}</span>
+          <button type="button" (click)="categoryRequested.emit(activeCategory())">Tentar novamente</button>
+        </div>
+      } @else if (visibleCandidates().length) {
         <p class="selection-count">{{ selectedCount() }}/8 selecionados</p>
         <div class="candidate-list">
-          @for (candidate of candidates(); track candidate.source_type + ':' + candidate.source_id) {
+          @for (candidate of visibleCandidates(); track candidate.source_type + ':' + candidate.source_id) {
             <label [class.selected]="isSelected(candidate)">
               <input
                 type="checkbox"
@@ -31,19 +51,25 @@
                 [disabled]="!isSelected(candidate) && selectedCount() >= 8"
                 (change)="toggle(candidate)"
               />
-              <span class="candidate-type">{{ candidate.label }}</span>
+              <span class="candidate-type">
+                {{ isSelected(candidate) ? 'Em destaque na home' : candidate.label }}
+              </span>
               <strong>{{ candidate.title }}</strong>
               <small>{{ candidate.summary || 'Sem resumo disponível.' }}</small>
             </label>
           }
         </div>
       } @else {
-        <p class="notice">Ainda não há notícias, eventos ou clubes públicos disponíveis para destacar.</p>
+        <p class="notice">{{ emptyMessage() }}</p>
+      }
+
+      @if (saveError()) {
+        <p class="notice notice--error" role="alert">{{ saveError() }}</p>
       }
 
       <footer>
         <button class="secondary" type="button" [disabled]="saving()" (click)="closed.emit()">Cancelar</button>
-        <button class="primary" type="button" [disabled]="loading() || saving()" (click)="save()">
+        <button class="primary" type="button" [disabled]="saving()" (click)="save()">
           {{ saving() ? 'Salvando...' : 'Salvar destaques' }}
         </button>
       </footer>
