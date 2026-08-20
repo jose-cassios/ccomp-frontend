@@ -77,7 +77,7 @@ export class EventDetailsComponent implements OnInit {
     request.pipe(finalize(() => this.subscriptionBusy.set(false))).subscribe({
       next: (response) => {
         this.subscribed.update((value) => !value);
-        this.successMessage.set(response.message);
+        this.successMessage.set(response.response ?? response.message ?? 'Inscrição atualizada com sucesso.');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível alterar sua inscrição.'));
@@ -87,7 +87,7 @@ export class EventDetailsComponent implements OnInit {
 
   private getErrorMessage(error: unknown, fallback = 'Não foi possível carregar este evento.'): string {
     if (error instanceof HttpErrorResponse) {
-      const message = error.error?.message;
+      const message = error.error?.message ?? error.error?.response;
       if (typeof message === 'string' && message.trim()) return message;
       if (error.status === 403) return 'Você não tem permissão para visualizar este evento.';
       if (error.status === 404) return 'O evento solicitado não foi encontrado.';

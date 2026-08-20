@@ -28,3 +28,18 @@ export interface UserNewsResponse {
   author: NewsItemType[];
   editor: NewsItemType[];
 }
+
+export interface NewsEditorUser {
+  id: string;
+  name: string;
+  email_address: string;
+  status_account: 'ACTIVE' | 'DEACTIVATED' | 'BLOCKED';
+  role: 'ADMIN' | 'STAFF' | 'USER';
+  active: boolean;
+  admin: boolean;
+  team_member: boolean;
+}
+
+export interface MessageResponse {
+  response: string;
+}

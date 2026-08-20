@@ -87,7 +87,7 @@ export class NewsPageComponent implements OnInit {
     ).subscribe({
       next: (response) => {
         this.drafts.update((drafts) => drafts.filter((item) => item.id !== draft.id));
-        this.draftsSuccess.set(response.message || 'Rascunho excluído com sucesso.');
+        this.draftsSuccess.set(response.response || 'Rascunho excluído com sucesso.');
       },
       error: () => {
         this.draftsError.set('Não foi possível excluir este rascunho.');

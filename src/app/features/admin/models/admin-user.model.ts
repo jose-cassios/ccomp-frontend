@@ -21,6 +21,10 @@ export interface AdminUsersPage {
   previous_cursor: string | null;
 }
 
+export interface AdminMessageResponse {
+  response: string;
+}
+
 /** Exact enum accepted by the user-role endpoints. */
 export type ApiUserRole = 'ADMIN' | 'STAFF' | 'USER';
 

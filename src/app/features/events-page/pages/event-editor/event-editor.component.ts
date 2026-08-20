@@ -208,7 +208,7 @@ export class EventEditorComponent implements OnInit {
       next: (response) => {
         this.editors.update((editors) => editors.includes(email) ? editors : [...editors, email]);
         this.editorForm.reset({ email: '' });
-        this.successMessage.set(response.message);
+        this.successMessage.set(response.response ?? response.message ?? 'Editor adicionado.');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível adicionar o editor.'));
@@ -226,7 +226,7 @@ export class EventEditorComponent implements OnInit {
     ).subscribe({
       next: (response) => {
         this.editors.update((editors) => editors.filter((editor) => editor !== email));
-        this.successMessage.set(response.message);
+        this.successMessage.set(response.response ?? response.message ?? 'Editor removido.');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível remover o editor.'));
@@ -300,7 +300,7 @@ export class EventEditorComponent implements OnInit {
 
   private getErrorMessage(error: unknown, fallback: string): string {
     if (error instanceof HttpErrorResponse) {
-      const message = error.error?.message;
+      const message = error.error?.message ?? error.error?.response;
       if (typeof message === 'string' && message.trim()) return message;
       if (error.status === 403) return 'Você não tem permissão para realizar esta operação.';
       if (error.status === 404) return 'O recurso solicitado não foi encontrado.';

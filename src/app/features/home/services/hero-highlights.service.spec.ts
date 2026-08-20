@@ -43,4 +43,30 @@ describe('HeroHighlightsService', () => {
 
     expect(api.get).toHaveBeenCalledWith('/highlights');
   });
+
+  it('should map the current club DTO fields', () => {
+    api.get.mockReturnValue(of({
+      news: [],
+      events: [],
+      clubs: [{
+        id: 7,
+        name: 'Clube de Robótica',
+        summary: 'Projetos de automação.',
+        cover_image_url: 'https://example.com/robotica.jpg',
+        content: null,
+        created_at: '2026-08-20T10:00:00',
+        published_at: '2026-08-20T11:00:00',
+        updated_at: '2026-08-20T11:00:00',
+      }],
+    }));
+
+    service.getAll().subscribe((highlights) => {
+      expect(highlights[0]).toEqual(expect.objectContaining({
+        source_type: 'CLUB',
+        title: 'Clube de Robótica',
+        summary: 'Projetos de automação.',
+        image_url: 'https://example.com/robotica.jpg',
+      }));
+    });
+  });
 });

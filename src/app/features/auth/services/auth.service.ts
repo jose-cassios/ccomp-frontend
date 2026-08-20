@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { Observable, catchError, finalize, map, of, switchMap, tap, throwError } from 'rxjs';
 import { ForgotPasswordRequest, LoginRequest, RegisterRequest, ResetPasswordRequest } from '../models/auth-requests.model';
-import { AuthResponse, MessageResponse } from '../models/auth-response.model';
+import { AuthResponse } from '../models/auth-response.model';
 import { User } from '../models/user.model';
 import { ApiService } from '../../../core/api/api.service';
 import { AUTH_CONFIG } from '../config/auth.config';
@@ -54,8 +54,8 @@ export class AuthService {
   }
 
   // /api/auth/sign-up
-  register(data: RegisterRequest): Observable<MessageResponse> {
-    return this.api.post<MessageResponse>('/auth/sign-up', {
+  register(data: RegisterRequest): Observable<string> {
+    return this.api.post<string>('/auth/sign-up', {
       name: data.name,
       email: data.email,
       password: data.password,

@@ -5,12 +5,13 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, switchMap, tap } from 'rxjs';
+import { StorageService } from '../../../../core/storage/storage.service';
 import { MarkdownEditorComponent } from '../../components/markdown-editor/markdown-editor.component';
 import {
   NewsPreviewComponent,
   NewsPreviewData,
 } from '../../components/news-preview/news-preview.component';
-import { NewsItemType, NewsUpdatePayload } from '../../interface/news.interface';
+import { NewsEditorUser, NewsItemType, NewsUpdatePayload } from '../../interface/news.interface';
 import { NewsService } from '../../services/news.service';
 
 type EditorOperation = 'idle' | 'loading' | 'creating' | 'saving' | 'publishing' | 'deleting';
@@ -45,6 +46,7 @@ export class NewsEditorComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly newsService = inject(NewsService);
+  private readonly storageService = inject(StorageService);
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.minLength(5)]],
     summary: ['', [Validators.required, Validators.minLength(10)]],
@@ -61,6 +63,12 @@ export class NewsEditorComponent implements OnInit {
   readonly hasUnsavedChanges = signal(false);
   readonly formValue = signal<EditorFormValue>(EMPTY_FORM);
   readonly formIsValid = signal(false);
+  readonly editors = signal<NewsEditorUser[]>([]);
+  readonly editorsLoading = signal(false);
+  readonly uploadingCover = signal(false);
+  readonly editorForm = this.fb.nonNullable.group({
+    email: ['', [Validators.required, Validators.email]],
+  });
 
   readonly isBusy = computed(() => this.operation() !== 'idle');
   readonly isPublished = computed(() => Boolean(this.news()?.published_at));
@@ -207,6 +215,79 @@ export class NewsEditorComponent implements OnInit {
     this.form.controls.content.markAsTouched();
   }
 
+  uploadCover(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || this.uploadingCover() || this.isPublished()) return;
+    if (!file.type.startsWith('image/')) {
+      this.errorMessage.set('Selecione um arquivo de imagem válido.');
+      input.value = '';
+      return;
+    }
+
+    this.uploadingCover.set(true);
+    this.errorMessage.set(null);
+    this.storageService.upload(file).pipe(
+      finalize(() => {
+        this.uploadingCover.set(false);
+        input.value = '';
+      }),
+    ).subscribe({
+      next: (response) => {
+        this.form.controls.cover_image_url.setValue(response.url);
+        this.form.controls.cover_image_url.markAsTouched();
+        this.successMessage.set('Imagem enviada. Salve a notícia para aplicar a nova capa.');
+      },
+      error: (error: unknown) => {
+        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível enviar a imagem.'));
+      },
+    });
+  }
+
+  addEditor(): void {
+    const currentNews = this.news();
+    if (!currentNews || this.editorForm.invalid || this.editorsLoading()) {
+      this.editorForm.markAllAsTouched();
+      return;
+    }
+
+    const email = this.editorForm.controls.email.value.trim();
+    this.editorsLoading.set(true);
+    this.errorMessage.set(null);
+    this.newsService.addEditor(currentNews.id, email).pipe(
+      switchMap(() => this.newsService.getEditors(currentNews.id)),
+      finalize(() => this.editorsLoading.set(false)),
+    ).subscribe({
+      next: (editors) => {
+        this.editors.set(editors);
+        this.editorForm.reset();
+        this.successMessage.set('Editor adicionado à notícia.');
+      },
+      error: (error: unknown) => {
+        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível adicionar o editor.'));
+      },
+    });
+  }
+
+  removeEditor(editor: NewsEditorUser): void {
+    const currentNews = this.news();
+    if (!currentNews || this.editorsLoading()) return;
+
+    this.editorsLoading.set(true);
+    this.errorMessage.set(null);
+    this.newsService.removeEditor(currentNews.id, editor.email_address).pipe(
+      finalize(() => this.editorsLoading.set(false)),
+    ).subscribe({
+      next: () => {
+        this.editors.update((editors) => editors.filter((item) => item.id !== editor.id));
+        this.successMessage.set('Editor removido da notícia.');
+      },
+      error: (error: unknown) => {
+        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível remover o editor.'));
+      },
+    });
+  }
+
   canDeactivate(): boolean {
     if (!this.hasUnsavedChanges() || typeof window === 'undefined') {
       return true;
@@ -226,7 +307,10 @@ export class NewsEditorComponent implements OnInit {
     this.newsService.getById(id).pipe(
       finalize(() => this.operation.set('idle')),
     ).subscribe({
-      next: (news) => this.applyNews(news),
+      next: (news) => {
+        this.applyNews(news);
+        this.loadEditors(news.id);
+      },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível carregar a notícia para edição.'));
       },
@@ -290,9 +374,21 @@ export class NewsEditorComponent implements OnInit {
     }
   }
 
+  private loadEditors(newsId: number): void {
+    this.editorsLoading.set(true);
+    this.newsService.getEditors(newsId).pipe(
+      finalize(() => this.editorsLoading.set(false)),
+    ).subscribe({
+      next: (editors) => this.editors.set(editors),
+      error: (error: unknown) => {
+        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível carregar os editores da notícia.'));
+      },
+    });
+  }
+
   private getErrorMessage(error: unknown, fallback: string): string {
     if (error instanceof HttpErrorResponse) {
-      const apiMessage = error.error?.message;
+      const apiMessage = error.error?.message ?? error.error?.detail ?? error.error?.response;
       if (typeof apiMessage === 'string' && apiMessage.trim()) {
         return apiMessage;
       }

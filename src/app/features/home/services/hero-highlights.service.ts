@@ -3,9 +3,9 @@ import { map, Observable } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
 import {
   GlobalHighlight,
-  HighlightClub,
   HighlightsResponse,
 } from '../models/global-highlight.model';
+import { Club } from '../../clubes/models/clube.model';
 
 @Injectable({ providedIn: 'root' })
 export class HeroHighlightsService {
@@ -39,14 +39,14 @@ export class HeroHighlightsService {
     );
   }
 
-  private toClubHighlight(club: HighlightClub): GlobalHighlight {
+  private toClubHighlight(club: Club): GlobalHighlight {
     return {
       id: `CLUB:${club.id}`,
       source_type: 'CLUB',
       source_id: club.id,
-      title: club.title ?? club.titulo ?? 'Clube em destaque',
-      summary: club.description ?? club.descricao ?? null,
-      image_url: club.image_url ?? club.cover_image_url ?? club.imagem ?? null,
+      title: club.name,
+      summary: club.summary,
+      image_url: club.cover_image_url,
       label: 'Clube em destaque',
       link: '/projetos/clubes',
     };

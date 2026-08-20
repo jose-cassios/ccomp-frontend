@@ -90,6 +90,33 @@ export class AdminUsersComponent implements OnInit {
     this.reload();
   }
 
+  searchExact(): void {
+    const term = this.search().trim();
+    if (!term || this.loading() || this.isBusy()) return;
+
+    const request = term.includes('@')
+      ? this.usersService.getByEmail(term)
+      : /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(term)
+        ? this.usersService.getById(term)
+        : null;
+
+    if (!request) {
+      this.errorMessage.set('Para buscar em toda a base, informe um e-mail completo ou o ID do usuário.');
+      return;
+    }
+
+    this.loading.set(true);
+    this.errorMessage.set(null);
+    request.pipe(finalize(() => this.loading.set(false))).subscribe({
+      next: (user) => {
+        const usersById = new Map(this.users().map((item) => [item.id, item]));
+        usersById.set(user.id, user);
+        this.users.set(this.sortUsers([...usersById.values()]));
+      },
+      error: () => this.errorMessage.set('Nenhum usuário foi encontrado com esse e-mail ou ID.'),
+    });
+  }
+
   selectRole(userId: string, role: ApiUserRole): void {
     this.selectedRoles.update((roles) => ({ ...roles, [userId]: role }));
   }
@@ -129,12 +156,18 @@ export class AdminUsersComponent implements OnInit {
       return;
     }
 
+    if (typeof window === 'undefined') return;
+    const reason = window.prompt(
+      action === 'block' ? 'Informe o motivo do bloqueio:' : 'Informe o motivo do desbloqueio:',
+    )?.trim();
+    if (!reason) return;
+
     this.pendingUserId.set(user.id);
     this.errorMessage.set(null);
     this.successMessage.set(null);
     const request = action === 'block'
-      ? this.usersService.block(user.id)
-      : this.usersService.unlock(user.id);
+      ? this.usersService.block(user.id, reason)
+      : this.usersService.unlock(user.id, reason);
 
     request.pipe(finalize(() => this.pendingUserId.set(null))).subscribe({
       next: (response) => {
@@ -142,7 +175,7 @@ export class AdminUsersComponent implements OnInit {
         this.users.update((users) => users.map((item) =>
           item.id === user.id ? { ...item, status_account: status } : item,
         ));
-        this.successMessage.set(response.message);
+        this.successMessage.set(response.response);
       },
       error: () => this.errorMessage.set(
         `Não foi possível ${action === 'block' ? 'bloquear' : 'desbloquear'} esta conta.`,

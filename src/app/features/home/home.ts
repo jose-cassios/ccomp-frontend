@@ -41,6 +41,9 @@ export class Home implements OnInit {
   readonly canManageHighlights = computed(() =>
     this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
   );
+  readonly clubHighlights = computed(() =>
+    this.highlights().filter((highlight) => highlight.source_type === 'CLUB'),
+  );
   readonly ongoingEvents = computed(() => {
     const now = Date.now();
     return this.events().filter((event) => {

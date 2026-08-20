@@ -88,7 +88,12 @@ export interface ActivityPayload {
 }
 
 export interface ApiMessage {
-  message: string;
+  response?: string;
+  message?: string;
+}
+
+export function apiMessage(response: ApiMessage, fallback: string): string {
+  return response.response ?? response.message ?? fallback;
 }
 
 export const EVENT_CATEGORY_OPTIONS: ReadonlyArray<{

@@ -1,9 +1,256 @@
-<div class="page-wrapper">
-  <section class="section-spacer">
-    <app-clube-destaques></app-clube-destaques>
-  </section>
+<main class="clubs-page">
+  <header class="page-header">
+    <div>
+      <span class="eyebrow">Projetos e comunidades</span>
+      <h1>Clubes</h1>
+      <p>Encontre grupos do curso, conheça suas atividades e participe.</p>
+    </div>
+    @if (canManage()) {
+      <button type="button" class="primary-button" (click)="openCreateClub()">Novo clube</button>
+    }
+  </header>
 
-  <section class="section-spacer">
-    <app-todos-clubes></app-todos-clubes>
-  </section>
-</div>
+  @if (message()) {
+    <div class="notice notice--success" role="status">
+      <span>{{ message() }}</span>
+      <button type="button" aria-label="Fechar aviso" (click)="message.set(null)">×</button>
+    </div>
+  }
+
+  <app-clube-destaques
+    [clubs]="highlightedClubs()"
+    [loading]="highlightsLoading()"
+    (selected)="openDetails($event)"
+    (enroll)="enroll($event)"
+  />
+
+  <app-todos-clubes
+    [clubs]="clubs()"
+    [loading]="loading()"
+    [loadingMore]="loadingMore()"
+    [error]="publicError()"
+    [hasMore]="!!nextCursor()"
+    (selected)="openDetails($event)"
+    (enroll)="enroll($event)"
+    (loadMore)="loadClubs(true)"
+  />
+
+  @if (canManage()) {
+    <section class="management-section">
+      <div class="management-heading">
+        <div>
+          <span class="eyebrow">Área de gestão</span>
+          <h2>Clubes que você gerencia</h2>
+        </div>
+        <button type="button" class="primary-button" (click)="openCreateClub()">Criar clube</button>
+      </div>
+
+      @if (managementError()) {
+        <div class="notice notice--error" role="alert">{{ managementError() }}</div>
+      }
+
+      @if (managedLoading() && !managedClubs().length) {
+        <div class="empty-state" role="status">Carregando clubes gerenciados...</div>
+      } @else if (managedClubs().length) {
+        <div class="managed-list">
+          @for (club of managedClubs(); track club.id) {
+            <article>
+              <div>
+                <span>{{ club.published_at ? 'Publicado' : 'Rascunho' }}</span>
+                <h3>{{ club.name }}</h3>
+                <p>{{ club.summary || 'Sem resumo.' }}</p>
+              </div>
+              <div class="row-actions">
+                <button type="button" (click)="openMembers(club)">Membros</button>
+                <button type="button" (click)="openEditClub(club)">Editar</button>
+                <button type="button" class="danger-button" (click)="deleteClub(club)">Excluir</button>
+              </div>
+            </article>
+          }
+        </div>
+        @if (managedNextCursor()) {
+          <button type="button" class="load-more" [disabled]="managedLoading()" (click)="loadManagedClubs(true)">
+            {{ managedLoading() ? 'Carregando...' : 'Carregar mais' }}
+          </button>
+        }
+      } @else if (!managementError()) {
+        <div class="empty-state">Você ainda não gerencia nenhum clube.</div>
+      }
+    </section>
+  }
+</main>
+
+@if (activeModal()) {
+  <div class="modal-backdrop" role="presentation" (click)="closeModal()">
+    <section
+      class="modal"
+      [class.modal--wide]="activeModal() === 'members'"
+      role="dialog"
+      aria-modal="true"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="modal-header">
+        <div>
+          @if (activeModal() === 'details') {
+            <span class="eyebrow">Detalhes do clube</span>
+            <h2>{{ selectedClub()?.name }}</h2>
+          } @else if (activeModal() === 'editor') {
+            <span class="eyebrow">Gestão de clubes</span>
+            <h2>{{ editingClub() ? 'Editar clube' : 'Novo clube' }}</h2>
+          } @else {
+            <span class="eyebrow">Participantes</span>
+            <h2>Membros de {{ selectedClub()?.name }}</h2>
+          }
+        </div>
+        <button type="button" class="close-button" aria-label="Fechar" (click)="closeModal()">×</button>
+      </header>
+
+      @if (modalError()) {
+        <div class="notice notice--error" role="alert">{{ modalError() }}</div>
+      }
+
+      @if (activeModal() === 'details' && selectedClub(); as club) {
+        <div class="club-details">
+          @if (club.cover_image_url) {
+            <img [src]="club.cover_image_url" [alt]="club.name" />
+          }
+          <p class="summary">{{ club.summary || 'Este clube ainda não possui resumo.' }}</p>
+          @if (club.content) {
+            <div class="content-block">
+              <h3>Sobre o clube</h3>
+              <p>{{ club.content }}</p>
+            </div>
+          }
+          <div class="modal-actions">
+            <button type="button" class="secondary-button" (click)="closeModal()">Fechar</button>
+            <button type="button" class="primary-button" [disabled]="enrollingClubId() === club.id" (click)="enroll(club)">
+              {{ enrollingClubId() === club.id ? 'Inscrevendo...' : 'Inscrever-se' }}
+            </button>
+          </div>
+        </div>
+      }
+
+      @if (activeModal() === 'editor') {
+        <form class="club-form" [formGroup]="clubForm" (ngSubmit)="saveClub()">
+          <label class="field">
+            <span>Nome *</span>
+            <input type="text" formControlName="name" maxlength="255" />
+            @if (clubForm.controls.name.touched && clubForm.controls.name.invalid) {
+              <small>Informe um nome com pelo menos 3 caracteres.</small>
+            }
+          </label>
+
+          <label class="field">
+            <span>Resumo *</span>
+            <textarea formControlName="summary" rows="3"></textarea>
+            @if (clubForm.controls.summary.touched && clubForm.controls.summary.invalid) {
+              <small>Informe um resumo com pelo menos 10 caracteres.</small>
+            }
+          </label>
+
+          <div class="field">
+            <span>Imagem de capa</span>
+            <div class="upload-row">
+              <input type="url" formControlName="cover_image_url" placeholder="https://..." />
+              <label class="upload-button">
+                {{ uploading() ? 'Enviando...' : 'Enviar imagem' }}
+                <input type="file" accept="image/*" [disabled]="uploading()" (change)="uploadCover($event)" />
+              </label>
+            </div>
+            @if (clubForm.controls.cover_image_url.touched && clubForm.controls.cover_image_url.invalid) {
+              <small>Use uma URL iniciada por http:// ou https://.</small>
+            }
+          </div>
+
+          <label class="field">
+            <span>Data de publicação</span>
+            <input type="datetime-local" formControlName="published_at" />
+            <small class="hint">Sem uma data, o clube permanece como rascunho.</small>
+          </label>
+
+          <label class="field">
+            <span>Conteúdo</span>
+            <textarea formControlName="content" rows="8" placeholder="Informações completas sobre o clube"></textarea>
+          </label>
+
+          <div class="modal-actions">
+            <button type="button" class="secondary-button" (click)="closeModal()">Cancelar</button>
+            <button type="submit" class="primary-button" [disabled]="saving() || uploading()">
+              {{ saving() ? 'Salvando...' : 'Salvar clube' }}
+            </button>
+          </div>
+        </form>
+      }
+
+      @if (activeModal() === 'members') {
+        <div class="members-panel">
+          <form class="add-member-form" [formGroup]="memberForm" (ngSubmit)="addMember()">
+            <label class="field">
+              <span>E-mail do participante</span>
+              <input type="email" formControlName="email" placeholder="usuario@exemplo.com" />
+            </label>
+            <label class="field field--compact">
+              <span>Função</span>
+              <select formControlName="role">
+                <option value="MEMBER">Membro</option>
+                <option value="INSTRUCTOR">Instrutor</option>
+              </select>
+            </label>
+            <button type="submit" class="primary-button" [disabled]="memberForm.invalid || membersLoading()">Adicionar</button>
+          </form>
+
+          <form class="member-filters" [formGroup]="memberFilterForm" (ngSubmit)="loadMembers()">
+            <label>
+              <span>Função</span>
+              <select formControlName="role">
+                <option value="">Todas</option>
+                <option value="MEMBER">Membro</option>
+                <option value="INSTRUCTOR">Instrutor</option>
+              </select>
+            </label>
+            <label>
+              <span>Status</span>
+              <select formControlName="status">
+                <option value="">Todos</option>
+                <option value="ACTIVE">Ativo</option>
+                <option value="INACTIVE">Inativo</option>
+              </select>
+            </label>
+            <button type="submit" class="secondary-button" [disabled]="membersLoading()">Filtrar</button>
+          </form>
+
+          @if (membersLoading() && !members().length) {
+            <div class="empty-state" role="status">Carregando membros...</div>
+          } @else if (members().length) {
+            <div class="member-list">
+              @for (member of members(); track member.id) {
+                <article>
+                  <div class="member-avatar">{{ member.user.name.charAt(0) }}</div>
+                  <div class="member-info">
+                    <strong>{{ member.user.name }}</strong>
+                    <span>{{ member.user.email_address }}</span>
+                  </div>
+                  <span class="member-role">{{ roleLabel(member.role) }}</span>
+                  <button
+                    type="button"
+                    class="status-button"
+                    [class.status-button--inactive]="member.status === 'INACTIVE'"
+                    [disabled]="changingMemberId() === member.id"
+                    (click)="changeMemberStatus(member)"
+                  >
+                    {{ member.status === 'ACTIVE' ? 'Ativo' : 'Inativo' }}
+                  </button>
+                </article>
+              }
+            </div>
+            @if (memberNextCursor()) {
+              <button type="button" class="load-more" [disabled]="membersLoading()" (click)="loadMembers(true)">Carregar mais membros</button>
+            }
+          } @else {
+            <div class="empty-state">Nenhum membro encontrado.</div>
+          }
+        </div>
+      }
+    </section>
+  </div>
+}

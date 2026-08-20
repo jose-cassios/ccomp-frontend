@@ -1,52 +1,96 @@
-import { Injectable } from '@angular/core';
+import { HttpParams } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
-
-export interface Clube {
-  id?: string;
-  titulo: string;
-  descricao: string;
-  imagem: string;
-  categoria: string;
-  data: string;
-  autor: {
-    nome: string;
-  };
-}
+import {
+  Club,
+  ClubMemberFilter,
+  ClubMemberPage,
+  ClubMemberRole,
+  ClubMemberStatus,
+  ClubMembership,
+  ClubPage,
+  CreateClubPayload,
+  UpdateClubPayload,
+} from '../models/clube.model';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ClubesService {
-  constructor(
-    private api: ApiService
-  ) {}
+  private readonly api = inject(ApiService);
 
-  getAll(): Observable<Clube[]> {
-    return this.api.get<Clube[]>('/clubes');
+  search(nextCursor?: string, pageSize = 10): Observable<ClubPage> {
+    return this.api.post<ClubPage>('/clubs/search', null, {
+      params: this.cursorParams('nextCursor', nextCursor, 'pageSize', pageSize),
+    });
   }
 
-  getById(id: string): Observable<Clube> {
-    return this.api.get<Clube>(`/clubes/${id}`);
+  getHighlights(): Observable<Club[]> {
+    return this.api.get<Club[]>('/highlights/clubs');
   }
 
-  getByCategory(categoria: string): Observable<Clube[]> {
-    return this.api.get<Clube[]>(`/clubes?categoria=${categoria}`);
+  getMine(nextCursor?: string, pageSize = 10): Observable<ClubPage> {
+    return this.api.post<ClubPage>('/clubs/me', null, {
+      params: this.cursorParams('nextCursor', nextCursor, 'pageSize', pageSize),
+    });
   }
 
-  create(clubeData: Partial<Clube>): Observable<Clube> {
-    return this.api.post<Clube>('/clubes', clubeData);
+  getById(clubId: number): Observable<Club> {
+    return this.api.get<Club>(`/clubs/${clubId}`);
   }
 
-  update(id: string, clubeData: Partial<Clube>): Observable<Clube> {
-    return this.api.put<Clube>(`/clubes/${id}`, clubeData);
+  create(payload: CreateClubPayload): Observable<Club> {
+    return this.api.post<Club>('/clubs', payload);
   }
 
-  delete(id: string): Observable<void> {
-    return this.api.delete<void>(`/clubes/${id}`);
+  update(clubId: number, payload: UpdateClubPayload): Observable<Club> {
+    return this.api.patch<Club>(`/clubs/${clubId}`, payload);
   }
 
-  getFeatured(): Observable<Clube[]> {
-    return this.api.get<Clube[]>('/clubes/featured');
+  delete(clubId: number): Observable<void> {
+    return this.api.delete<void>(`/clubs/${clubId}`);
+  }
+
+  enroll(clubId: number): Observable<ClubMembership> {
+    return this.api.post<ClubMembership>(`/clubs/${clubId}/members/enroll`, null);
+  }
+
+  searchMembers(
+    clubId: number,
+    filter: ClubMemberFilter = {},
+    cursor?: string,
+    size = 10,
+  ): Observable<ClubMemberPage> {
+    return this.api.post<ClubMemberPage>(`/clubs/${clubId}/members/search`, filter, {
+      params: this.cursorParams('cursor', cursor, 'size', size),
+    });
+  }
+
+  addMember(clubId: number, email: string, role: ClubMemberRole): Observable<ClubMembership> {
+    const params = new HttpParams().set('role', role);
+    return this.api.post<ClubMembership>(
+      `/clubs/${clubId}/members/staff/${encodeURIComponent(email)}`,
+      null,
+      { params },
+    );
+  }
+
+  changeMemberStatus(memberId: number, status: ClubMemberStatus): Observable<void> {
+    const params = new HttpParams().set('status', status);
+    return this.api.patch<void>(`/clubs/members/${memberId}/status`, null, { params });
+  }
+
+  private cursorParams(
+    cursorName: string,
+    cursor: string | undefined,
+    sizeName: string,
+    size: number,
+  ): HttpParams {
+    let params = new HttpParams().set(sizeName, size.toString());
+    if (cursor) {
+      params = params.set(cursorName, cursor);
+    }
+    return params;
   }
 }

@@ -62,4 +62,14 @@ describe('NewsService', () => {
     service.delete(9).subscribe();
     expect(api.delete).toHaveBeenCalledWith('/news/9');
   });
+
+  it('should manage news editors by email', () => {
+    service.getEditors(9).subscribe();
+    service.addEditor(9, 'editor+teste@example.com').subscribe();
+    service.removeEditor(9, 'editor+teste@example.com').subscribe();
+
+    expect(api.get).toHaveBeenCalledWith('/news/9/editors');
+    expect(api.post).toHaveBeenCalledWith('/news/9/editors/editor%2Bteste%40example.com', {});
+    expect(api.delete).toHaveBeenCalledWith('/news/9/editors/editor%2Bteste%40example.com');
+  });
 });

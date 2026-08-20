@@ -96,6 +96,20 @@
               <strong>Informe uma URL completa iniciada por http:// ou https://.</strong>
             }
           </label>
+
+          <div class="field field--wide upload-field">
+            <span>Ou envie uma imagem</span>
+            <label class="upload-button">
+              {{ uploadingCover() ? 'Enviando imagem...' : 'Selecionar imagem de capa' }}
+              <input
+                type="file"
+                accept="image/*"
+                [disabled]="uploadingCover() || isPublished()"
+                (change)="uploadCover($event)"
+              />
+            </label>
+            <small>O endereço retornado pelo storage será preenchido no campo acima.</small>
+          </div>
         </div>
       </section>
 
@@ -128,6 +142,49 @@
         </div>
       </section>
     </form>
+
+    @if (news()) {
+      <section class="collaboration-card" aria-labelledby="collaboration-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Colaboração</span>
+            <h2 id="collaboration-title">Editores da notícia</h2>
+          </div>
+          <span class="content-help">Editores podem ajudar a manter este conteúdo.</span>
+        </div>
+
+        <form class="add-editor-form" [formGroup]="editorForm" (ngSubmit)="addEditor()">
+          <label class="field">
+            <span>E-mail do novo editor</span>
+            <input type="email" formControlName="email" placeholder="editor@exemplo.com" />
+          </label>
+          <button type="submit" class="button button--primary" [disabled]="editorForm.invalid || editorsLoading()">
+            Adicionar editor
+          </button>
+        </form>
+
+        @if (editorsLoading() && !editors().length) {
+          <div class="editors-empty" role="status">Carregando editores...</div>
+        } @else if (editors().length) {
+          <div class="editors-list">
+            @for (editor of editors(); track editor.id) {
+              <article>
+                <span class="editor-avatar">{{ editor.name.charAt(0) }}</span>
+                <span class="editor-identity">
+                  <strong>{{ editor.name }}</strong>
+                  <small>{{ editor.email_address }}</small>
+                </span>
+                <button type="button" class="remove-editor" [disabled]="editorsLoading()" (click)="removeEditor(editor)">
+                  Remover
+                </button>
+              </article>
+            }
+          </div>
+        } @else {
+          <div class="editors-empty">Nenhum editor adicional foi vinculado.</div>
+        }
+      </section>
+    }
 
     <footer class="editor-footer">
       <div>

@@ -1,101 +1,62 @@
-<section class="todos-clubes-section">
-  <div class="todos-clubes-layout">
-
-    <aside class="sidebar">
-      <div class="filtro-categorias">
-        <div class="filtro-header">
-          <span class="filtro-label">CATEGORIAS</span>
-          <span class="filtro-sublabel">Filtrar clubes</span>
-        </div>
-        <nav class="categorias-lista">
-          @for (categoria of  categorias; track categoria) {
-            <label class="categoria-item" [class.ativa]="categoriaAtiva === categoria.nome">
-              <input type="checkbox"
-                class="categoria-checkbox"
-                [checked]="categoriaAtiva===categoria.nome"
-                (change)="selecionarCategoria(categoria.nome)"/>
-                <span class="cat-nome">{{categoria.nome}}</span>
-            </label>
+<section class="all-clubs-section">
+  <div class="list-header">
+    <div>
+      <span class="eyebrow">Comunidade</span>
+      <h2>Todos os clubes</h2>
+    </div>
+    <div class="sort-wrapper" #sortWrapper>
+      <button type="button" class="sort-button" (click)="sortMenuOpen = !sortMenuOpen">
+        {{ sort }} <span aria-hidden="true">▾</span>
+      </button>
+      @if (sortMenuOpen) {
+        <ul class="sort-menu">
+          @for (option of sortOptions; track option) {
+            <li><button type="button" [class.active]="option === sort" (click)="selectSort(option)">{{ option }}</button></li>
           }
-        </nav>
-      </div>
-
-      <app-newsletter-clubes></app-newsletter-clubes>
-    </aside>
-
-    <div class="conteudo-principal">
-      <div class="lista-header">
-        <h2 class="lista-titulo">Todos os Clubes</h2>
-        <div class="ordenar-wrapper" #ordenarWrapper>
-          <button class="btn-ordenar" (click)="toggleMenuOrdenacao()">{{ordenacao}}
-            <span class="seta-baixo">&#9662;</span>
-          </button>
-          @if(menuOrdenacaoAberto){
-            <ul class="ordenar-menu">
-              @for(opcao of opcoesOrdenacao; track opcao){
-                <li>
-                  <button
-                    class="ordenar-opcao"
-                    [class.ativa]="opcao === ordenacao"
-                    (click)="selecionarOrdenacao(opcao)">
-                    {{opcao}}
-                  </button>
-                </li>
-              }
-            </ul>
-          }
-        </div>
-      </div>
-
-      <div class="clubes-lista">
-        @for (clube of clubesPaginados; track clube) {
-          <article class="clube-card-lista">
-            <div class="card-imagem">
-              <img [src]="clube.imagem" [alt]="clube.titulo"/>
-            </div>
-            <div class="card-info">
-              <div class="card-meta">
-                <span class="card-categoria">
-                  {{clube.categoria}}
-                </span>
-                <span class="card-separador">
-                  -
-                </span>
-                <span class="card-data">
-                  {{clube.data}}
-                </span>
-              </div>
-
-              <h3 class="card-titulo">{{clube.titulo}}</h3>
-              <p class="card-descricao">{{clube.descricao}}</p>
-
-              <div class="card-autor">
-                <span class="autor-avatar">{{getIniciais(clube.autor.nome)}}</span>
-                <span class="autor-nome">{{clube.autor.nome}}</span>
-              </div>
-            </div>
-          </article>
-        }
-      </div>
-
-      @if (totalPaginas > 1) {
-        <nav class="paginacao">
-          @for (pagina of paginas; track pagina) {
-            <button
-              class="pagina-btn"
-              [class.ativa]="paginaAtual === pagina"
-              (click)="isParaPagina(pagina)"
-            >{{pagina}}</button>
-          }
-          <span class="pagina-elipsis">...</span>
-          <button
-            class="pagina-btn pagina-next"
-            [disabled]="paginaAtual === totalPaginas"
-            (click)="isParaPagina(paginaAtual+1)"
-          >&#8250;</button>
-        </nav>
+        </ul>
       }
     </div>
   </div>
-</section>
 
+  @if (error()) {
+    <div class="state state--error" role="alert">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="state" role="status">Carregando clubes...</div>
+  } @else if (sortedClubs.length) {
+    <div class="club-list">
+      @for (club of sortedClubs; track club.id) {
+        <article class="club-card">
+          <div class="card-image">
+            @if (club.cover_image_url) {
+              <img [src]="club.cover_image_url" [alt]="club.name" />
+            } @else {
+              <span class="image-placeholder" aria-hidden="true">{{ club.name.charAt(0) }}</span>
+            }
+          </div>
+          <div class="card-info">
+            <div class="card-meta">
+              <span>Clube</span>
+              <time>{{ (club.published_at || club.updated_at) | date: 'dd/MM/yyyy' }}</time>
+            </div>
+            <h3>{{ club.name }}</h3>
+            <p>{{ club.summary || 'Conheça as atividades deste clube.' }}</p>
+            <div class="card-actions">
+              <button type="button" class="details-button" (click)="selected.emit(club)">Ver detalhes</button>
+              <button type="button" class="enroll-button" (click)="enroll.emit(club)">Inscrever-se</button>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="state">Nenhum clube público foi encontrado.</div>
+  }
+
+  @if (hasMore()) {
+    <button type="button" class="load-more" [disabled]="loadingMore()" (click)="loadMore.emit()">
+      {{ loadingMore() ? 'Carregando...' : 'Carregar mais clubes' }}
+    </button>
+  }
+</section>

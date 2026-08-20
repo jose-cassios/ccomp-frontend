@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
+import { StorageService } from '../../../../core/storage/storage.service';
 import { NewsItemType } from '../../interface/news.interface';
 import { NewsService } from '../../services/news.service';
 import { NewsEditorComponent } from './news-editor.component';
@@ -34,6 +35,9 @@ describe('NewsEditorComponent', () => {
     publish: vi.fn(() => of(void 0)),
     delete: vi.fn(() => of({ message: 'Notícia deletada com sucesso.' })),
     getById: vi.fn(() => of({ ...savedNews, published_at: '2026-08-11T15:00:00' })),
+    getEditors: vi.fn(() => of([])),
+    addEditor: vi.fn(() => of({ response: 'Editor adicionado.' })),
+    removeEditor: vi.fn(() => of({ response: 'Editor removido.' })),
   };
 
   beforeEach(async () => {
@@ -47,6 +51,7 @@ describe('NewsEditorComponent', () => {
           useValue: { snapshot: { paramMap: convertToParamMap({}) } },
         },
         { provide: NewsService, useValue: newsService },
+        { provide: StorageService, useValue: { upload: vi.fn() } },
       ],
     }).compileComponents();
 

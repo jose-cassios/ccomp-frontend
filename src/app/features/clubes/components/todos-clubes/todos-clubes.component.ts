@@ -1,88 +1,49 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, HostListener, ViewChild } from '@angular/core';
-import { NewsletterClubesComponent } from '../newsletter-clubes/newsletter-clubes.component';
-import { CATEGORIAS_CLUBES, CLUBES } from '../../data/clubes.mock';
-import { Categoria, Clube } from '../../models/clube.model';
+import { Component, ElementRef, HostListener, ViewChild, input, output } from '@angular/core';
+import { Club } from '../../models/clube.model';
 
 @Component({
   selector: 'app-todos-clubes',
-  imports: [CommonModule, NewsletterClubesComponent ],
+  imports: [CommonModule],
   templateUrl: './todos-clubes.component.html',
   styleUrl: './todos-clubes.component.css',
 })
 export class TodosClubesComponent {
+  @ViewChild('sortWrapper') sortWrapper?: ElementRef<HTMLElement>;
 
-  @ViewChild('ordenarWrapper') ordenarWrapper?: ElementRef<HTMLElement>;
+  readonly clubs = input<readonly Club[]>([]);
+  readonly loading = input(false);
+  readonly loadingMore = input(false);
+  readonly error = input<string | null>(null);
+  readonly hasMore = input(false);
+  readonly selected = output<Club>();
+  readonly enroll = output<Club>();
+  readonly loadMore = output<void>();
 
-    categoriaAtiva = 'Geral';
-  ordenacao = 'Recentes';
-  menuOrdenacaoAberto = false;
-  opcoesOrdenacao = ['Recentes', 'A-Z', 'Z-A'];
-  paginaAtual = 1;
-  itensPorPagina = 4;
-  categorias: Categoria[] = CATEGORIAS_CLUBES;
+  sort = 'Recentes';
+  sortMenuOpen = false;
+  readonly sortOptions = ['Recentes', 'A-Z', 'Z-A'];
 
-  clubes: Clube[] = CLUBES;
-
-  get clubesFiltrados(): Clube[]{
-    const filtrados = this.categoriaAtiva === 'Geral'
-      ? [...this.clubes]
-      : this.clubes.filter(
-          (c) => c.categoria.toLocaleLowerCase() === this.categoriaAtiva.toLocaleLowerCase()
-        );
-
-    if(this.ordenacao === 'A-Z'){
-      return filtrados.sort((a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR'));
-    }
-    if(this.ordenacao === 'Z-A'){
-      return filtrados.sort((a, b) => b.titulo.localeCompare(a.titulo, 'pt-BR'));
-    }
-    return filtrados;
-  }
-
-  get totalPaginas(): number{
-    return Math.ceil(this.clubesFiltrados.length / this.itensPorPagina);
-  }
-
-  get clubesPaginados(): Clube[]{
-    const inicio = (this.paginaAtual - 1)* this.itensPorPagina;
-    return this.clubesFiltrados.slice(inicio, inicio+this.itensPorPagina);
-  }
-
-  get paginas(): number[]{
-    return Array.from({length: this.totalPaginas}, (_,i)=> i+1);
-  }
-
-  toggleMenuOrdenacao(): void{
-    this.menuOrdenacaoAberto = !this.menuOrdenacaoAberto;
+  get sortedClubs(): Club[] {
+    const clubs = [...this.clubs()];
+    if (this.sort === 'A-Z') return clubs.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    if (this.sort === 'Z-A') return clubs.sort((a, b) => b.name.localeCompare(a.name, 'pt-BR'));
+    return clubs.sort((a, b) => this.timestamp(b) - this.timestamp(a));
   }
 
   @HostListener('document:click', ['$event.target'])
-  fecharMenuAoClicarFora(alvo: EventTarget | null): void{
-    if(this.menuOrdenacaoAberto && !this.ordenarWrapper?.nativeElement.contains(alvo as Node)){
-      this.menuOrdenacaoAberto = false;
+  closeSortWhenClickingOutside(target: EventTarget | null): void {
+    if (this.sortMenuOpen && !this.sortWrapper?.nativeElement.contains(target as Node)) {
+      this.sortMenuOpen = false;
     }
   }
 
-  selecionarOrdenacao(opcao: string): void{
-    this.ordenacao = opcao;
-    this.menuOrdenacaoAberto = false;
-    this.paginaAtual = 1;
+  selectSort(option: string): void {
+    this.sort = option;
+    this.sortMenuOpen = false;
   }
 
-  selecionarCategoria(nome:string): void{
-    this.categoriaAtiva = nome;
-    this.paginaAtual = 1;
+  private timestamp(club: Club): number {
+    return new Date(club.published_at ?? club.updated_at ?? club.created_at).getTime();
   }
-
-  isParaPagina(pagina: number): void{
-    if(pagina >= 1 && pagina <= this.totalPaginas){
-      this.paginaAtual = pagina;
-    }
-  }
-
-  getIniciais(nome: string):string{
-    return nome.split(' ').map((p) =>p[0]).slice(0, 2).join('').toLocaleUpperCase();
-  }
-
 }

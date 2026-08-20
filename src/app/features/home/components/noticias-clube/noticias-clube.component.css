@@ -178,3 +178,5 @@
     font-size: 2.2rem;
   }
 }
+.club-placeholder { display: grid; width: 100%; height: 100%; place-items: center; background: linear-gradient(135deg, #166534, #0f172a); color: #fff; font-size: 5rem; font-weight: 800; }
+.empty-clubs { width: min(1200px, calc(100% - 40px)); margin: 0 auto; border: 1px dashed #b8c8bd; border-radius: 14px; padding: 2.5rem 1rem; color: #64748b; text-align: center; }

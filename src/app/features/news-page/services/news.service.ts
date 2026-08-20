@@ -3,6 +3,8 @@ import { Observable } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
 import {
   NewsItemType,
+  MessageResponse,
+  NewsEditorUser,
   NewsPageResponse,
   NewsUpdatePayload,
   UserNewsResponse,
@@ -52,7 +54,24 @@ export class NewsService {
     return this.api.post<void>(`/news/${id}/publish`, {});
   }
 
-  delete(id: number | string): Observable<{ message: string }> {
-    return this.api.delete<{ message: string }>(`/news/${id}`);
+  delete(id: number | string): Observable<MessageResponse> {
+    return this.api.delete<MessageResponse>(`/news/${id}`);
+  }
+
+  getEditors(newsId: number | string): Observable<NewsEditorUser[]> {
+    return this.api.get<NewsEditorUser[]>(`/news/${newsId}/editors`);
+  }
+
+  addEditor(newsId: number | string, email: string): Observable<MessageResponse> {
+    return this.api.post<MessageResponse>(
+      `/news/${newsId}/editors/${encodeURIComponent(email)}`,
+      {},
+    );
+  }
+
+  removeEditor(newsId: number | string, email: string): Observable<MessageResponse> {
+    return this.api.delete<MessageResponse>(
+      `/news/${newsId}/editors/${encodeURIComponent(email)}`,
+    );
   }
 }

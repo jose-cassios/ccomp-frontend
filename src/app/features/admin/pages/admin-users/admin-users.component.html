@@ -62,9 +62,13 @@
           <input
             [ngModel]="search()"
             (ngModelChange)="search.set($event)"
+            (keyup.enter)="searchExact()"
             placeholder="Buscar por nome, e-mail ou ID"
           />
         </label>
+        <button type="button" class="exact-search-button" [disabled]="loading() || isBusy()" (click)="searchExact()">
+          Buscar na API
+        </button>
       </div>
     </div>
 

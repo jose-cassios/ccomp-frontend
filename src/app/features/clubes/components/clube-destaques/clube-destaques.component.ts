@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
-import { CLUBES_DESTAQUE } from '../../data/clubes.mock';
-import { ClubeDestaque } from '../../models/clube.model';
+import { Component, input, output } from '@angular/core';
+import { Club } from '../../models/clube.model';
 
 @Component({
   selector: 'app-clube-destaques',
@@ -10,6 +9,8 @@ import { ClubeDestaque } from '../../models/clube.model';
   styleUrl: './clube-destaques.component.css',
 })
 export class ClubeDestaquesComponent {
-
-  clubes: ClubeDestaque[] = CLUBES_DESTAQUE;
+  readonly clubs = input<readonly Club[]>([]);
+  readonly loading = input(false);
+  readonly selected = output<Club>();
+  readonly enroll = output<Club>();
 }

@@ -36,11 +36,19 @@ describe('AdminUsersService', () => {
 
   it('should use the administrative prefix for role and account operations', () => {
     service.assignRole('user-id', 'STAFF').subscribe();
-    service.block('user-id').subscribe();
-    service.unlock('user-id').subscribe();
+    service.block('user-id', 'Violação dos termos').subscribe();
+    service.unlock('user-id', 'Situação regularizada').subscribe();
 
     expect(api.post).toHaveBeenCalledWith('/admin/users/user-id/roles/STAFF', null);
-    expect(api.post).toHaveBeenCalledWith('/admin/users/user-id/block', null);
-    expect(api.post).toHaveBeenCalledWith('/admin/users/user-id/unlock', null);
+    expect(api.post).toHaveBeenCalledWith('/admin/users/user-id/block', { reason: 'Violação dos termos' });
+    expect(api.post).toHaveBeenCalledWith('/admin/users/user-id/unlock', { reason: 'Situação regularizada' });
+  });
+
+  it('should look up a user by id or exact email', () => {
+    service.getById('user-id').subscribe();
+    service.getByEmail('admin+teste@example.com').subscribe();
+
+    expect(api.get).toHaveBeenCalledWith('/admin/users/user-id');
+    expect(api.get).toHaveBeenCalledWith('/admin/users/email/admin%2Bteste%40example.com');
   });
 });

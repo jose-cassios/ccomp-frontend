@@ -1,5 +1,6 @@
 import { EventListItem } from '../../events-page/models/event.model';
 import { NewsItemType } from '../../news-page/interface/news.interface';
+import { Club } from '../../clubes/models/clube.model';
 
 export type HighlightSourceType = 'NEWS' | 'EVENT' | 'CLUB';
 
@@ -7,23 +8,7 @@ export type HighlightSourceType = 'NEWS' | 'EVENT' | 'CLUB';
 export interface HighlightsResponse {
   news: NewsItemType[];
   events: EventListItem[];
-  clubs: HighlightClub[];
-}
-
-/**
- * O cadastro de clubes ainda usa campos em português. Os aliases mantêm o
- * card compatível enquanto a entidade de clube é consolidada no backend.
- */
-export interface HighlightClub {
-  id: number | string;
-  titulo?: string;
-  title?: string;
-  descricao?: string | null;
-  description?: string | null;
-  imagem?: string | null;
-  image_url?: string | null;
-  cover_image_url?: string | null;
-  slug?: string;
+  clubs: Club[];
 }
 
 /** Formato de apresentação único para o carrossel da home. */

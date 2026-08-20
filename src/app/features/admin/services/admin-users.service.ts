@@ -6,6 +6,7 @@ import {
   AdminUser,
   AdminUserSearchFilter,
   AdminUsersPage,
+  AdminMessageResponse,
   ApiUserRole,
 } from '../models/admin-user.model';
 
@@ -30,21 +31,29 @@ export class AdminUsersService {
     return this.api.get<AdminUser>('/users/me');
   }
 
-  assignRole(userId: string, role: ApiUserRole): Observable<void> {
-    return this.api.post<void>(`/admin/users/${encodeURIComponent(userId)}/roles/${role}`, null);
+  getById(userId: string): Observable<AdminUser> {
+    return this.api.get<AdminUser>(`/admin/users/${encodeURIComponent(userId)}`);
   }
 
-  block(userId: string): Observable<{ message: string }> {
-    return this.api.post<{ message: string }>(
+  getByEmail(email: string): Observable<AdminUser> {
+    return this.api.get<AdminUser>(`/admin/users/email/${encodeURIComponent(email)}`);
+  }
+
+  assignRole(userId: string, role: ApiUserRole): Observable<AdminMessageResponse> {
+    return this.api.post<AdminMessageResponse>(`/admin/users/${encodeURIComponent(userId)}/roles/${role}`, null);
+  }
+
+  block(userId: string, reason: string): Observable<AdminMessageResponse> {
+    return this.api.post<AdminMessageResponse>(
       `/admin/users/${encodeURIComponent(userId)}/block`,
-      null,
+      { reason },
     );
   }
 
-  unlock(userId: string): Observable<{ message: string }> {
-    return this.api.post<{ message: string }>(
+  unlock(userId: string, reason: string): Observable<AdminMessageResponse> {
+    return this.api.post<AdminMessageResponse>(
       `/admin/users/${encodeURIComponent(userId)}/unlock`,
-      null,
+      { reason },
     );
   }
 }
