@@ -1,65 +1,62 @@
 <section
   class="noticias-container"
-  (mouseenter)="autoplayPausado.set(true)"
-  (mouseleave)="autoplayPausado.set(false)"
+  (mouseenter)="autoplayPaused.set(true)"
+  (mouseleave)="autoplayPaused.set(false)"
 >
-  <div class="noticias-wrapper">
-    <div class="carousel-viewport">
-      <div class="carousel-stage">
-        @for (clube of clubes; track clube.id; let i = $index) {
-          <!-- Todos os cards ficam no DOM: só o ativo é visível, o resto faz o crossfade -->
-          <div
-            class="notice-card"
-            [class.is-active]="i === currentIndex()"
-            [attr.inert]="i === currentIndex() ? null : ''"
-            [attr.aria-hidden]="i === currentIndex() ? null : 'true'"
-          >
-            <div class="notice-image">
-              <img [src]="clube.imagem" [alt]="clube.nome" />
-            </div>
-            <div class="description-notice">
-              <span class="category-tag">{{ clube.categoria }}</span>
-              <h3>{{ clube.nome }}</h3>
-              <p>{{ clube.descricao }}</p>
-            </div>
-            <a
-              class="btn-cta-light"
-              [routerLink]="clube.link"
-              [attr.aria-label]="'Quero me inscrever no ' + clube.nome"
+  @if (clubs().length && currentClub(); as activeClub) {
+    <div class="noticias-wrapper">
+      <div class="carousel-viewport">
+        <div class="carousel-stage">
+          @for (club of clubs(); track club.id; let i = $index) {
+            <div
+              class="notice-card"
+              [class.is-active]="i === currentIndex()"
+              [attr.inert]="i === currentIndex() ? null : ''"
+              [attr.aria-hidden]="i === currentIndex() ? null : 'true'"
             >
-              Quero me inscrever
-            </a>
+              <div class="notice-image">
+                @if (club.image_url) {
+                  <img [src]="club.image_url" [alt]="club.title" />
+                } @else {
+                  <span class="club-placeholder" aria-hidden="true">{{ club.title.charAt(0) }}</span>
+                }
+              </div>
+              <div class="description-notice">
+                <span class="category-tag">CLUBE EM DESTAQUE</span>
+                <h3>{{ club.title }}</h3>
+                <p>{{ club.summary || 'Conheça este clube e participe da comunidade acadêmica.' }}</p>
+              </div>
+              <a class="btn-cta-light" [routerLink]="club.link">Conhecer clubes</a>
+            </div>
+          }
+        </div>
+
+        @if (clubs().length > 1) {
+          <div class="carousel-indicators">
+            @for (club of clubs(); track club.id; let i = $index) {
+              <button
+                type="button"
+                class="dot"
+                [class.active]="i === currentIndex()"
+                [attr.aria-label]="'Ir para o clube ' + club.title"
+                [attr.aria-current]="i === currentIndex()"
+                (click)="goTo(i)"
+              ></button>
+            }
           </div>
         }
       </div>
 
-      <div class="carousel-indicators">
-        @for (clube of clubes; track clube.id; let i = $index) {
-          <button
-            type="button"
-            class="dot"
-            [class.active]="i === currentIndex()"
-            [attr.aria-label]="'Ir para o clube ' + clube.nome"
-            [attr.aria-current]="i === currentIndex()"
-            (click)="goTo(i)"
-          ></button>
-        }
+      <div class="notice-side-content">
+        <div class="section-header">
+          <span class="linha-verde"></span>
+          <span class="label">Clubes</span>
+        </div>
+        <h2 class="main-notice-title">{{ activeClub.title }} está em alta</h2>
+        <a class="btn-secondary" [routerLink]="activeClub.link">Ver informações</a>
       </div>
     </div>
-
-    <div class="notice-side-content">
-      <div class="section-header">
-        <span class="linha-verde"></span>
-        <span class="label">{{ labelSessao }}</span>
-      </div>
-      <h2 class="main-notice-title">{{ clubeAtual().chamada }}</h2>
-      <a
-        class="btn-secondary"
-        [routerLink]="clubeAtual().link"
-        [attr.aria-label]="'Ver informações do ' + clubeAtual().nome"
-      >
-        Ver informações
-      </a>
-    </div>
-  </div>
+  } @else {
+    <div class="empty-clubs">Nenhum clube está em destaque no momento.</div>
+  }
 </section>

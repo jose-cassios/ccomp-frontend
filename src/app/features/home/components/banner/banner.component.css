@@ -102,6 +102,7 @@
   gap: 10px;
   box-shadow: 0px 12px 32px rgba(0, 107, 31, 0.2);
   transition: transform 0.2s;
+  text-decoration: none;
 }
 
 .btn-primary-gradient:hover { transform: scale(1.05); }
@@ -118,6 +119,7 @@
   display: flex;
   align-items: center;
   transition: background 0.2s;
+  text-decoration: none;
 }
 
 .btn-secondary-light:hover { background: var(--gray-300); }
@@ -143,6 +145,7 @@
 
 .news-img-container { height: 200px; position: relative; }
 .news-img { width: 100%; height: 100%; object-fit: cover; }
+.news-img--placeholder { display: grid; place-items: center; background: linear-gradient(135deg, #063d27, #27a24a); color: #fff; font-size: 2rem; font-weight: 900; letter-spacing: .12em; }
 
 .badge-novo-floating {
   position: absolute;
@@ -193,6 +196,8 @@
   transition: background 0.2s;
 }
 
+.news-controls .manage-highlight { width: auto; height: auto; border-radius: 8px; padding: .45rem .6rem; background: #eff8f1; border-color: #a9cdb2; color: #176d38; font-size: .72rem; }
+
 .news-controls button:hover { background: var(--gray-100); }
 
 .news-title { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0; }
@@ -239,6 +244,8 @@ display: -webkit-box;
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.3s ease;
+  border: 0;
+  padding: 0;
 }
 
 .dot.active {

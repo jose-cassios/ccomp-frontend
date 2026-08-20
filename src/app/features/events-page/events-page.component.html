@@ -1,14 +1,118 @@
-<div class="page-wrapper">
-  <section class="section-spacer">
-    <app-evento-destaque></app-evento-destaque>
-  </section>
+<main class="events-page">
+  <header class="page-header">
+    <div>
+      <span>Agenda do curso</span>
+      <h1>Eventos</h1>
+      <p>Programação acadêmica, encontros e atividades da comunidade de Computação.</p>
+    </div>
+    <div class="page-actions">
+      <button type="button" (click)="openCalendar()">Ver calendário</button>
+      @if (canManageEvents()) {
+        <a routerLink="/eventos/novo">+ Novo evento</a>
+      }
+    </div>
+  </header>
 
-  <section class="section-spacer">
-    <app-proximos-eventos></app-proximos-eventos>
-  </section>
-  
-  <section class="section-spacer">
-    <app-propor-evento></app-propor-evento>
-  </section>
+  @if (errorMessage()) {
+    <p class="notice notice--error" role="alert">{{ errorMessage() }}</p>
+  }
 
-</div>
+  @if (loading()) {
+    <p class="empty-state" role="status">Carregando eventos...</p>
+  } @else if (featuredEvent(); as featured) {
+    <app-evento-destaque [evento]="featured" (selected)="openEvent($event)" />
+    <app-proximos-eventos
+      [eventos]="remainingEvents()"
+      [selectedCategory]="selectedCategory()"
+      [selectedFormat]="selectedFormat()"
+      [selectedTiming]="selectedTiming()"
+      [hasMore]="nextCursor() !== null"
+      [loadingMore]="loadingMore()"
+      (selected)="openEvent($event)"
+      (categoryChanged)="changeCategory($event)"
+      (formatChanged)="changeFormat($event)"
+      (timingChanged)="changeTiming($event)"
+      (loadMore)="loadMore()"
+    />
+  } @else if (!errorMessage()) {
+    <section class="empty-state">
+      <h2>Nenhum evento disponível</h2>
+      <p>Não há eventos publicados para este filtro no momento.</p>
+    </section>
+  }
+
+  @if (calendarOpen()) {
+    <div class="modal-backdrop" role="presentation" (click)="closeCalendar()">
+      <section
+        class="calendar-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="calendar-title"
+        (click)="$event.stopPropagation()"
+      >
+        <header>
+          <div>
+            <span>Agenda completa</span>
+            <h2 id="calendar-title">Calendário de eventos</h2>
+          </div>
+          <button type="button" aria-label="Fechar calendário" (click)="closeCalendar()">×</button>
+        </header>
+
+        @if (calendarLoading()) {
+          <p role="status">Carregando calendário...</p>
+        } @else if (calendarError()) {
+          <p class="notice notice--error" role="alert">{{ calendarError() }}</p>
+        } @else if (calendarEvents().length) {
+          <div class="calendar-list">
+            @for (event of calendarEvents(); track event.id) {
+              <button type="button" (click)="closeCalendar(); openEvent(event.id)">
+                <time [attr.datetime]="event.start_date">
+                  {{ event.start_date | date: 'dd/MM' }}
+                </time>
+                <span>
+                  <strong>{{ event.title }}</strong>
+                  {{ event.start_date | date: 'HH:mm' }} · {{ formatLabel(event.format) }}
+                </span>
+              </button>
+            }
+          </div>
+        } @else {
+          <p>Nenhum evento disponível no calendário.</p>
+        }
+      </section>
+    </div>
+  }
+
+  @if (canManageEvents()) {
+    <section class="management" aria-labelledby="created-events-title">
+      <div class="management__heading">
+        <div>
+          <span>Área editorial</span>
+          <h2 id="created-events-title">Eventos que criei</h2>
+        </div>
+        <a routerLink="/eventos/novo">Criar evento</a>
+      </div>
+
+      @if (createdEventsLoading()) {
+        <p>Carregando os seus eventos...</p>
+      } @else if (createdEventsError()) {
+        <p class="notice notice--error" role="alert">{{ createdEventsError() }}</p>
+      } @else if (createdEvents().length) {
+        <div class="editable-list">
+          @for (event of createdEvents(); track event.id) {
+            <article>
+              <div>
+                <span>Evento criado por você</span>
+                <h3>{{ event.title }}</h3>
+                <p>{{ event.start_date | date: 'dd/MM/yyyy, HH:mm' }}</p>
+              </div>
+              <a [routerLink]="['/eventos', event.id, 'editar']">Editar →</a>
+            </article>
+          }
+        </div>
+      } @else {
+        <p>Você ainda não criou eventos.</p>
+      }
+    </section>
+  }
+</main>

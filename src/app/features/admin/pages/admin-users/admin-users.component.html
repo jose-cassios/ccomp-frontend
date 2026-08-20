@@ -1,0 +1,181 @@
+<section class="admin-page">
+  <header class="admin-header">
+    <div>
+      <span class="eyebrow">Área restrita</span>
+      <h1>Administração de usuários</h1>
+      <p>Consulte usuários, gerencie contas e altere permissões sem sair da plataforma.</p>
+    </div>
+    <button
+      type="button"
+      class="refresh-button"
+      [disabled]="loading() || isBusy()"
+      (click)="reload()"
+    >
+      Atualizar lista
+    </button>
+  </header>
+
+  @if (errorMessage()) {
+    <p class="notice notice--error" role="alert">{{ errorMessage() }}</p>
+  }
+  @if (successMessage()) {
+    <p class="notice notice--success" role="status">{{ successMessage() }}</p>
+  }
+
+  <div class="overview" aria-label="Resumo administrativo">
+    <article class="metric-card">
+      <span>Usuários carregados</span>
+      <strong>{{ users().length }}</strong>
+    </article>
+    <article class="metric-card">
+      <span>Seu papel atual</span>
+      <strong>{{ roleLabel(currentUser()?.role) }}</strong>
+    </article>
+    <article class="metric-card">
+      <span>Usuário conectado</span>
+      <strong>{{ currentUser()?.name || 'Carregando...' }}</strong>
+    </article>
+  </div>
+
+  <section class="users-card" aria-labelledby="users-title">
+    <div class="section-heading">
+      <div>
+        <h2 id="users-title">Usuários cadastrados</h2>
+        <p>Filtre as contas e execute a ação necessária para cada usuário.</p>
+      </div>
+      <div class="filters">
+        <label>
+          <span class="sr-only">Filtrar por status da conta</span>
+          <select
+            [ngModel]="statusFilter()"
+            [disabled]="loading() || isBusy()"
+            (ngModelChange)="filterByStatus($event)"
+          >
+            <option value="">Todos os status</option>
+            <option value="ACTIVE">Ativas</option>
+            <option value="BLOCKED">Bloqueadas</option>
+            <option value="DEACTIVATED">Desativadas</option>
+          </select>
+        </label>
+        <label class="search-field">
+          <span class="sr-only">Buscar usuário</span>
+          <input
+            [ngModel]="search()"
+            (ngModelChange)="search.set($event)"
+            (keyup.enter)="searchExact()"
+            placeholder="Buscar por nome, e-mail ou ID"
+          />
+        </label>
+        <button type="button" class="exact-search-button" [disabled]="loading() || isBusy()" (click)="searchExact()">
+          Buscar na API
+        </button>
+      </div>
+    </div>
+
+    <p class="api-note">
+      O painel exibe o status e o papel atual de cada usuário, conforme informado pela API.
+      A gestão de papéis é exclusiva de administradores.
+    </p>
+
+    @if (loading()) {
+      <p class="empty-state" role="status">Carregando usuários...</p>
+    } @else if (!filteredUsers().length) {
+      <p class="empty-state">Nenhum usuário encontrado para a busca.</p>
+    } @else {
+      <div class="users-table" role="table">
+        @for (user of filteredUsers(); track user.id) {
+          <article class="user-row" role="row">
+            <div class="user-details" role="cell">
+              <div class="user-name-row">
+                <strong>{{ user.name }}</strong>
+                <span class="status-badge" [class.status-badge--blocked]="user.status_account === 'BLOCKED'">
+                  {{ statusLabel(user.status_account) }}
+                </span>
+                <span class="role-badge">{{ roleLabel(user.role) }}</span>
+              </div>
+              <span>{{ user.email_address }}</span>
+              <small>ID: {{ user.id }}</small>
+            </div>
+
+            <div class="management-actions" role="cell">
+              <div class="account-actions">
+                @if (user.status_account === 'BLOCKED') {
+                  <button
+                    type="button"
+                    class="unlock-button"
+                    [disabled]="isBusy()"
+                    (click)="changeAccountStatus(user, 'unlock')"
+                  >
+                    {{ pendingUserId() === user.id ? 'Processando...' : 'Desbloquear' }}
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="block-button"
+                    [disabled]="isBusy() || user.id === currentUser()?.id"
+                    (click)="changeAccountStatus(user, 'block')"
+                  >
+                    {{ pendingUserId() === user.id ? 'Processando...' : 'Bloquear' }}
+                  </button>
+                }
+              </div>
+
+              @if (canManageRoles()) {
+                <div class="role-actions">
+                  <label>
+                    <span class="sr-only">Papel para {{ user.name }}</span>
+                    <select
+                      [ngModel]="selectedRole(user)"
+                      (ngModelChange)="selectRole(user.id, $event)"
+                    >
+                      @for (role of roleOptions; track role.value) {
+                        <option [value]="role.value">{{ role.label }}</option>
+                      }
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    class="assign-button"
+                    [disabled]="isBusy()"
+                    (click)="changeRole(user)"
+                  >
+                    {{ pendingUserId() === user.id ? 'Processando...' : 'Atribuir' }}
+                  </button>
+                </div>
+              }
+            </div>
+          </article>
+        }
+      </div>
+
+      @if (nextCursor()) {
+        <button
+          type="button"
+          class="load-more-button"
+          [disabled]="loadingMore() || isBusy()"
+          (click)="loadMore()"
+        >
+          {{ loadingMore() ? 'Carregando...' : 'Carregar mais usuários' }}
+        </button>
+      }
+    }
+  </section>
+
+  @if (canManageRoles()) {
+    <section class="operations-card" aria-labelledby="operations-title">
+      <h2 id="operations-title">Ações nesta sessão</h2>
+      @if (!recentOperations().length) {
+        <p>Nenhuma alteração de papel foi realizada nesta sessão.</p>
+      } @else {
+        <ul>
+          @for (operation of recentOperations(); track operation.at) {
+            <li>
+              Papel <strong>{{ roleLabel(operation.role) }}</strong> atribuído para
+              {{ operation.userName }} às {{ operation.at | date: 'HH:mm' }}.
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</section>

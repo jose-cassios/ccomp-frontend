@@ -1,0 +1,15 @@
+<section class="news-page">
+  <a routerLink="/noticias" class="back-link">← Todas as notícias</a>
+
+  @if (isLoading()) {
+    <div class="feedback" role="status">Carregando notícia...</div>
+  } @else if (news(); as selectedNews) {
+    <app-news-preview [news]="selectedNews"></app-news-preview>
+  } @else {
+    <div class="feedback feedback--error" role="alert">
+      <h1>Notícia não encontrada</h1>
+      <p>{{ errorMessage() }}</p>
+      <a routerLink="/noticias">Voltar para notícias</a>
+    </div>
+  }
+</section>

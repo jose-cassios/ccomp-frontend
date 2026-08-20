@@ -1,0 +1,54 @@
+.markdown-editor {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.markdown-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 46px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-primary);
+  background: #f8faf9;
+}
+
+.markdown-toolbar button {
+  min-width: 34px;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.markdown-toolbar button:hover:not(:disabled) { background: #e6f4e9; color: var(--brand-700); }
+.markdown-toolbar button:disabled { cursor: not-allowed; opacity: 0.45; }
+.markdown-hint { margin-left: auto; padding-right: 6px; color: var(--text-tertiary); font-size: 0.75rem; }
+
+textarea {
+  display: block;
+  width: 100%;
+  min-height: 560px;
+  resize: vertical;
+  padding: 20px;
+  border: 0;
+  outline: 0;
+  color: #24312a;
+  background: #fff;
+  font: 0.95rem/1.7 Consolas, 'Courier New', monospace;
+}
+
+textarea:focus { box-shadow: inset 0 0 0 2px rgba(21, 128, 61, 0.18); }
+textarea:disabled { background: #f8faf9; color: var(--text-disabled); }
+
+@media (max-width: 700px) {
+  .markdown-toolbar { overflow-x: auto; }
+  .markdown-hint { display: none; }
+  textarea { min-height: 420px; padding: 16px; }
+}

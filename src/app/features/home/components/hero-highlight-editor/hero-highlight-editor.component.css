@@ -1,0 +1,15 @@
+.backdrop { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 1rem; background: rgba(9, 24, 19, .62); }
+.editor { width: min(760px, 100%); max-height: min(760px, 90vh); overflow: auto; border-radius: 20px; padding: 1.5rem; background: #fff; box-shadow: 0 22px 65px rgba(0, 0, 0, .3); color: #243642; }
+header { display: flex; justify-content: space-between; gap: 1rem; }
+header span, .highlight-type { color: var(--brand-600); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+h2 { margin: .35rem 0; }
+header p { margin: 0; color: #62737b; }
+header > button { border: 0; background: transparent; cursor: pointer; font-size: 2rem; line-height: 1; color: #53646f; }
+.notice { margin: 1.5rem 0; padding: 1rem; border-radius: 10px; background: #f2f6f4; color: #50636a; }
+.highlight-list { display: grid; gap: .7rem; max-height: 430px; overflow: auto; }
+.highlight-list article { display: flex; flex-direction: column; gap: .25rem; border: 1px solid #dbe5e0; border-radius: 12px; padding: .9rem; }
+.highlight-list small { color: #647681; line-height: 1.35; }
+footer { display: flex; justify-content: flex-end; margin-top: 1.3rem; }
+footer button { border: 0; border-radius: 9px; padding: .75rem 1rem; cursor: pointer; font-weight: 800; }
+.secondary { background: #edf1ef; color: #3e5058; }
+@media (max-width: 520px) { .editor { padding: 1rem; } }

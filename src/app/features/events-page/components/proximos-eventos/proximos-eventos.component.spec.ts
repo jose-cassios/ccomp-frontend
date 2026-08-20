@@ -13,11 +13,18 @@ describe('ProximosEventosComponent', () => {
     .compileComponents();
 
     fixture = TestBed.createComponent(ProximosEventosComponent);
+    fixture.componentRef.setInput('eventos', []);
     component = fixture.componentInstance;
+    fixture.detectChanges();
     await fixture.whenStable();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should expose timing, format and category filters', () => {
+    expect(fixture.nativeElement.querySelectorAll('select')).toHaveLength(3);
+    expect(fixture.nativeElement.textContent).toContain('Todos os eventos');
   });
 });

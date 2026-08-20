@@ -1,17 +1,8 @@
-import { Component, DestroyRef, afterNextRender, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, afterNextRender, computed, effect, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { GlobalHighlight } from '../../models/global-highlight.model';
 
-interface Clube {
-  id: number;
-  categoria: string;
-  nome: string;
-  descricao: string;
-  imagem: string;
-  chamada: string;
-  link: string;
-}
-
-const INTERVALO_AUTOPLAY = 6000;
+const AUTOPLAY_INTERVAL = 6000;
 
 @Component({
   selector: 'app-noticias-clube',
@@ -23,64 +14,30 @@ const INTERVALO_AUTOPLAY = 6000;
 export class NoticiasClubeComponent {
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly labelSessao = 'Clubes';
-
-  currentIndex = signal(0);
-  autoplayPausado = signal(false);
-
-  clubes: Clube[] = [
-    {
-      id: 1,
-      categoria: 'ESTRATÉGIA',
-      nome: 'Clube de Jogos',
-      descricao:
-        'Estratégia, lógica e foco. Organizamos torneios semanais e sessões de estudo de táticas avançadas para mentes competitivas.',
-      imagem: '/Container.png',
-      chamada: 'Estão abertas as inscrições para o Clube de Jogos!',
-      link: '/clubes/jogos',
-    },
-    {
-      id: 2,
-      categoria: 'DESENVOLVIMENTO',
-      nome: 'Clube de Programação',
-      descricao:
-        'Encontros práticos de algoritmos e desafios de código. Preparação para maratonas e projetos colaborativos entre os períodos.',
-      imagem: '/img1.png',
-      chamada: 'Treine para as maratonas com o Clube de Programação',
-      link: '/clubes/programacao',
-    },
-    {
-      id: 3,
-      categoria: 'PESQUISA',
-      nome: 'Clube de Robótica',
-      descricao:
-        'Da prototipagem à competição: montagem de robôs, automação e integração de sensores em projetos do laboratório.',
-      imagem: '/img2.png',
-      chamada: 'Construa seu primeiro robô no Clube de Robótica',
-      link: '/clubes/robotica',
-    },
-  ];
-
-  // texto lateral acompanha o card ativo do carrossel
-  clubeAtual = computed(() => this.clubes[this.currentIndex()]);
+  readonly clubs = input<readonly GlobalHighlight[]>([]);
+  readonly currentIndex = signal(0);
+  readonly autoplayPaused = signal(false);
+  readonly currentClub = computed(() => this.clubs()[this.currentIndex()] ?? null);
 
   constructor() {
+    effect(() => {
+      if (this.currentIndex() >= this.clubs().length) this.currentIndex.set(0);
+    });
+
     afterNextRender(() => {
       const timer = setInterval(() => {
-        if (!this.autoplayPausado()) {
-          this.next();
-        }
-      }, INTERVALO_AUTOPLAY);
-
+        if (!this.autoplayPaused()) this.next();
+      }, AUTOPLAY_INTERVAL);
       this.destroyRef.onDestroy(() => clearInterval(timer));
     });
   }
 
-  next() {
-    this.currentIndex.update((i) => (i === this.clubes.length - 1 ? 0 : i + 1));
+  next(): void {
+    const length = this.clubs().length;
+    if (length > 1) this.currentIndex.update((index) => (index + 1) % length);
   }
 
-  goTo(index: number) {
+  goTo(index: number): void {
     this.currentIndex.set(index);
   }
 }

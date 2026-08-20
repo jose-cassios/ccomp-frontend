@@ -1,15 +1,6 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-
-interface Atualizacao {
-  id: number;
-  tag: string;
-  titulo: string;
-  descricao: string;
-  imagem: string;
-  link: string;
-  isNovo: boolean;
-}
+import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { GlobalHighlight } from '../../models/global-highlight.model';
 
 interface StatItem {
   valor: string;
@@ -19,61 +10,54 @@ interface StatItem {
 @Component({
   selector: 'app-banner',
   standalone: true,
-  imports: [CommonModule],
+  imports: [RouterLink],
   templateUrl: './banner.component.html',
   styleUrl: './banner.component.css'
 })
 export class BannerComponent {
+  readonly highlights = input<readonly GlobalHighlight[]>([]);
+  readonly eventsCount = input(0);
+  readonly newsCount = input(0);
+  readonly canManageHighlights = input(false);
+  readonly manageHighlights = output<void>();
+  readonly currentIndex = signal(0);
+  readonly currentHighlight = computed(() =>
+    this.highlights()[this.currentIndex()] ?? this.highlights()[0] ?? DEFAULT_HIGHLIGHT,
+  );
+  readonly carouselItems = computed(() => this.highlights().length ? this.highlights() : [DEFAULT_HIGHLIGHT]);
+  readonly estatisticas = computed<StatItem[]>(() => [
+    { valor: String(this.eventsCount()), label: 'Eventos disponíveis' },
+    { valor: String(this.newsCount()), label: 'Notícias publicadas' },
+  ]);
 
-  currentIndex = 0; // card
+  constructor() {
+    effect(() => {
+      if (this.currentIndex() >= this.carouselItems().length) this.currentIndex.set(0);
+    });
+  }
 
-  estatisticas: StatItem[] = [
-    { valor: '5', label: 'Eventos abertos' },
-    { valor: '12+', label: 'Editais' },
-    { valor: '100%', label: 'Sucesso' }
-  ];
-
-  // Dados mockados
-  atualizacoes: Atualizacao[] = [
-    {
-      id: 1,
-      tag: 'Monitoria',
-      titulo: 'Edital Monitoria 2026.1',
-      descricao: 'Estão abertas as inscrições para o programa de monitoria remunerada. Vagas para Algoritmos, Estrutura de Dados e Sistemas Operacionais.',
-      imagem: '/img1.png',
-      link: '#edital',
-      isNovo: true
-    },
-    {
-      id: 2,
-      tag: 'Pesquisa e Extensão',
-      titulo: 'Bolsas PIBIC Liberadas',
-      descricao: 'Confira a lista de projetos aprovados para fomento no departamento de Ciência da Computação neste semestre.',
-      imagem: '/img2.png',
-      link: '#pibic',
-      isNovo: true
-    },
-    {
-      id: 3,
-      tag: 'Eventos Acadêmicos',
-      titulo: 'Semana de Tecnologia',
-      descricao: 'Garanta sua vaga nos minicursos e palestras. Inscrições com desconto para alunos matriculados.',
-      imagem: 'img3.png',
-      link: '#eventos',
-      isNovo: true
-    }
-  ];
-
-  // Navegação
   next() {
-    this.currentIndex = (this.currentIndex === this.atualizacoes.length - 1) ? 0 : this.currentIndex + 1;
+    const total = this.carouselItems().length;
+    this.currentIndex.update((index) => index === total - 1 ? 0 : index + 1);
   }
 
   prev() {
-    this.currentIndex = (this.currentIndex === 0) ? this.atualizacoes.length - 1 : this.currentIndex - 1;
+    const total = this.carouselItems().length;
+    this.currentIndex.update((index) => index === 0 ? total - 1 : index - 1);
   }
 
   goTo(index: number) {
-    this.currentIndex = index;
+    this.currentIndex.set(index);
   }
 }
+
+const DEFAULT_HIGHLIGHT: GlobalHighlight = {
+  id: 'DEFAULT:0',
+  source_type: 'EVENT',
+  source_id: 0,
+  title: 'Semana de Tecnologia',
+  summary: 'Acompanhe eventos, notícias e iniciativas da comunidade de Computação.',
+  image_url: '/img3.png',
+  label: 'Últimas notícias',
+  link: '/eventos',
+};

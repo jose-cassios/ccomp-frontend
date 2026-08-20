@@ -2,35 +2,42 @@
   <div class="section-header">
     <div class="header-left">
       <span class="linha-verde"></span>
-      <h3>Clubes em Destaque</h3>
+      <h2>Clubes em destaque</h2>
     </div>
-    <button class="btn-agendar">
-      Agendar visita
-    </button>
+    <span class="section-caption">Selecionados automaticamente pela plataforma</span>
   </div>
 
-  <div class="clubes-grid">
-    @for(clube of clubes; track clube.titulo){
-      <div class="clube-card">
-        <div class="card-image">
-          <img [src]="clube.imagem" [alt]="clube.titulo"/>
-          <div class="card-overlay"></div>
-        </div>
+  @if (loading()) {
+    <div class="state" role="status">Carregando destaques...</div>
+  } @else if (clubs().length) {
+    <div class="clubes-grid">
+      @for (club of clubs(); track club.id) {
+        <article class="clube-card">
+          <button type="button" class="card-details" (click)="selected.emit(club)">
+            <div class="card-image">
+              @if (club.cover_image_url) {
+                <img [src]="club.cover_image_url" [alt]="club.name" />
+              } @else {
+                <span class="image-placeholder" aria-hidden="true">{{ club.name.charAt(0) }}</span>
+              }
+              <span class="card-overlay"></span>
+            </div>
 
-        <div class="card-content">
-          <span class="card-categoria">{{clube.categoria}}</span>
-          <h4 class="card-titulo">{{clube.titulo}}</h4>
-          <p class="card-descricao">{{clube.descricao}}</p>
+            <div class="card-content">
+              <span class="card-category">Clube em alta</span>
+              <h3>{{ club.name }}</h3>
+              <p>{{ club.summary || 'Conheça este clube e participe das atividades.' }}</p>
+            </div>
+          </button>
 
           <div class="card-footer">
-            <span class="card-horario">
-              <span class="icon-clock">&#128339;</span>
-              {{clube.horario}}
-            </span>
-            <button class="btn-inscrever">Inscrever-se</button>
+            <span>{{ club.published_at ? (club.published_at | date: 'dd/MM/yyyy') : 'Em preparação' }}</span>
+            <button type="button" class="enroll-button" (click)="enroll.emit(club)">Inscrever-se</button>
           </div>
-        </div>
-      </div>
-    }
-  </div>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="state">Nenhum clube está em destaque no momento.</div>
+  }
 </section>
