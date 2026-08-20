@@ -84,25 +84,25 @@
   }
 
   @if (canManageEvents()) {
-    <section class="management" aria-labelledby="editable-events-title">
+    <section class="management" aria-labelledby="created-events-title">
       <div class="management__heading">
         <div>
           <span>Área editorial</span>
-          <h2 id="editable-events-title">Eventos que posso editar</h2>
+          <h2 id="created-events-title">Eventos que criei</h2>
         </div>
         <a routerLink="/eventos/novo">Criar evento</a>
       </div>
 
-      @if (editableLoading()) {
-        <p>Carregando sua área editorial...</p>
-      } @else if (editableError()) {
-        <p class="notice notice--error" role="alert">{{ editableError() }}</p>
-      } @else if (editableEvents().length) {
+      @if (createdEventsLoading()) {
+        <p>Carregando os seus eventos...</p>
+      } @else if (createdEventsError()) {
+        <p class="notice notice--error" role="alert">{{ createdEventsError() }}</p>
+      } @else if (createdEvents().length) {
         <div class="editable-list">
-          @for (event of editableEvents(); track event.id) {
+          @for (event of createdEvents(); track event.id) {
             <article>
               <div>
-                <span>{{ categoryLabel(event.category) }} · {{ formatLabel(event.format) }}</span>
+                <span>Evento criado por você</span>
                 <h3>{{ event.title }}</h3>
                 <p>{{ event.start_date | date: 'dd/MM/yyyy, HH:mm' }}</p>
               </div>
@@ -111,7 +111,7 @@
           }
         </div>
       } @else {
-        <p>Você ainda não criou nem recebeu permissão para editar eventos.</p>
+        <p>Você ainda não criou eventos.</p>
       }
     </section>
   }

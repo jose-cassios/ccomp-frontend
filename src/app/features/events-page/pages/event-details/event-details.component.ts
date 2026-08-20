@@ -1,10 +1,10 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { catchError, finalize, forkJoin, of } from 'rxjs';
-import { AuthService } from '../../../auth/services/auth.service';
+import { catchError, finalize, of } from 'rxjs';
 import { CONTENT_MANAGEMENT_ROLES } from '../../../auth/config/auth.config';
+import { AuthService } from '../../../auth/services/auth.service';
 import {
   EventDetails,
   eventCategoryLabel,
@@ -29,10 +29,12 @@ export class EventDetailsComponent implements OnInit {
   readonly loading = signal(true);
   readonly subscriptionBusy = signal(false);
   readonly subscribed = signal(false);
-  readonly canEdit = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly isAuthenticated = this.authService.isAuthenticatedState;
+  readonly canEdit = computed(() =>
+    this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
+  );
   readonly categoryLabel = eventCategoryLabel;
   readonly formatLabel = eventFormatLabel;
 
@@ -47,16 +49,10 @@ export class EventDetailsComponent implements OnInit {
     const subscriptions = this.isAuthenticated()
       ? this.eventsService.getSubscriptions().pipe(catchError(() => of([])))
       : of([]);
-    const editableEvents = this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES)
-      ? this.eventsService.getEditableEvents().pipe(catchError(() => of([])))
-      : of([]);
-    forkJoin({ event: this.eventsService.getById(id), subscriptions, editableEvents }).pipe(
-      finalize(() => this.loading.set(false)),
-    ).subscribe({
-      next: ({ event, subscriptions: items, editableEvents: editableItems }) => {
-        this.event.set({ ...event, activities: event.activities ?? [] });
-        this.subscribed.set(items.some((item) => item.id === event.id));
-        this.canEdit.set(editableItems.some((item) => item.id === event.id));
+    this.eventsService.getById(id).pipe(finalize(() => this.loading.set(false))).subscribe({
+      next: (event) => {
+        this.event.set(event);
+        subscriptions.subscribe((items) => this.subscribed.set(items.some((item) => item.id === event.id)));
       },
       error: (error: unknown) => this.errorMessage.set(this.getErrorMessage(error)),
     });

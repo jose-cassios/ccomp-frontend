@@ -8,10 +8,16 @@
   } @else if (event(); as currentEvent) {
     <article class="event-hero">
       <div>
-        <div class="tags">
-          <span>{{ categoryLabel(currentEvent.category) }}</span>
-          <span>{{ formatLabel(currentEvent.format) }}</span>
-        </div>
+        @if (currentEvent.category || currentEvent.format) {
+          <div class="tags">
+            @if (currentEvent.category) {
+              <span>{{ categoryLabel(currentEvent.category) }}</span>
+            }
+            @if (currentEvent.format) {
+              <span>{{ formatLabel(currentEvent.format) }}</span>
+            }
+          </div>
+        }
         <h1>{{ currentEvent.title }}</h1>
         <p>{{ currentEvent.description || 'A descrição deste evento ainda não foi informada.' }}</p>
       </div>
@@ -61,26 +67,5 @@
       <p class="notice notice--success" role="status">{{ successMessage() }}</p>
     }
 
-    <section class="activities" aria-labelledby="activities-title">
-      <div>
-        <span>Programação</span>
-        <h2 id="activities-title">Atividades</h2>
-      </div>
-      @if (currentEvent.activities.length) {
-        <div class="activity-list">
-          @for (activity of currentEvent.activities; track activity.id) {
-            <article>
-              <span>{{ $index + 1 }}</span>
-              <div>
-                <h3>{{ activity.title }}</h3>
-                <p>{{ activity.description || 'Sem descrição adicional.' }}</p>
-              </div>
-            </article>
-          }
-        </div>
-      } @else {
-        <p class="empty-activities">A programação detalhada ainda não foi cadastrada.</p>
-      }
-    </section>
   }
 </main>

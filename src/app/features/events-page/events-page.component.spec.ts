@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of } from 'rxjs';
 
 import { AuthService } from '../auth/services/auth.service';
 import { EventsPageComponent } from './events-page.component';
@@ -20,7 +20,6 @@ describe('EventsPageComponent', () => {
           provide: EventsService,
           useValue: {
             search: () => of({ content: [], next_cursor: null, previous_cursor: null }),
-            getFeatured: () => throwError(() => ({ status: 404 })),
           },
         },
       ],

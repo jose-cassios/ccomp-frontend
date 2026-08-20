@@ -17,6 +17,7 @@ export interface EventActivity {
   description: string | null;
 }
 
+/** Resumo retornado pelo endpoint público de busca de eventos. */
 export interface EventListItem {
   id: number;
   title: string;
@@ -28,11 +29,26 @@ export interface EventListItem {
   end_date: string | null;
 }
 
-export interface EventDetails extends EventListItem {
-  address: string | null;
-  online_url: string | null;
+/** Resposta atual de GET/POST /events e dos endpoints em /users/me. */
+export interface EventResponse {
+  id: number;
+  title: string;
+  start_date: string | null;
+  end_date: string | null;
   owner_id: string;
-  activities: EventActivity[];
+}
+
+/**
+ * Campos adicionais são opcionais porque o Swagger ainda não os documenta no
+ * endpoint de detalhes. A UI aproveita-os caso sejam disponibilizados depois.
+ */
+export interface EventDetails extends EventResponse {
+  description?: string | null;
+  format?: EventFormat;
+  category?: EventCategory;
+  address?: string | null;
+  online_url?: string | null;
+  activities?: EventActivity[];
 }
 
 export interface EventsPageResponse {
@@ -41,33 +57,29 @@ export interface EventsPageResponse {
   previous_cursor: string | null;
 }
 
+/** Campos aceitos por POST /events/search. */
 export interface EventsFilter {
   event_category?: EventCategory;
   format?: EventFormat;
-  timing?: EventTiming;
 }
 
+/** Campos aceitos por POST /events. */
 export interface CreateEventPayload {
   title: string;
-  description?: string;
   category: EventCategory;
   format: EventFormat;
-  start_date: string;
-  end_date: string;
-  address?: string;
-  online_url?: string;
+  start_date?: string;
+  end_date?: string;
 }
 
+/** Campos aceitos por PATCH /events. */
 export interface UpdateEventPayload {
   id: number;
   title?: string;
   description?: string;
   event_category?: EventCategory;
-  format?: EventFormat;
   start_date?: string;
   end_date?: string;
-  address?: string;
-  online_url?: string;
 }
 
 export interface ActivityPayload {

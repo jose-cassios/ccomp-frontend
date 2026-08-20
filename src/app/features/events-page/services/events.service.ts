@@ -9,6 +9,7 @@ import {
   EventActivity,
   EventDetails,
   EventListItem,
+  EventResponse,
   EventsFilter,
   EventsPageResponse,
   UpdateEventPayload,
@@ -29,28 +30,28 @@ export class EventsService {
     return this.api.post<EventsPageResponse>('/events/search', filter, { params });
   }
 
-  getFeatured(): Observable<EventListItem> {
-    return this.api.get<EventListItem>('/events/featured');
-  }
-
   getById(id: number | string): Observable<EventDetails> {
     return this.api.get<EventDetails>(`/events/${encodeURIComponent(id)}`);
   }
 
-  getEditableEvents(): Observable<EventListItem[]> {
-    return this.api.get<EventListItem[]>('/users/me/editable-events');
+  getBySlug(slug: string): Observable<EventDetails> {
+    return this.api.get<EventDetails>(`/events/slug/${encodeURIComponent(slug)}`);
   }
 
-  getSubscriptions(): Observable<EventDetails[]> {
-    return this.api.get<EventDetails[]>('/users/me/events-subscriptions');
+  getCreatedEvents(): Observable<EventResponse[]> {
+    return this.api.get<EventResponse[]>('/users/me/created-events');
   }
 
-  create(payload: CreateEventPayload): Observable<EventDetails> {
-    return this.api.post<EventDetails>('/events', payload);
+  getSubscriptions(): Observable<EventResponse[]> {
+    return this.api.get<EventResponse[]>('/users/me/events-subscriptions');
   }
 
-  update(payload: UpdateEventPayload): Observable<EventDetails> {
-    return this.api.patch<EventDetails>('/events', payload);
+  create(payload: CreateEventPayload): Observable<EventResponse> {
+    return this.api.post<EventResponse>('/events', payload);
+  }
+
+  update(payload: UpdateEventPayload): Observable<EventListItem> {
+    return this.api.patch<EventListItem>('/events', payload);
   }
 
   deleteEvent(id: number | string): Observable<ApiMessage> {
@@ -65,20 +66,16 @@ export class EventsService {
     return this.api.delete<ApiMessage>(`/events/${encodeURIComponent(id)}/subscribe`);
   }
 
-  getEditors(eventId: number | string): Observable<string[]> {
-    return this.api.get<string[]>(`/events/${encodeURIComponent(eventId)}/editors`);
-  }
-
-  addEditor(eventId: number | string, userId: string): Observable<ApiMessage> {
+  addEditor(eventId: number | string, email: string): Observable<ApiMessage> {
     return this.api.post<ApiMessage>(
-      `/events/${encodeURIComponent(eventId)}/editors/${encodeURIComponent(userId)}`,
+      `/events/${encodeURIComponent(eventId)}/editors/${encodeURIComponent(email)}`,
       null,
     );
   }
 
-  removeEditor(eventId: number | string, userId: string): Observable<ApiMessage> {
+  removeEditor(eventId: number | string, email: string): Observable<ApiMessage> {
     return this.api.delete<ApiMessage>(
-      `/events/${encodeURIComponent(eventId)}/editors/${encodeURIComponent(userId)}`,
+      `/events/${encodeURIComponent(eventId)}/editors/${encodeURIComponent(email)}`,
     );
   }
 
@@ -89,14 +86,9 @@ export class EventsService {
     );
   }
 
-  updateActivity(activityId: number | string, payload: ActivityPayload): Observable<EventActivity> {
-    return this.api.patch<EventActivity>(
-      `/events/activities/${encodeURIComponent(activityId)}`,
-      payload,
-    );
-  }
-
   deleteActivity(activityId: number | string): Observable<ApiMessage> {
-    return this.api.delete<ApiMessage>(`/events/activities/${encodeURIComponent(activityId)}`);
+    return this.api.delete<ApiMessage>(
+      `/events/activities/${encodeURIComponent(activityId)}`,
+    );
   }
 }

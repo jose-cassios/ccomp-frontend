@@ -3,7 +3,7 @@
     <div>
       <a routerLink="/eventos">← Voltar para eventos</a>
       <h1>{{ editingExisting() ? 'Editar evento' : 'Novo evento' }}</h1>
-      <p>Cadastre os dados principais, a programação e os moderadores que poderão colaborar.</p>
+      <p>Cadastre os dados principais e as atividades do evento.</p>
     </div>
     <div class="header-actions">
       @if (event() && isOwner()) {
@@ -48,28 +48,37 @@
           }
         </label>
 
-        <label class="field field--wide">
-          <span>Descrição</span>
-          <textarea formControlName="description" rows="5" maxlength="1000"></textarea>
-        </label>
-
-        <label class="field">
-          <span>Categoria *</span>
-          <select formControlName="category">
-            @for (category of categories; track category.value) {
-              <option [value]="category.value">{{ category.label }}</option>
+        @if (editingExisting()) {
+          <label class="field field--wide">
+            <span>Descrição</span>
+            <textarea formControlName="description" rows="5" maxlength="1000"></textarea>
+            @if (form.controls.description.touched && form.controls.description.invalid) {
+              <strong>Informe ao menos 4 caracteres ou deixe o campo vazio.</strong>
             }
-          </select>
-        </label>
+          </label>
+        }
 
-        <label class="field">
-          <span>Formato *</span>
-          <select formControlName="format">
-            @for (format of formats; track format.value) {
-              <option [value]="format.value">{{ format.label }}</option>
-            }
-          </select>
-        </label>
+        @if (canChangeCategory()) {
+          <label class="field">
+            <span>Categoria *</span>
+            <select formControlName="category">
+              @for (category of categories; track category.value) {
+                <option [value]="category.value">{{ category.label }}</option>
+              }
+            </select>
+          </label>
+        }
+
+        @if (!editingExisting()) {
+          <label class="field">
+            <span>Formato *</span>
+            <select formControlName="format">
+              @for (format of formats; track format.value) {
+                <option [value]="format.value">{{ format.label }}</option>
+              }
+            </select>
+          </label>
+        }
 
         <label class="field">
           <span>Início *</span>
@@ -80,23 +89,6 @@
           <span>Término *</span>
           <input type="datetime-local" formControlName="end_date" />
         </label>
-
-        @if (isInPerson()) {
-          <label class="field field--wide">
-            <span>Endereço</span>
-            <input type="text" formControlName="address" placeholder="Campus, prédio e sala" />
-          </label>
-        }
-
-        @if (isOnline()) {
-          <label class="field field--wide">
-            <span>Link online</span>
-            <input type="url" formControlName="online_url" placeholder="https://..." />
-            @if (form.controls.online_url.touched && form.controls.online_url.invalid) {
-              <strong>Informe uma URL iniciada por http:// ou https://.</strong>
-            }
-          </label>
-        }
       </div>
 
       <div class="form-footer">
@@ -124,12 +116,7 @@
             <span>Descrição</span>
             <input type="text" formControlName="description" maxlength="2000" />
           </label>
-          <button class="button button--primary" type="submit" [disabled]="isBusy()">
-            {{ editingActivityId() ? 'Atualizar' : 'Adicionar' }}
-          </button>
-          @if (editingActivityId()) {
-            <button class="button button--secondary" type="button" (click)="cancelActivityEdit()">Cancelar</button>
-          }
+          <button class="button button--primary" type="submit" [disabled]="isBusy()">Adicionar</button>
         </form>
 
         <div class="item-list">
@@ -140,12 +127,11 @@
                 <p>{{ activity.description || 'Sem descrição.' }}</p>
               </div>
               <div>
-                <button type="button" (click)="editActivity(activity)">Editar</button>
                 <button class="danger-link" type="button" (click)="deleteActivity(activity)">Excluir</button>
               </div>
             </article>
           } @empty {
-            <p>Nenhuma atividade cadastrada.</p>
+            <p>Não há atividades carregadas nesta sessão.</p>
           }
         </div>
       </section>
@@ -159,27 +145,27 @@
             <h2 id="editors-title">Editores do evento</h2>
           </div>
         </div>
-        <p class="section-copy">Informe o ID de outro moderador. Apenas o proprietário pode conceder ou remover esse acesso.</p>
+        <p class="section-copy">Informe o e-mail de outro moderador. Apenas o proprietário pode conceder ou remover esse acesso.</p>
 
         <form class="inline-form" [formGroup]="editorForm" (ngSubmit)="addEditor()">
           <label class="field field--grow">
-            <span>ID do moderador *</span>
-            <input type="text" formControlName="userId" placeholder="00000000-0000-0000-0000-000000000000" />
-            @if (editorForm.controls.userId.touched && editorForm.controls.userId.invalid) {
-              <strong>Informe um UUID válido.</strong>
+            <span>E-mail do moderador *</span>
+            <input type="email" formControlName="email" placeholder="moderador@ifma.edu.br" />
+            @if (editorForm.controls.email.touched && editorForm.controls.email.invalid) {
+              <strong>Informe um e-mail válido.</strong>
             }
           </label>
           <button class="button button--primary" type="submit" [disabled]="isBusy()">Adicionar editor</button>
         </form>
 
         <div class="item-list">
-          @for (editorId of editors(); track editorId) {
+          @for (email of editors(); track email) {
             <article>
-              <code>{{ editorId }}</code>
-              <button class="danger-link" type="button" (click)="removeEditor(editorId)">Remover</button>
+              <code>{{ email }}</code>
+              <button class="danger-link" type="button" (click)="removeEditor(email)">Remover</button>
             </article>
           } @empty {
-            <p>Somente você pode editar este evento no momento.</p>
+            <p>A API ainda não disponibiliza a lista de editores já atribuídos.</p>
           }
         </div>
       </section>

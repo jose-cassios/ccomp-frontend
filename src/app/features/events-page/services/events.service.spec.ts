@@ -23,12 +23,12 @@ describe('EventsService', () => {
     service = TestBed.inject(EventsService);
   });
 
-  it('should search with filters and cursor pagination', () => {
-    service.search({ format: 'ONLINE', timing: 'FUTURE' }, 'cursor-2', 20).subscribe();
+  it('should search with the Swagger filter and cursor pagination', () => {
+    service.search({ format: 'ONLINE', event_category: 'ACADEMIC_EDUCATIONAL' }, 'cursor-2', 20).subscribe();
 
     expect(api.post).toHaveBeenCalledWith(
       '/events/search',
-      { format: 'ONLINE', timing: 'FUTURE' },
+      { format: 'ONLINE', event_category: 'ACADEMIC_EDUCATIONAL' },
       { params: expect.objectContaining({}) },
     );
     const params = api.post.mock.calls[0]?.[2]?.params;
@@ -36,25 +36,29 @@ describe('EventsService', () => {
     expect(params?.get('pageSize')).toBe('20');
   });
 
-  it('should load event discovery and management endpoints', () => {
-    service.getFeatured().subscribe();
+  it('should use the available event and user endpoints', () => {
     service.getById(12).subscribe();
-    service.getEditableEvents().subscribe();
+    service.getBySlug('semana-da-computacao').subscribe();
+    service.getCreatedEvents().subscribe();
+    service.getSubscriptions().subscribe();
 
-    expect(api.get).toHaveBeenCalledWith('/events/featured');
     expect(api.get).toHaveBeenCalledWith('/events/12');
-    expect(api.get).toHaveBeenCalledWith('/users/me/editable-events');
+    expect(api.get).toHaveBeenCalledWith('/events/slug/semana-da-computacao');
+    expect(api.get).toHaveBeenCalledWith('/users/me/created-events');
+    expect(api.get).toHaveBeenCalledWith('/users/me/events-subscriptions');
   });
 
-  it('should call event and activity mutation endpoints', () => {
+  it('should use e-mail addresses for editor management and supported activities', () => {
     service.deleteEvent(12).subscribe();
-    service.addEditor(12, 'moderator-id').subscribe();
-    service.updateActivity(7, { title: 'Palestra' }).subscribe();
+    service.addEditor(12, 'moderator@ifma.edu.br').subscribe();
+    service.removeEditor(12, 'moderator@ifma.edu.br').subscribe();
+    service.createActivity(12, { title: 'Palestra' }).subscribe();
     service.deleteActivity(7).subscribe();
 
     expect(api.delete).toHaveBeenCalledWith('/events/12');
-    expect(api.post).toHaveBeenCalledWith('/events/12/editors/moderator-id', null);
-    expect(api.patch).toHaveBeenCalledWith('/events/activities/7', { title: 'Palestra' });
+    expect(api.post).toHaveBeenCalledWith('/events/12/editors/moderator%40ifma.edu.br', null);
+    expect(api.delete).toHaveBeenCalledWith('/events/12/editors/moderator%40ifma.edu.br');
+    expect(api.post).toHaveBeenCalledWith('/events/12/activities', { title: 'Palestra' });
     expect(api.delete).toHaveBeenCalledWith('/events/activities/7');
   });
 });
