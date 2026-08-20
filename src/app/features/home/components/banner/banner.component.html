@@ -52,7 +52,7 @@
             <h3 class="news-tag">{{ currentHighlight().label }}</h3>
             <div class="news-controls">
               @if (canManageHighlights()) {
-                <button class="manage-highlight" type="button" (click)="manageHighlights.emit()">Atualizar destaque</button>
+                <button class="manage-highlight" type="button" (click)="manageHighlights.emit()">Gerenciar destaques</button>
               }
               <button type="button" aria-label="Destaque anterior" (click)="prev()">‹</button>
               <button type="button" aria-label="Próximo destaque" (click)="next()">›</button>

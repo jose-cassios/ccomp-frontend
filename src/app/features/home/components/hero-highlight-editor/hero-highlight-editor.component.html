@@ -10,68 +10,33 @@
       <header>
         <div>
           <span>Destaques globais</span>
-          <h2 id="hero-highlight-editor-title">Atualizar destaque</h2>
-          <p>Escolha até oito notícias, eventos ou clubes públicos para exibir na hero.</p>
+          <h2 id="hero-highlight-editor-title">Destaques da home</h2>
+          <p>Os destaques são definidos automaticamente pelo sistema.</p>
         </div>
         <button type="button" aria-label="Fechar" (click)="closed.emit()">×</button>
       </header>
 
-      <nav class="category-tabs" aria-label="Categorias de destaque">
-        @for (category of categories; track category.type) {
-          <button
-            type="button"
-            role="tab"
-            [class.active]="activeCategory() === category.type"
-            [attr.aria-selected]="activeCategory() === category.type"
-            (click)="selectCategory(category.type)"
-          >
-            {{ category.label }}
-            @if (loadingCategories()[category.type]) {
-              <span class="tab-loading" aria-hidden="true"></span>
-            }
-          </button>
-        }
-      </nav>
+      <p class="notice">
+        A seleção manual ainda não está disponível. Este modal será usado quando essa
+        funcionalidade for liberada.
+      </p>
 
-      @if (loading()) {
-        <p class="notice" role="status">Carregando {{ activeCategoryLabel().toLowerCase() }}...</p>
-      } @else if (errorMessage()) {
-        <div class="notice notice--error" role="alert">
-          <span>{{ errorMessage() }}</span>
-          <button type="button" (click)="categoryRequested.emit(activeCategory())">Tentar novamente</button>
-        </div>
-      } @else if (visibleCandidates().length) {
-        <p class="selection-count">{{ selectedCount() }}/8 selecionados</p>
-        <div class="candidate-list">
-          @for (candidate of visibleCandidates(); track candidate.source_type + ':' + candidate.source_id) {
-            <label [class.selected]="isSelected(candidate)">
-              <input
-                type="checkbox"
-                [checked]="isSelected(candidate)"
-                [disabled]="!isSelected(candidate) && selectedCount() >= 8"
-                (change)="toggle(candidate)"
-              />
-              <span class="candidate-type">
-                {{ isSelected(candidate) ? 'Em destaque na home' : candidate.label }}
-              </span>
-              <strong>{{ candidate.title }}</strong>
-              <small>{{ candidate.summary || 'Sem resumo disponível.' }}</small>
-            </label>
+      @if (highlights().length) {
+        <div class="highlight-list" aria-label="Itens em destaque">
+          @for (highlight of highlights(); track highlight.id) {
+            <article>
+              <span class="highlight-type">{{ highlight.label }}</span>
+              <strong>{{ highlight.title }}</strong>
+              <small>{{ highlight.summary || 'Sem resumo disponível.' }}</small>
+            </article>
           }
         </div>
       } @else {
-        <p class="notice">{{ emptyMessage() }}</p>
-      }
-
-      @if (saveError()) {
-        <p class="notice notice--error" role="alert">{{ saveError() }}</p>
+        <p class="notice">Não há itens em destaque no momento.</p>
       }
 
       <footer>
-        <button class="secondary" type="button" [disabled]="saving()" (click)="closed.emit()">Cancelar</button>
-        <button class="primary" type="button" [disabled]="saving()" (click)="save()">
-          {{ saving() ? 'Salvando...' : 'Salvar destaques' }}
-        </button>
+        <button class="secondary" type="button" (click)="closed.emit()">Fechar</button>
       </footer>
     </section>
   </div>

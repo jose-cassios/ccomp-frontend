@@ -33,6 +33,6 @@ describe('Banner', () => {
     fixture.componentRef.setInput('canManageHighlights', true);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Atualizar destaque');
+    expect(fixture.nativeElement.textContent).toContain('Gerenciar destaques');
   });
 });

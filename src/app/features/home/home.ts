@@ -1,51 +1,46 @@
-import { Component, computed, inject, signal, OnInit } from '@angular/core';
-import { BannerComponent } from "./components/banner/banner.component";
-import { AgendaMesComponent } from "./components/agenda-mes/agenda-mes.component";
-import { EventosAndamentoComponent } from "./components/eventos-andamento/eventos-andamento.component";
-import { NoticiasClubeComponent } from "./components/noticias-clube/noticias-clube.component";
-import { DestaquesSemana } from "./components/destaques-semana/destaques-semana";
-import { NewsService } from '../news-page/services/news.service';
-import { NewsItemType } from '../news-page/interface/news.interface';
-import { EventListItem } from '../events-page/models/event.model';
-import { EventsService } from '../events-page/services/events.service';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CONTENT_MANAGEMENT_ROLES } from '../auth/config/auth.config';
 import { AuthService } from '../auth/services/auth.service';
+import { EventListItem } from '../events-page/models/event.model';
+import { EventsService } from '../events-page/services/events.service';
+import { NewsItemType } from '../news-page/interface/news.interface';
+import { NewsService } from '../news-page/services/news.service';
+import { AgendaMesComponent } from './components/agenda-mes/agenda-mes.component';
+import { BannerComponent } from './components/banner/banner.component';
+import { DestaquesSemana } from './components/destaques-semana/destaques-semana';
+import { EventosAndamentoComponent } from './components/eventos-andamento/eventos-andamento.component';
 import { HeroHighlightEditorComponent } from './components/hero-highlight-editor/hero-highlight-editor.component';
-import {
-  GlobalHighlight,
-  HighlightCandidate,
-  HighlightSelection,
-  HighlightSourceType,
-} from './models/global-highlight.model';
+import { NoticiasClubeComponent } from './components/noticias-clube/noticias-clube.component';
+import { GlobalHighlight } from './models/global-highlight.model';
 import { HeroHighlightsService } from './services/hero-highlights.service';
 
 @Component({
   selector: 'app-home',
-  standalone:true,
-  imports: [BannerComponent, AgendaMesComponent, EventosAndamentoComponent, DestaquesSemana, NoticiasClubeComponent, HeroHighlightEditorComponent],
+  standalone: true,
+  imports: [
+    BannerComponent,
+    AgendaMesComponent,
+    EventosAndamentoComponent,
+    DestaquesSemana,
+    NoticiasClubeComponent,
+    HeroHighlightEditorComponent,
+  ],
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
 export class Home implements OnInit {
-  private newsService = inject(NewsService);
-  private eventsService = inject(EventsService);
-  private authService = inject(AuthService);
-  private heroHighlightsService = inject(HeroHighlightsService);
-  
+  private readonly newsService = inject(NewsService);
+  private readonly eventsService = inject(EventsService);
+  private readonly authService = inject(AuthService);
+  private readonly heroHighlightsService = inject(HeroHighlightsService);
+
   readonly newsItems = signal<NewsItemType[]>([]);
   readonly events = signal<EventListItem[]>([]);
   readonly highlights = signal<GlobalHighlight[]>([]);
-  readonly highlightCandidates = signal<HighlightCandidate[]>([]);
   readonly highlightEditorOpen = signal(false);
-  readonly highlightCandidatesLoading = signal<Record<HighlightSourceType, boolean>>({
-    NEWS: false,
-    EVENT: false,
-    CLUB: false,
-  });
-  readonly highlightCandidateErrors = signal<Partial<Record<HighlightSourceType, string>>>({});
-  readonly highlightSaving = signal(false);
-  readonly highlightSaveError = signal<string | null>(null);
-  readonly canManageHighlights = computed(() => this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES));
+  readonly canManageHighlights = computed(() =>
+    this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
+  );
   readonly ongoingEvents = computed(() => {
     const now = Date.now();
     return this.events().filter((event) => {
@@ -63,12 +58,8 @@ export class Home implements OnInit {
 
   loadFeaturedNews(): void {
     this.newsService.getAll({ featured: true }).subscribe({
-      next: (response) => {
-        this.newsItems.set(response.content);
-      },
-      error: (error) => {
-        this.newsItems.set([]);
-      }
+      next: (response) => this.newsItems.set(response.content),
+      error: () => this.newsItems.set([]),
     });
   }
 
@@ -80,54 +71,11 @@ export class Home implements OnInit {
   }
 
   openHighlightEditor(): void {
-    if (!this.canManageHighlights()) return;
-    this.highlightEditorOpen.set(true);
-    this.highlightSaveError.set(null);
-    this.loadHighlightCandidates('NEWS');
-  }
-
-  loadHighlightCandidates(sourceType: HighlightSourceType): void {
-    this.highlightCandidatesLoading.update((state) => ({ ...state, [sourceType]: true }));
-    this.highlightCandidateErrors.update((errors) => ({ ...errors, [sourceType]: undefined }));
-
-    this.heroHighlightsService.getCandidates(sourceType).subscribe({
-      next: (candidates) => this.highlightCandidates.update((current) => [
-        ...current.filter((candidate) => candidate.source_type !== sourceType),
-        ...candidates,
-      ]),
-      error: () => {
-        this.highlightCandidatesLoading.update((state) => ({ ...state, [sourceType]: false }));
-        this.highlightCandidateErrors.update((errors) => ({
-          ...errors,
-          [sourceType]: 'Não foi possível carregar esta categoria. Tente novamente.',
-        }));
-      },
-      complete: () => this.highlightCandidatesLoading.update((state) => ({
-        ...state,
-        [sourceType]: false,
-      })),
-    });
+    if (this.canManageHighlights()) this.highlightEditorOpen.set(true);
   }
 
   closeHighlightEditor(): void {
-    if (!this.highlightSaving()) this.highlightEditorOpen.set(false);
-  }
-
-  saveHighlights(selections: HighlightSelection[]): void {
-    if (this.highlightSaving()) return;
-    this.highlightSaving.set(true);
-    this.highlightSaveError.set(null);
-    this.heroHighlightsService.update(selections).subscribe({
-      next: (highlights) => {
-        this.highlights.set(highlights);
-        this.highlightEditorOpen.set(false);
-      },
-      error: () => {
-        this.highlightSaving.set(false);
-        this.highlightSaveError.set('Não foi possível salvar os destaques.');
-      },
-      complete: () => this.highlightSaving.set(false),
-    });
+    this.highlightEditorOpen.set(false);
   }
 
   private loadHighlights(): void {

@@ -4,7 +4,7 @@ import { ApiService } from '../../../core/api/api.service';
 import { HeroHighlightsService } from './hero-highlights.service';
 
 describe('HeroHighlightsService', () => {
-  const api = { get: vi.fn(() => of([])), put: vi.fn(() => of([])) };
+  const api = { get: vi.fn() };
   let service: HeroHighlightsService;
 
   beforeEach(() => {
@@ -15,13 +15,32 @@ describe('HeroHighlightsService', () => {
     service = TestBed.inject(HeroHighlightsService);
   });
 
-  it('should use the global highlight endpoints', () => {
-    service.getAll().subscribe();
-    service.getCandidates('NEWS').subscribe();
-    service.update([{ source_type: 'EVENT', source_id: 4 }]).subscribe();
+  it('should map the automatic highlights returned by the API', () => {
+    api.get.mockReturnValue(of({
+      news: [{
+        id: 1,
+        title: 'Notícia',
+        summary: 'Resumo',
+        slug: 'noticia',
+        cover_image_url: null,
+      }],
+      events: [],
+      clubs: [],
+    }));
+
+    service.getAll().subscribe((highlights) => {
+      expect(highlights).toEqual([{
+        id: 'NEWS:1',
+        source_type: 'NEWS',
+        source_id: 1,
+        title: 'Notícia',
+        summary: 'Resumo',
+        image_url: null,
+        label: 'Notícia em destaque',
+        link: '/news/noticia',
+      }]);
+    });
 
     expect(api.get).toHaveBeenCalledWith('/highlights');
-    expect(api.get).toHaveBeenCalledWith('/highlights/candidates/NEWS');
-    expect(api.put).toHaveBeenCalledWith('/highlights', [{ source_type: 'EVENT', source_id: 4 }]);
   });
 });

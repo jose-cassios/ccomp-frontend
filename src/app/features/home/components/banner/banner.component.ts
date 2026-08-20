@@ -52,7 +52,7 @@ export class BannerComponent {
 }
 
 const DEFAULT_HIGHLIGHT: GlobalHighlight = {
-  id: 0,
+  id: 'DEFAULT:0',
   source_type: 'EVENT',
   source_id: 0,
   title: 'Semana de Tecnologia',

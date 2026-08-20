@@ -1,7 +1,5 @@
 <header class="site-header">
-  
   <div class="header-container">
-
     <div class="brand" routerLink="/">
       <img src="ifma-logo.png" alt="Logo IFMA" class="logo-ifma">
       <div class="brand-text">
@@ -15,7 +13,7 @@
         <input type="text" placeholder="Busca global..." #searchInput>
         <button (click)="onSearch(searchInput.value)">🔍</button>
       </div>
-      
+
       @if (isAuthenticated()) {
         <div class="user-summary" aria-label="Usuário autenticado">
           <span class="user-avatar" aria-hidden="true">{{ userInitials() }}</span>
@@ -29,69 +27,58 @@
         </div>
       } @else {
         <a class="guest-user" routerLink="/login" aria-label="Acessar conta">
-          <button class="login-button" (click)="onLogin()"> 
-            Entrar
-          </button>
+          <button class="login-button" (click)="onLogin()">Entrar</button>
         </a>
       }
     </div>
-    
   </div>
 
   <nav class="header-navigation">
-
     <div class="nav-container">
       <ul class="nav-list">
-
         <li class="nav-item">
-          <a class="nav-link" routerLink="/projetos/clubes">Clubes</a>
+          <a class="nav-link" routerLink="/" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true }">Home</a>
         </li>
-
         <li class="nav-item">
-          <a class="nav-link" routerLink="/eventos">Eventos</a>
+          <a class="nav-link" routerLink="/eventos" routerLinkActive="active-link">Eventos</a>
         </li>
-
         <li class="nav-item">
-          <a class="nav-link" routerLink="/ensino/editais">Editais</a>
+          <a class="nav-link" routerLink="/noticias" routerLinkActive="active-link">Notícias</a>
         </li>
-
         <li class="nav-item">
-          <a class="nav-link" routerLink="/noticias">Notícias</a>
+          <a class="nav-link" routerLink="/projetos/clubes" routerLinkActive="active-link">Clubes</a>
         </li>
-
-        @if (canAccessAdministration()) {
-          <li class="nav-item">
-            <a class="nav-link" routerLink="/admin/usuarios">Administração</a>
-          </li>
-        }
-
         <li class="nav-item has-dropdown">
-          <a class="nav-link">Sobre o Curso ▼</a>
+          <a class="nav-link">Sobre o Curso ▾</a>
           <ul class="dropdown-menu">
             <li><a routerLink="/sobre/apresentacao">Apresentação</a></li>
             <li><a routerLink="/sobre/docentes">Corpo Docente</a></li>
             <li><a routerLink="/sobre/infraestrutura">Infraestrutura</a></li>
             <li><a routerLink="/ensino/matriz">Matriz Curricular</a></li>
             <li><a routerLink="/ensino/calendario">Calendário Acadêmico</a></li>
+            <li><a routerLink="/ensino/editais">Editais</a></li>
             <li><a routerLink="/projetos/pesquisa-extensao">Pesquisa e Extensão</a></li>
             <li><a routerLink="/processo-seletivo">Processo Seletivo</a></li>
           </ul>
         </li>
 
+        @if (canAccessAdministration()) {
+          <li class="nav-item">
+            <a class="nav-link" routerLink="/admin/usuarios" routerLinkActive="active-link">Administração</a>
+          </li>
+        }
       </ul>
- 
+
       <div class="contact-social">
         <div class="social-icons">
           <a href="https://instagram.com/ccomp_ifma" target="_blank" title="Instagram" class="social-link">
-            <span class="icon"> </span>
+            <span class="icon"></span>
           </a>
           <a href="https://github.com/ccomp-ifma" target="_blank" title="GitHub" class="social-link">
             <span class="icon"></span>
           </a>
         </div>
       </div>
-
-    </div> 
-   </nav>
-
+    </div>
+  </nav>
 </header>

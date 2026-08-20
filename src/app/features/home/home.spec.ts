@@ -26,7 +26,7 @@ describe('Home', () => {
           useValue: { search: () => of({ content: [], next_cursor: null, previous_cursor: null }) },
         },
         { provide: AuthService, useValue: { hasAnyRole: () => false } },
-        { provide: HeroHighlightsService, useValue: { getAll: () => of([]), getCandidates: () => of([]), update: () => of([]) } },
+        { provide: HeroHighlightsService, useValue: { getAll: () => of([]) } },
       ],
     })
     .compileComponents();
