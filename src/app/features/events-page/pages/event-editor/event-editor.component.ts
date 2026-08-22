@@ -1,9 +1,11 @@
+import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, HostListener, inject, OnInit, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, Observable } from 'rxjs';
+import { ADMINISTRATION_ROLES } from '../../../auth/config/auth.config';
 import { AuthService } from '../../../auth/services/auth.service';
 import {
   ActivityPayload,
@@ -13,13 +15,21 @@ import {
   EventActivity,
   EventCategory,
   EventDetails,
+  EventEditor,
   EventFormat,
-  EventListItem,
   UpdateEventPayload,
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 
 type EditorOperation = 'idle' | 'loading' | 'saving' | 'deleting' | 'activity' | 'editor';
+type EventEditorStep = 'details' | 'schedule' | 'team' | 'review';
+
+const EDITOR_STEPS: ReadonlyArray<{ value: EventEditorStep; label: string }> = [
+  { value: 'details', label: 'Informações' },
+  { value: 'schedule', label: 'Programação' },
+  { value: 'team', label: 'Equipe' },
+  { value: 'review', label: 'Revisão' },
+];
 
 @Component({
   selector: 'app-event-editor',
@@ -32,6 +42,7 @@ export class EventEditorComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly location = inject(Location);
   private readonly eventsService = inject(EventsService);
   private readonly authService = inject(AuthService);
 
@@ -53,20 +64,35 @@ export class EventEditorComponent implements OnInit {
 
   readonly event = signal<EventDetails | null>(null);
   readonly editingExisting = signal(false);
+  readonly activeStep = signal<EventEditorStep>('details');
   readonly activities = signal<EventActivity[]>([]);
-  readonly editors = signal<string[]>([]);
+  readonly editors = signal<EventEditor[]>([]);
+  readonly ownedEventIds = signal<ReadonlySet<number>>(new Set());
   readonly operation = signal<EditorOperation>('idle');
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly hasUnsavedChanges = signal(false);
   readonly categories = EVENT_CATEGORY_OPTIONS;
   readonly formats = EVENT_FORMAT_OPTIONS;
-  readonly currentUser = this.authService.currentUserState;
+  readonly steps = EDITOR_STEPS;
   readonly isBusy = computed(() => this.operation() !== 'idle');
-  readonly isOwner = computed(() => this.event()?.owner_id === this.currentUser()?.id);
-  readonly canChangeCategory = computed(() =>
-    !this.editingExisting() || this.event()?.category !== undefined,
-  );
+  readonly isAdmin = computed(() => this.authService.hasAnyRole(ADMINISTRATION_ROLES));
+  readonly isOwner = computed(() => {
+    const eventId = this.event()?.id;
+    return eventId !== undefined && this.ownedEventIds().has(eventId);
+  });
+  readonly canDelete = computed(() => this.isAdmin() || this.isOwner());
+  readonly canManageTeam = computed(() => this.isOwner());
+  readonly operationLabel = computed(() => {
+    switch (this.operation()) {
+      case 'loading': return 'Carregando evento...';
+      case 'saving': return 'Salvando informações do evento...';
+      case 'deleting': return 'Excluindo evento...';
+      case 'activity': return 'Atualizando programação...';
+      case 'editor': return 'Atualizando equipe...';
+      default: return '';
+    }
+  });
 
   constructor() {
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
@@ -76,6 +102,7 @@ export class EventEditorComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadOwnedEvents();
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return;
 
@@ -102,27 +129,31 @@ export class EventEditorComponent implements OnInit {
     this.operation.set('saving');
     this.errorMessage.set(null);
     this.successMessage.set(null);
-
-    const request: Observable<EventDetails | EventListItem> = currentEvent
+    const request: Observable<EventDetails> = currentEvent
       ? this.eventsService.update(this.buildUpdatePayload(currentEvent))
       : this.eventsService.create({
           title: value.title,
           category: value.category,
           format: value.format,
-          start_date: value.start_date,
-          end_date: value.end_date,
+          startDate: value.start_date,
+          endDate: value.end_date,
         } satisfies CreateEventPayload);
 
     request.pipe(finalize(() => this.operation.set('idle'))).subscribe({
       next: (savedEvent) => {
-        if (currentEvent) {
-          this.applyEvent({ ...currentEvent, ...savedEvent });
-        } else {
-          const createdEvent = savedEvent as EventDetails;
-          this.applyEvent(createdEvent);
-          void this.router.navigate(['/eventos', createdEvent.id, 'editar'], { replaceUrl: true });
+        const localDescription = value.description;
+        this.applyEvent(savedEvent, localDescription);
+
+        if (!currentEvent) {
+          this.editingExisting.set(true);
+          this.ownedEventIds.update((ids) => new Set(ids).add(savedEvent.id));
+          this.location.replaceState(`/eventos/${savedEvent.id}/editar`);
+          this.activeStep.set('schedule');
+          this.successMessage.set('Evento criado. Agora adicione a programação ou revise as informações.');
+          return;
         }
-        this.successMessage.set(currentEvent ? 'Evento atualizado com sucesso.' : 'Evento criado com sucesso.');
+
+        this.successMessage.set('Informações do evento salvas com sucesso.');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível salvar o evento.'));
@@ -130,9 +161,28 @@ export class EventEditorComponent implements OnInit {
     });
   }
 
+  selectStep(step: EventEditorStep): void {
+    if (step === 'details') {
+      this.activeStep.set(step);
+      return;
+    }
+
+    if (!this.event()) {
+      this.errorMessage.set('Salve as informações básicas antes de configurar as próximas etapas.');
+      return;
+    }
+
+    if (step === 'team' && !this.canManageTeam()) {
+      this.errorMessage.set('Apenas o responsável pelo evento pode gerenciar a equipe.');
+      return;
+    }
+
+    this.activeStep.set(step);
+  }
+
   deleteEvent(): void {
     const currentEvent = this.event();
-    if (!currentEvent || !this.isOwner() || this.isBusy()) return;
+    if (!currentEvent || !this.canDelete() || this.isBusy()) return;
     if (typeof window !== 'undefined' && !window.confirm(`Excluir o evento “${currentEvent.title}”?`)) return;
 
     this.operation.set('deleting');
@@ -166,7 +216,7 @@ export class EventEditorComponent implements OnInit {
       next: (activity) => {
         this.activities.update((activities) => [...activities, activity]);
         this.activityForm.reset({ title: '', description: '' });
-        this.successMessage.set('Atividade adicionada.');
+        this.successMessage.set('Atividade adicionada à programação.');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível adicionar a atividade.'));
@@ -184,7 +234,7 @@ export class EventEditorComponent implements OnInit {
     ).subscribe({
       next: () => {
         this.activities.update((activities) => activities.filter((item) => item.id !== activity.id));
-        this.successMessage.set('Atividade excluída.');
+        this.successMessage.set('Atividade removida da programação.');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível excluir a atividade.'));
@@ -194,7 +244,7 @@ export class EventEditorComponent implements OnInit {
 
   addEditor(): void {
     const currentEvent = this.event();
-    if (!currentEvent || !this.isOwner() || this.editorForm.invalid || this.isBusy()) {
+    if (!currentEvent || !this.canManageTeam() || this.editorForm.invalid || this.isBusy()) {
       this.editorForm.markAllAsTouched();
       return;
     }
@@ -206,9 +256,9 @@ export class EventEditorComponent implements OnInit {
       finalize(() => this.operation.set('idle')),
     ).subscribe({
       next: (response) => {
-        this.editors.update((editors) => editors.includes(email) ? editors : [...editors, email]);
         this.editorForm.reset({ email: '' });
-        this.successMessage.set(response.response ?? response.message ?? 'Editor adicionado.');
+        this.loadEditors(currentEvent.id);
+        this.successMessage.set(response.response ?? response.message ?? 'Editor adicionado à equipe.');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível adicionar o editor.'));
@@ -216,22 +266,27 @@ export class EventEditorComponent implements OnInit {
     });
   }
 
-  removeEditor(email: string): void {
+  removeEditor(editor: EventEditor): void {
     const currentEvent = this.event();
-    if (!currentEvent || !this.isOwner() || this.isBusy()) return;
+    if (!currentEvent || !this.canManageTeam() || this.isBusy()) return;
 
     this.operation.set('editor');
-    this.eventsService.removeEditor(currentEvent.id, email).pipe(
+    this.eventsService.removeEditor(currentEvent.id, editor.email_address).pipe(
       finalize(() => this.operation.set('idle')),
     ).subscribe({
       next: (response) => {
-        this.editors.update((editors) => editors.filter((editor) => editor !== email));
-        this.successMessage.set(response.response ?? response.message ?? 'Editor removido.');
+        this.editors.update((editors) => editors.filter((item) => item.id !== editor.id));
+        this.successMessage.set(response.response ?? response.message ?? 'Editor removido da equipe.');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível remover o editor.'));
       },
     });
+  }
+
+  dismissFeedback(): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
   }
 
   canDeactivate(): boolean {
@@ -249,37 +304,48 @@ export class EventEditorComponent implements OnInit {
     this.eventsService.getById(id).pipe(
       finalize(() => this.operation.set('idle')),
     ).subscribe({
-      next: (event) => this.applyEvent(event),
+      next: (event) => {
+        this.applyEvent(event);
+        this.loadEditors(event.id);
+      },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível carregar o evento.'));
       },
     });
   }
 
-  private buildUpdatePayload(event: EventDetails): UpdateEventPayload {
-    const value = this.form.getRawValue();
-    const payload: UpdateEventPayload = {
-      id: event.id,
-      title: value.title,
-      start_date: value.start_date,
-      end_date: value.end_date,
-    };
-
-    if (event.category !== undefined && value.category !== event.category) {
-      payload.event_category = value.category;
-    }
-    if (value.description && value.description !== (event.description ?? '')) {
-      payload.description = value.description;
-    }
-    return payload;
+  private loadOwnedEvents(): void {
+    this.eventsService.getCreatedEvents().subscribe({
+      next: (events) => this.ownedEventIds.set(new Set(events.map((event) => event.id))),
+      error: () => undefined,
+    });
   }
 
-  private applyEvent(event: EventDetails): void {
+  private loadEditors(eventId: number): void {
+    this.eventsService.getEditors(eventId).subscribe({
+      next: (page) => this.editors.set(page.content.filter((editor) => editor.active)),
+      error: () => this.editors.set([]),
+    });
+  }
+
+  private buildUpdatePayload(event: EventDetails): UpdateEventPayload {
+    const value = this.form.getRawValue();
+    return {
+      id: event.id,
+      title: value.title,
+      description: value.description || undefined,
+      eventCategory: value.category,
+      startDate: value.start_date,
+      endDate: value.end_date,
+    };
+  }
+
+  private applyEvent(event: EventDetails, fallbackDescription?: string): void {
     this.event.set({ ...event, activities: event.activities ?? [] });
     this.activities.set(event.activities ?? []);
     this.form.reset({
       title: event.title ?? '',
-      description: event.description ?? '',
+      description: fallbackDescription ?? event.description ?? '',
       category: event.category ?? 'ACADEMIC_EDUCATIONAL',
       format: event.format ?? 'IN_PERSON',
       start_date: this.toLocalInput(event.start_date),

@@ -17,7 +17,20 @@ export interface EventActivity {
   description: string | null;
 }
 
-/** Resumo retornado pelo endpoint público de busca de eventos. */
+export interface EventEditor {
+  id: number;
+  event_id: number;
+  name: string;
+  email_address: string;
+  active: boolean;
+}
+
+export interface EventEditorsPage {
+  content: EventEditor[];
+  next_cursor: string | null;
+}
+
+/** Modelo normalizado para a interface, independente do formato da resposta da API. */
 export interface EventListItem {
   id: number;
   title: string;
@@ -29,27 +42,15 @@ export interface EventListItem {
   end_date: string | null;
 }
 
-/** Resposta atual de GET/POST /events e dos endpoints em /users/me. */
-export interface EventResponse {
-  id: number;
-  title: string;
-  start_date: string | null;
-  end_date: string | null;
-  owner_id: string;
-}
-
-/**
- * Campos adicionais são opcionais porque o Swagger ainda não os documenta no
- * endpoint de detalhes. A UI aproveita-os caso sejam disponibilizados depois.
- */
-export interface EventDetails extends EventResponse {
-  description?: string | null;
-  format?: EventFormat;
-  category?: EventCategory;
+export interface EventDetails extends EventListItem {
+  content?: string | null;
+  owner_id?: string | null;
   address?: string | null;
   online_url?: string | null;
   activities?: EventActivity[];
 }
+
+export type EventResponse = EventDetails;
 
 export interface EventsPageResponse {
   content: EventListItem[];
@@ -57,29 +58,29 @@ export interface EventsPageResponse {
   previous_cursor: string | null;
 }
 
-/** Campos aceitos por POST /events/search. */
+/** Contrato de POST /events/search confirmado na API. */
 export interface EventsFilter {
-  event_category?: EventCategory;
+  eventCategory?: EventCategory;
   format?: EventFormat;
 }
 
-/** Campos aceitos por POST /events. */
+/** Contrato de POST /events confirmado na API. */
 export interface CreateEventPayload {
   title: string;
   category: EventCategory;
   format: EventFormat;
-  start_date?: string;
-  end_date?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
-/** Campos aceitos por PATCH /events. */
+/** Contrato de PATCH /events confirmado na API. */
 export interface UpdateEventPayload {
   id: number;
   title?: string;
   description?: string;
-  event_category?: EventCategory;
-  start_date?: string;
-  end_date?: string;
+  eventCategory?: EventCategory;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface ActivityPayload {
@@ -92,8 +93,8 @@ export interface ApiMessage {
   message?: string;
 }
 
-export function apiMessage(response: ApiMessage, fallback: string): string {
-  return response.response ?? response.message ?? fallback;
+export function apiMessage(response: ApiMessage | null | undefined, fallback: string): string {
+  return response?.response ?? response?.message ?? fallback;
 }
 
 export const EVENT_CATEGORY_OPTIONS: ReadonlyArray<{

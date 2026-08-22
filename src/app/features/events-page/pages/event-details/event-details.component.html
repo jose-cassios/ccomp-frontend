@@ -1,5 +1,5 @@
 <main class="details-page">
-  <a class="back-link" routerLink="/eventos">← Voltar para eventos</a>
+  <a class="back-link" routerLink="/eventos">← Todos os eventos</a>
 
   @if (loading()) {
     <p class="notice" role="status">Carregando evento...</p>
@@ -7,30 +7,82 @@
     <p class="notice notice--error" role="alert">{{ errorMessage() }}</p>
   } @else if (event(); as currentEvent) {
     <article class="event-hero">
-      <div>
-        @if (currentEvent.category || currentEvent.format) {
-          <div class="tags">
-            @if (currentEvent.category) {
-              <span>{{ categoryLabel(currentEvent.category) }}</span>
-            }
-            @if (currentEvent.format) {
-              <span>{{ formatLabel(currentEvent.format) }}</span>
-            }
-          </div>
-        }
+      <div class="event-hero__copy">
+        <div class="tags">
+          <span>{{ categoryLabel(currentEvent.category) }}</span>
+          <span>{{ formatLabel(currentEvent.format) }}</span>
+        </div>
         <h1>{{ currentEvent.title }}</h1>
-        <p>{{ currentEvent.description || 'A descrição deste evento ainda não foi informada.' }}</p>
+        <p>{{ currentEvent.description || 'A organização ainda não publicou uma descrição detalhada para este evento.' }}</p>
       </div>
 
-      <aside>
+      <aside class="enrollment-card">
+        <div class="event-date">
+          <strong>{{ currentEvent.start_date | date: 'dd' }}</strong>
+          <span>{{ currentEvent.start_date | date: 'MMM' }}</span>
+        </div>
+        <div class="enrollment-card__copy">
+          <span>Início</span>
+          <strong>{{ currentEvent.start_date | date: 'dd/MM/yyyy, HH:mm' }}</strong>
+        </div>
+        <button type="button" [disabled]="subscriptionBusy()" (click)="toggleSubscription()">
+          @if (subscriptionBusy()) {
+            Processando...
+          } @else if (subscribed()) {
+            Cancelar inscrição
+          } @else {
+            Inscrever-se
+          }
+        </button>
+        @if (canEdit()) {
+          <a class="edit-link" [routerLink]="['/eventos', currentEvent.id, 'editar']">Área do organizador</a>
+        }
+      </aside>
+    </article>
+
+    <div class="details-layout">
+      <section class="content-column">
+        <article class="content-card">
+          <span class="section-kicker">Sobre o evento</span>
+          <h2>Apresentação</h2>
+          <p class="event-description">{{ currentEvent.description || 'A organização ainda não publicou uma descrição detalhada para este evento.' }}</p>
+        </article>
+
+        <section class="schedule-card" aria-labelledby="schedule-title">
+          <span class="section-kicker">Programação</span>
+          <h2 id="schedule-title">Atividades do evento</h2>
+          @if (currentEvent.activities?.length) {
+            <div class="activity-list">
+              @for (activity of currentEvent.activities!; track activity.id; let index = $index) {
+                <article>
+                  <span>{{ index + 1 }}</span>
+                  <div>
+                    <h3>{{ activity.title }}</h3>
+                    <p>{{ activity.description || 'Sem descrição adicional.' }}</p>
+                  </div>
+                </article>
+              }
+            </div>
+          } @else {
+            <p class="empty-activities">A programação será exibida aqui quando a API disponibilizar as atividades deste evento.</p>
+          }
+        </section>
+      </section>
+
+      <aside class="info-card">
+        <h2>Informações</h2>
         <dl>
           <div>
-            <dt>Início</dt>
+            <dt>Data de início</dt>
             <dd>{{ currentEvent.start_date | date: 'dd/MM/yyyy, HH:mm' }}</dd>
           </div>
           <div>
-            <dt>Término</dt>
+            <dt>Data de término</dt>
             <dd>{{ currentEvent.end_date | date: 'dd/MM/yyyy, HH:mm' }}</dd>
+          </div>
+          <div>
+            <dt>Formato</dt>
+            <dd>{{ formatLabel(currentEvent.format) }}</dd>
           </div>
           @if (currentEvent.address) {
             <div>
@@ -45,20 +97,8 @@
             </div>
           }
         </dl>
-        <button type="button" [disabled]="subscriptionBusy()" (click)="toggleSubscription()">
-          @if (subscriptionBusy()) {
-            Processando...
-          } @else if (subscribed()) {
-            Cancelar inscrição
-          } @else {
-            Inscrever-se
-          }
-        </button>
-        @if (canEdit()) {
-          <a class="edit-link" [routerLink]="['/eventos', currentEvent.id, 'editar']">Editar evento</a>
-        }
       </aside>
-    </article>
+    </div>
 
     @if (errorMessage()) {
       <p class="notice notice--error" role="alert">{{ errorMessage() }}</p>
@@ -66,6 +106,5 @@
     @if (successMessage()) {
       <p class="notice notice--success" role="status">{{ successMessage() }}</p>
     }
-
   }
 </main>

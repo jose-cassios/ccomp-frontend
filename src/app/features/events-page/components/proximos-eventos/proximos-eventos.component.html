@@ -1,10 +1,6 @@
 <section class="events-list" aria-labelledby="events-list-title">
   <div class="section-heading">
-    <div>
-      <span>Agenda acadêmica</span>
-      <h2 id="events-list-title">Todos os eventos</h2>
-      <p>Explore eventos, palestras e atividades publicados na plataforma.</p>
-    </div>
+    <h2 id="events-list-title">Todos os eventos</h2>
     <div class="filters">
       <label>
         <span>Período</span>
@@ -44,6 +40,10 @@
       </label>
     </div>
   </div>
+
+  @if (selectedTiming() === 'FUTURE') {
+    <p class="api-note">A API atual disponibiliza apenas eventos em andamento; os próximos eventos aparecerão aqui quando esse filtro for suportado.</p>
+  }
 
   <div class="events-grid">
     @for (event of eventos(); track event.id) {

@@ -10,7 +10,6 @@ import {
   EventCategory,
   EventFormat,
   EventListItem,
-  EventResponse,
   EventsFilter,
   EventTiming,
   eventCategoryLabel,
@@ -31,7 +30,7 @@ export class EventsPageComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly events = signal<EventListItem[]>([]);
-  readonly createdEvents = signal<EventResponse[]>([]);
+  readonly createdEvents = signal<EventListItem[]>([]);
   readonly selectedCategory = signal<EventCategory | null>(null);
   readonly selectedFormat = signal<EventFormat | null>(null);
   readonly selectedTiming = signal<EventTiming | null>(null);
@@ -149,7 +148,7 @@ export class EventsPageComponent implements OnInit {
     const format = this.selectedFormat();
 
     return {
-      ...(eventCategory ? { event_category: eventCategory } : {}),
+      ...(eventCategory ? { eventCategory } : {}),
       ...(format ? { format } : {}),
     };
   }

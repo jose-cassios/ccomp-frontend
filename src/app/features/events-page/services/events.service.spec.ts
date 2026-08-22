@@ -6,17 +6,53 @@ import { EventsService } from './events.service';
 
 describe('EventsService', () => {
   const api = {
-    get: vi.fn((_endpoint: string) => of({})),
-    post: vi.fn(
-      (_endpoint: string, _body: unknown, _options?: { params?: HttpParams }) => of({}),
-    ),
-    patch: vi.fn((_endpoint: string, _body: unknown) => of({})),
+    get: vi.fn((endpoint: string) => {
+      if (endpoint.startsWith('/users/me/')) return of([]);
+      if (endpoint.endsWith('/editors')) return of({ content: [], nextCursor: null });
+      return of({
+        id: 9,
+        title: 'Evento de teste',
+        slug: 'evento-de-teste',
+        summary: 'Resumo do evento',
+        format: 'ONLINE',
+        category: 'ACADEMIC_EDUCATIONAL',
+        startDate: '2026-08-22T10:00:00',
+        endDate: '2026-08-22T12:00:00',
+      });
+    }),
+    post: vi.fn(),
+    patch: vi.fn((_endpoint: string, _body: unknown) => of({
+      id: 9,
+      title: 'Evento de teste',
+      slug: 'evento-de-teste',
+      summary: 'Resumo do evento',
+      format: 'ONLINE',
+      category: 'ACADEMIC_EDUCATIONAL',
+      startDate: '2026-08-22T10:00:00',
+      endDate: '2026-08-22T12:00:00',
+    })),
     delete: vi.fn((_endpoint: string) => of({})),
   };
   let service: EventsService;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    api.post.mockImplementation(
+      (endpoint: string, _body: unknown, _options?: { params?: HttpParams }) => of(
+        endpoint === '/events/search'
+          ? { content: [], nextCursor: null, previousCursor: null }
+          : {
+              id: 9,
+              title: 'Evento de teste',
+              slug: 'evento-de-teste',
+              summary: 'Resumo do evento',
+              format: 'ONLINE',
+              category: 'ACADEMIC_EDUCATIONAL',
+              startDate: '2026-08-22T10:00:00',
+              endDate: '2026-08-22T12:00:00',
+            },
+      ),
+    );
     TestBed.configureTestingModule({
       providers: [EventsService, { provide: ApiService, useValue: api }],
     });
@@ -24,11 +60,11 @@ describe('EventsService', () => {
   });
 
   it('should search with the Swagger filter and cursor pagination', () => {
-    service.search({ format: 'ONLINE', event_category: 'ACADEMIC_EDUCATIONAL' }, 'cursor-2', 20).subscribe();
+    service.search({ format: 'ONLINE', eventCategory: 'ACADEMIC_EDUCATIONAL' }, 'cursor-2', 20).subscribe();
 
     expect(api.post).toHaveBeenCalledWith(
       '/events/search',
-      { format: 'ONLINE', event_category: 'ACADEMIC_EDUCATIONAL' },
+      { format: 'ONLINE', eventCategory: 'ACADEMIC_EDUCATIONAL' },
       { params: expect.objectContaining({}) },
     );
     const params = api.post.mock.calls[0]?.[2]?.params;
@@ -46,6 +82,32 @@ describe('EventsService', () => {
     expect(api.get).toHaveBeenCalledWith('/events/slug/semana-da-computacao');
     expect(api.get).toHaveBeenCalledWith('/users/me/created-events');
     expect(api.get).toHaveBeenCalledWith('/users/me/events-subscriptions');
+  });
+
+  it('should normalize the camelCase event contract returned by the API', () => {
+    api.post.mockImplementationOnce(() => of({
+      content: [{
+        id: 4,
+        title: 'Semana de Computação',
+        slug: 'semana-de-computacao',
+        summary: 'Palestras e oficinas.',
+        format: 'IN_PERSON',
+        category: 'ACADEMIC_EDUCATIONAL',
+        startDate: '2026-09-10T08:00:00',
+        endDate: '2026-09-10T18:00:00',
+      }],
+      nextCursor: 'next-page',
+      previousCursor: null,
+    } as never));
+
+    service.search().subscribe((page) => {
+      expect(page.content[0]).toMatchObject({
+        description: 'Palestras e oficinas.',
+        start_date: '2026-09-10T08:00:00',
+        end_date: '2026-09-10T18:00:00',
+      });
+      expect(page.next_cursor).toBe('next-page');
+    });
   });
 
   it('should use e-mail addresses for editor management and supported activities', () => {
