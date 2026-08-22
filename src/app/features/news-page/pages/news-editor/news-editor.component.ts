@@ -210,6 +210,11 @@ export class NewsEditorComponent implements OnInit {
     this.activeView.set(view);
   }
 
+  dismissFeedback(): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+  }
+
   updateContent(content: string): void {
     this.form.controls.content.setValue(content);
     this.form.controls.content.markAsTouched();

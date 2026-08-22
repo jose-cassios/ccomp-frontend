@@ -24,6 +24,11 @@ export interface NewsPageResponse {
   previous_cursor: string | null;
 }
 
+/** Campos atualmente suportados pela busca pública de notícias. */
+export interface NewsSearchFilter {
+  featured?: boolean;
+}
+
 export interface UserNewsResponse {
   author: NewsItemType[];
   editor: NewsItemType[];

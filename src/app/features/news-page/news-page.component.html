@@ -1,40 +1,66 @@
 <section class="news-page-section">
   <div class="news-page-layout">
-    <div class="news-main">
-      <div class="news-header">
-        <h1 class="page-title">Notícias</h1>
+    <main class="news-main">
+      <header class="news-header">
+        <div>
+          <span class="eyebrow">Informação e comunidade</span>
+          <h1 class="page-title">Notícias</h1>
+          <p>Fique por dentro das novidades do curso de Computação.</p>
+        </div>
         @if (canManageNews()) {
           <a class="btn-create-news" routerLink="/noticias/nova">
-            <span class="btn-icon">+</span>
+            <span class="btn-icon" aria-hidden="true">+</span>
             Nova notícia
           </a>
         }
-      </div>
+      </header>
+
+      <form class="search-form" role="search" (submit)="$event.preventDefault()">
+        <label for="news-search">Buscar notícias</label>
+        <div class="search-control">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input
+            id="news-search"
+            type="search"
+            placeholder="Buscar por título ou resumo"
+            [value]="searchQuery()"
+            (input)="updateSearch($any($event.target).value)"
+          />
+          @if (hasSearchQuery()) {
+            <button type="button" class="clear-search" (click)="clearSearch()" aria-label="Limpar busca">
+              Limpar
+            </button>
+          }
+        </div>
+      </form>
 
       @if (!isLoading()) {
-        @if (noticiaDestaque(); as destaque) {
-          <app-news-hero [news]="destaque"></app-news-hero>
-        } @else if (!errorMessage()) {
-          <div class="empty-state">Nenhuma notícia publicada até o momento.</div>
-        }
-
         @if (errorMessage()) {
           <div class="page-message page-message--error" role="alert">{{ errorMessage() }}</div>
-        }
-
-        @if (noticiasLista().length) {
-          <div class="news-list-header">
-            <h2 class="news-list-title">Mais notícias</h2>
+        } @else if (filteredNews().length) {
+          <div class="results-heading">
+            @if (hasSearchQuery()) {
+              <p>{{ filteredNews().length }} notícia(s) encontrada(s).</p>
+            } @else {
+              <p>Últimas notícias publicadas</p>
+            }
           </div>
-
-          <div class="news-grid">
-            @for (noticia of noticiasLista(); track noticia.id) {
-              <app-news-card [news]="noticia"></app-news-card>
+          <div class="news-list">
+            @for (noticia of filteredNews(); track noticia.id) {
+              <app-news-card [news]="noticia" [canEdit]="canEditNews(noticia)"></app-news-card>
+            }
+          </div>
+        } @else {
+          <div class="empty-state">
+            @if (hasSearchQuery()) {
+              Nenhuma notícia foi encontrada para a sua busca.
+            } @else {
+              Nenhuma notícia publicada até o momento.
             }
           </div>
         }
       } @else {
-        <p>Carregando notícias...</p>
+        <p class="loading-message">Carregando notícias...</p>
       }
 
       @if (canManageNews()) {
@@ -82,7 +108,7 @@
           }
         </section>
       }
-    </div>
+    </main>
 
     <app-news-sidebar></app-news-sidebar>
   </div>

@@ -41,16 +41,6 @@
     </div>
   </header>
 
-  @if (operationLabel()) {
-    <div class="notice notice--loading" role="status"><span class="spinner"></span>{{ operationLabel() }}</div>
-  }
-  @if (errorMessage()) {
-    <div class="notice notice--error" role="alert">{{ errorMessage() }}</div>
-  }
-  @if (successMessage()) {
-    <div class="notice notice--success" role="status">{{ successMessage() }}</div>
-  }
-
   @if (operation() !== 'loading') {
     @if (isPublished()) {
       <div class="published-message">
@@ -205,5 +195,34 @@
         </button>
       </div>
     </footer>
+  }
+
+  @if (operationLabel() || errorMessage() || successMessage()) {
+    <aside class="feedback-viewport" aria-live="polite" aria-atomic="true">
+      @if (operationLabel()) {
+        <div class="feedback-toast feedback-toast--loading" role="status">
+          <span class="spinner" aria-hidden="true"></span>
+          <span>{{ operationLabel() }}</span>
+        </div>
+      }
+      @if (errorMessage()) {
+        <div class="feedback-toast feedback-toast--error" role="alert">
+          <span class="feedback-icon" aria-hidden="true">!</span>
+          <span>{{ errorMessage() }}</span>
+          <button type="button" class="feedback-dismiss" (click)="dismissFeedback()" aria-label="Fechar mensagem">
+            ×
+          </button>
+        </div>
+      }
+      @if (successMessage()) {
+        <div class="feedback-toast feedback-toast--success" role="status">
+          <span class="feedback-icon" aria-hidden="true">✓</span>
+          <span>{{ successMessage() }}</span>
+          <button type="button" class="feedback-dismiss" (click)="dismissFeedback()" aria-label="Fechar mensagem">
+            ×
+          </button>
+        </div>
+      }
+    </aside>
   }
 </section>

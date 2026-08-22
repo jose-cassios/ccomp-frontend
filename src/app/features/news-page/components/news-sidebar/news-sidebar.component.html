@@ -1,40 +1,21 @@
 <aside class="news-sidebar">
   <div class="sidebar-section">
     <div class="sidebar-header">
-      <span class="sidebar-label">CATEGORIAS</span>
-      <span class="sidebar-sublabel">Filtrar notícias</span>
-    </div>
-    <nav class="categorias-lista">
-      @for (categoria of categorias; track categoria.nome) {
-        <label 
-          class="categoria-item" 
-          [class.ativa]="categoriaAtiva === categoria.nome"
-        >
-          <input 
-            type="checkbox"
-            class="categoria-checkbox"
-            [checked]="categoriaAtiva === categoria.nome"
-            (change)="selecionarCategoria(categoria.nome)"
-          />
-          <span class="cat-nome">{{ categoria.nome }}</span>
-          <span class="cat-count">({{ categoria.count }})</span>
-        </label>
-      }
-    </nav>
-  </div>
-
-  <div class="sidebar-section">
-    <div class="sidebar-header">
       <span class="sidebar-label">NEWSLETTER</span>
       <span class="sidebar-sublabel">Receba atualizações</span>
     </div>
-    <div class="newsletter-form">
-      <input 
-        type="email" 
-        placeholder="Seu email" 
-        class="newsletter-input"
-      />
-      <button class="newsletter-button">Inscrever</button>
+    <div class="newsletter-card">
+      <p>Receba no seu e-mail as novidades do curso e da comunidade.</p>
+      <div class="newsletter-form">
+        <label class="sr-only" for="newsletter-email">Seu e-mail</label>
+        <input
+          id="newsletter-email"
+          type="email"
+          placeholder="Seu e-mail"
+          class="newsletter-input"
+        />
+        <button type="button" class="newsletter-button">Inscrever</button>
+      </div>
     </div>
   </div>
 </aside>
