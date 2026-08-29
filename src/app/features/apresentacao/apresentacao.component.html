@@ -1,0 +1,176 @@
+<div class="course-page">
+
+  <!-- HERO: apenas mensagem. -->
+  <section class="course-hero">
+    <div class="page-shell hero-grid">
+      <div class="hero-content">
+        <span class="badge-inst">Bacharelado • Campus Caxias</span>
+
+        <h1 class="hero-title">
+          Ciência da <span class="text-highlight">Computação</span>
+        </h1>
+
+        <p class="hero-desc">
+          Uma formação para quem quer compreender a computação em profundidade e transformar
+          conhecimento em soluções para pessoas, organizações e sociedade.
+        </p>
+      </div>
+
+      <div class="hero-visual" aria-hidden="true">
+        <div class="visual-orbit"></div>
+        <div class="code-panel">
+          <div class="panel-top"><i></i><i></i><i></i></div>
+          <div class="code-lines">
+            <span class="line line-lg"></span>
+            <span class="line line-md"></span>
+            <span class="line line-sm"></span>
+            <span class="line line-lg"></span>
+            <span class="line line-xs"></span>
+          </div>
+          <span class="code-mark">&lt;/&gt;</span>
+        </div>
+        <span class="floating-chip chip-top">algoritmos</span>
+        <span class="floating-chip chip-bottom">inovação</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- informações basicas: ficha técnica + ação principal da página -->
+  <section id="informacoes" class="page-shell page-section">
+    <div class="section-header">
+      <span class="linha-verde"></span>
+      <h2>Informações do curso</h2>
+    </div>
+
+    <div class="course-info">
+      <div class="info-highlights">
+        <dl>
+          @for (highlight of content.highlights; track highlight.label) {
+            <div class="highlight">
+              <dt>{{ highlight.value }}</dt>
+              <dd>{{ highlight.label }}</dd>
+            </div>
+          }
+        </dl>
+      </div>
+
+      <dl class="info-sheet">
+        @for (detail of content.courseDetails; track detail.term) {
+          <div class="info-row">
+            <dt>{{ detail.term }}</dt>
+            <dd>{{ detail.description }}</dd>
+          </div>
+        }
+      </dl>
+    </div>
+
+    <div class="info-actions">
+      <a class="btn-cta" routerLink="/ensino/matriz">Conhecer a matriz curricular</a>
+      <a class="btn-text" routerLink="/processo-seletivo">Ver processo seletivo →</a>
+    </div>
+  </section>
+
+  <!-- missão do curso -->
+  <section id="o-curso" class="soft-section">
+    <div class="page-shell page-section">
+    <div class="section-header">
+      <span class="linha-verde"></span>
+      <h2>Formação ampla, prática e conectada ao futuro</h2>
+    </div>
+
+    <p class="section-lead">
+      O bacharelado combina fundamentos científicos, desenvolvimento de software, dados, sistemas e
+      inovação para formar profissionais preparados para contextos tecnológicos diversos.
+    </p>
+
+    <div class="mission-grid">
+      <article class="mission-card">
+        <span class="card-label">Missão</span>
+        <h3>Formar profissionais que entendem tecnologia além das ferramentas.</h3>
+        <p>
+          Integramos ensino, pesquisa e extensão para desenvolver autonomia intelectual, domínio
+          técnico, pensamento crítico e compromisso com a transformação social.
+        </p>
+      </article>
+
+      <article class="mission-card mission-card-dark">
+        <span class="card-label">Visão</span>
+        <h3>Ser referência regional em formação e inovação em computação.</h3>
+        <p>
+          Criando um ambiente acadêmico conectado à ciência, ao mercado, à comunidade e às novas
+          fronteiras da tecnologia.
+        </p>
+      </article>
+    </div>
+    </div>
+  </section>
+
+  <!-- OBJETIVOS -->
+  <section>
+    <div class="page-shell page-section split-section">
+      <div class="split-intro">
+        <div class="section-header">
+          <span class="linha-verde"></span>
+          <h2>O que você desenvolve ao longo da graduação</h2>
+        </div>
+        <p class="section-lead">
+          Mais do que aprender tecnologias, o estudante constrói repertório para compreender
+          problemas, escolher abordagens e criar soluções consistentes.
+        </p>
+      </div>
+
+      <ul class="check-list">
+        @for (objective of content.objectives; track objective) {
+          <li class="check-item">
+            <span class="check-icon" aria-hidden="true">✓</span>
+            <p>{{ objective }}</p>
+          </li>
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- PERFIL DO ALUNO -->
+  <section class="soft-section">
+    <div class="page-shell page-section">
+    <div class="section-header">
+      <span class="linha-verde"></span>
+      <h2>Perfil do egresso</h2>
+    </div>
+
+    <p class="section-lead">
+      A formação equilibra profundidade conceitual, competência prática e consciência sobre o
+      impacto das soluções computacionais.
+    </p>
+
+    <div class="competence-grid">
+      @for (competence of content.graduateCompetences; track competence.title) {
+        <article class="competence-card">
+          <h3>{{ competence.title }}</h3>
+          <p>{{ competence.description }}</p>
+        </article>
+      }
+    </div>
+    </div>
+  </section>
+
+  <!-- EXPERIÊNCIA ACADÊMICA -->
+  <section>
+    <div class="page-shell page-section">
+      <div class="section-header">
+        <span class="linha-verde"></span>
+        <h2>Um curso que acontece dentro e fora da sala de aula</h2>
+      </div>
+
+      <div class="experience-grid">
+        @for (item of content.academicExperience; track item.title) {
+          <article class="experience-card">
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.description }}</p>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+</div>
