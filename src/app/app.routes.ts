@@ -18,6 +18,7 @@ import {
 } from './features/auth/config/auth.config';
 import { pendingNewsChangesGuard } from './features/news-page/guards/pending-news-changes.guard';
 import { pendingEventChangesGuard } from './features/events-page/guards/pending-event-changes.guard';
+import { ApresentacaoComponent } from './features/apresentacao/apresentacao.component';
 
 export const routes: Routes = [
     // Rotas fora do layout principal (sem header/footer)
@@ -89,6 +90,7 @@ export const routes: Routes = [
           canDeactivate: [pendingNewsChangesGuard],
           data: { roles: NEWS_MANAGEMENT_ROLES },
         },
+        { path: 'sobre/apresentacao', component: ApresentacaoComponent },
         { path: 'noticias', component: NewsPageComponent },
         { path: 'news/:slug', component: NewsComponent },
         { path: '**', component: EmConstrucao }
