@@ -22,10 +22,11 @@ import {
 import { EventsService } from '../../services/events.service';
 
 type EditorOperation = 'idle' | 'loading' | 'saving' | 'deleting' | 'activity' | 'editor';
-type EventEditorStep = 'details' | 'schedule' | 'team' | 'review';
+type EventEditorStep = 'details' | 'presentation' | 'schedule' | 'team' | 'review';
 
 const EDITOR_STEPS: ReadonlyArray<{ value: EventEditorStep; label: string }> = [
   { value: 'details', label: 'Informações' },
+  { value: 'presentation', label: 'Página do evento' },
   { value: 'schedule', label: 'Programação' },
   { value: 'team', label: 'Equipe' },
   { value: 'review', label: 'Revisão' },
@@ -48,11 +49,15 @@ export class EventEditorComponent implements OnInit {
 
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(255)]],
-    description: ['', [Validators.minLength(4), Validators.maxLength(1000)]],
     category: this.fb.nonNullable.control<EventCategory>('ACADEMIC_EDUCATIONAL', Validators.required),
     format: this.fb.nonNullable.control<EventFormat>('IN_PERSON', Validators.required),
     start_date: ['', Validators.required],
     end_date: ['', Validators.required],
+  });
+  readonly presentationForm = this.fb.nonNullable.group({
+    summary: ['', [Validators.minLength(4), Validators.maxLength(255)]],
+    content: ['', [Validators.minLength(4), Validators.maxLength(5000)]],
+    cover_image_url: ['', Validators.pattern(/^https?:\/\/.+/)],
   });
   readonly activityForm = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(255)]],
@@ -95,10 +100,12 @@ export class EventEditorComponent implements OnInit {
   });
 
   constructor() {
-    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+    const registerChanges = () => {
       this.hasUnsavedChanges.set(true);
       this.successMessage.set(null);
-    });
+    };
+    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
+    this.presentationForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
   }
 
   ngOnInit(): void {
@@ -130,26 +137,25 @@ export class EventEditorComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
     const request: Observable<EventDetails> = currentEvent
-      ? this.eventsService.update(this.buildUpdatePayload(currentEvent))
+      ? this.eventsService.update(currentEvent.id, this.buildBasicUpdatePayload())
       : this.eventsService.create({
           title: value.title,
           category: value.category,
           format: value.format,
-          startDate: value.start_date,
-          endDate: value.end_date,
+          start_date: value.start_date,
+          end_date: value.end_date,
         } satisfies CreateEventPayload);
 
     request.pipe(finalize(() => this.operation.set('idle'))).subscribe({
       next: (savedEvent) => {
-        const localDescription = value.description;
-        this.applyEvent(savedEvent, localDescription);
+        this.applyEvent(savedEvent, this.presentationForm.getRawValue());
 
         if (!currentEvent) {
           this.editingExisting.set(true);
           this.ownedEventIds.update((ids) => new Set(ids).add(savedEvent.id));
           this.location.replaceState(`/eventos/${savedEvent.id}/editar`);
-          this.activeStep.set('schedule');
-          this.successMessage.set('Evento criado. Agora adicione a programação ou revise as informações.');
+          this.activeStep.set('presentation');
+          this.successMessage.set('Evento criado. Complete a página do evento antes de montar a programação.');
           return;
         }
 
@@ -157,6 +163,33 @@ export class EventEditorComponent implements OnInit {
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível salvar o evento.'));
+      },
+    });
+  }
+
+  savePresentation(): void {
+    const currentEvent = this.event();
+    if (!currentEvent || this.isBusy()) return;
+    if (this.form.invalid || this.presentationForm.invalid || !this.hasValidDates()) {
+      this.form.markAllAsTouched();
+      this.presentationForm.markAllAsTouched();
+      this.errorMessage.set('Revise os dados da página do evento antes de salvar.');
+      return;
+    }
+
+    this.operation.set('saving');
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    const presentation = this.presentationForm.getRawValue();
+    this.eventsService.update(currentEvent.id, this.buildCompleteUpdatePayload()).pipe(
+      finalize(() => this.operation.set('idle')),
+    ).subscribe({
+      next: (savedEvent) => {
+        this.applyEvent(savedEvent, presentation);
+        this.successMessage.set('Página do evento atualizada com sucesso.');
+      },
+      error: (error: unknown) => {
+        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível atualizar a página do evento.'));
       },
     });
   }
@@ -328,28 +361,52 @@ export class EventEditorComponent implements OnInit {
     });
   }
 
-  private buildUpdatePayload(event: EventDetails): UpdateEventPayload {
+  private buildBasicUpdatePayload(): UpdateEventPayload {
     const value = this.form.getRawValue();
     return {
-      id: event.id,
       title: value.title,
-      description: value.description || undefined,
-      eventCategory: value.category,
-      startDate: value.start_date,
-      endDate: value.end_date,
+      category: value.category,
+      format: value.format,
+      start_date: value.start_date,
+      end_date: value.end_date,
     };
   }
 
-  private applyEvent(event: EventDetails, fallbackDescription?: string): void {
-    this.event.set({ ...event, activities: event.activities ?? [] });
-    this.activities.set(event.activities ?? []);
+  private buildCompleteUpdatePayload(): UpdateEventPayload {
+    const presentation = this.presentationForm.getRawValue();
+    return {
+      ...this.buildBasicUpdatePayload(),
+      ...(presentation.summary.trim() ? { summary: presentation.summary.trim() } : {}),
+      ...(presentation.content.trim() ? { content: presentation.content.trim() } : {}),
+      ...(presentation.cover_image_url.trim() ? { cover_image_url: presentation.cover_image_url.trim() } : {}),
+    };
+  }
+
+  private applyEvent(
+    event: EventDetails,
+    presentation?: { summary: string; content: string; cover_image_url: string },
+  ): void {
+    const enrichedEvent: EventDetails = {
+      ...event,
+      summary: event.summary ?? presentation?.summary ?? null,
+      content: event.content ?? presentation?.content ?? null,
+      cover_image_url: event.cover_image_url ?? presentation?.cover_image_url ?? null,
+      description: event.content ?? presentation?.content ?? event.description ?? event.summary ?? presentation?.summary ?? null,
+      activities: event.activities ?? [],
+    };
+    this.event.set(enrichedEvent);
+    this.activities.set(enrichedEvent.activities ?? []);
     this.form.reset({
-      title: event.title ?? '',
-      description: fallbackDescription ?? event.description ?? '',
-      category: event.category ?? 'ACADEMIC_EDUCATIONAL',
-      format: event.format ?? 'IN_PERSON',
-      start_date: this.toLocalInput(event.start_date),
-      end_date: this.toLocalInput(event.end_date),
+      title: enrichedEvent.title ?? '',
+      category: enrichedEvent.category ?? 'ACADEMIC_EDUCATIONAL',
+      format: enrichedEvent.format ?? 'IN_PERSON',
+      start_date: this.toLocalInput(enrichedEvent.start_date),
+      end_date: this.toLocalInput(enrichedEvent.end_date),
+    }, { emitEvent: false });
+    this.presentationForm.reset({
+      summary: enrichedEvent.summary ?? '',
+      content: enrichedEvent.content ?? '',
+      cover_image_url: enrichedEvent.cover_image_url ?? '',
     }, { emitEvent: false });
     this.hasUnsavedChanges.set(false);
   }

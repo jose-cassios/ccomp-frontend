@@ -148,7 +148,7 @@ export class EventsPageComponent implements OnInit {
     const format = this.selectedFormat();
 
     return {
-      ...(eventCategory ? { eventCategory } : {}),
+      ...(eventCategory ? { event_category: eventCategory } : {}),
       ...(format ? { format } : {}),
     };
   }

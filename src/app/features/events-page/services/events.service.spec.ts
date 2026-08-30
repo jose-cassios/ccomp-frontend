@@ -59,12 +59,12 @@ describe('EventsService', () => {
     service = TestBed.inject(EventsService);
   });
 
-  it('should search with the Swagger filter and cursor pagination', () => {
-    service.search({ format: 'ONLINE', eventCategory: 'ACADEMIC_EDUCATIONAL' }, 'cursor-2', 20).subscribe();
+  it('should search with the API snake_case filter and cursor pagination', () => {
+    service.search({ format: 'ONLINE', event_category: 'ACADEMIC_EDUCATIONAL' }, 'cursor-2', 20).subscribe();
 
     expect(api.post).toHaveBeenCalledWith(
       '/events/search',
-      { format: 'ONLINE', eventCategory: 'ACADEMIC_EDUCATIONAL' },
+      { format: 'ONLINE', event_category: 'ACADEMIC_EDUCATIONAL' },
       { params: expect.objectContaining({}) },
     );
     const params = api.post.mock.calls[0]?.[2]?.params;
@@ -82,6 +82,44 @@ describe('EventsService', () => {
     expect(api.get).toHaveBeenCalledWith('/events/slug/semana-da-computacao');
     expect(api.get).toHaveBeenCalledWith('/users/me/created-events');
     expect(api.get).toHaveBeenCalledWith('/users/me/events-subscriptions');
+  });
+
+  it('should create and update events with the current API contracts', () => {
+    service.create({
+      title: 'Semana da Computação',
+      category: 'ACADEMIC_EDUCATIONAL',
+      format: 'IN_PERSON',
+      start_date: '2026-09-10T08:00',
+      end_date: '2026-09-10T18:00',
+    }).subscribe();
+    service.update(12, {
+      title: 'Semana da Computação',
+      summary: 'Palestras e oficinas para a comunidade.',
+      content: 'Uma programação completa com atividades para estudantes.',
+      cover_image_url: 'https://example.com/capa.jpg',
+      category: 'ACADEMIC_EDUCATIONAL',
+      format: 'IN_PERSON',
+      start_date: '2026-09-10T08:00',
+      end_date: '2026-09-10T18:00',
+    }).subscribe();
+
+    expect(api.post).toHaveBeenCalledWith('/events', {
+      title: 'Semana da Computação',
+      category: 'ACADEMIC_EDUCATIONAL',
+      format: 'IN_PERSON',
+      start_date: '2026-09-10T08:00',
+      end_date: '2026-09-10T18:00',
+    });
+    expect(api.patch).toHaveBeenCalledWith('/events/12', {
+      title: 'Semana da Computação',
+      summary: 'Palestras e oficinas para a comunidade.',
+      content: 'Uma programação completa com atividades para estudantes.',
+      cover_image_url: 'https://example.com/capa.jpg',
+      category: 'ACADEMIC_EDUCATIONAL',
+      format: 'IN_PERSON',
+      start_date: '2026-09-10T08:00',
+      end_date: '2026-09-10T18:00',
+    });
   });
 
   it('should normalize the camelCase event contract returned by the API', () => {

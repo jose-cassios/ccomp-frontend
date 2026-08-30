@@ -51,10 +51,9 @@ describe('EventEditorComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create the event with the camelCase contract and advance to the schedule step', () => {
+  it('should create the event with only the required API fields and advance to the presentation step', () => {
     component.form.setValue({
       title: createdEvent.title,
-      description: 'Palestras, oficinas e oportunidades para a comunidade.',
       category: createdEvent.category,
       format: createdEvent.format,
       start_date: '2026-09-10T08:00',
@@ -67,10 +66,39 @@ describe('EventEditorComponent', () => {
       title: createdEvent.title,
       category: createdEvent.category,
       format: createdEvent.format,
-      startDate: '2026-09-10T08:00',
-      endDate: '2026-09-10T18:00',
+      start_date: '2026-09-10T08:00',
+      end_date: '2026-09-10T18:00',
     });
     expect(component.event()?.id).toBe(createdEvent.id);
-    expect(component.activeStep()).toBe('schedule');
+    expect(component.activeStep()).toBe('presentation');
+  });
+
+  it('should send page details through PATCH /events/{eventId}', () => {
+    component.form.setValue({
+      title: createdEvent.title,
+      category: createdEvent.category,
+      format: createdEvent.format,
+      start_date: '2026-09-10T08:00',
+      end_date: '2026-09-10T18:00',
+    });
+    component.save();
+    component.presentationForm.setValue({
+      summary: 'Palestras e oficinas para a comunidade.',
+      content: 'Uma programação completa com atividades para estudantes.',
+      cover_image_url: 'https://example.com/capa.jpg',
+    });
+
+    component.savePresentation();
+
+    expect(eventsService.update).toHaveBeenCalledWith(createdEvent.id, {
+      title: createdEvent.title,
+      summary: 'Palestras e oficinas para a comunidade.',
+      content: 'Uma programação completa com atividades para estudantes.',
+      cover_image_url: 'https://example.com/capa.jpg',
+      category: createdEvent.category,
+      format: createdEvent.format,
+      start_date: '2026-09-10T08:00',
+      end_date: '2026-09-10T18:00',
+    });
   });
 });

@@ -43,7 +43,9 @@ export interface EventListItem {
 }
 
 export interface EventDetails extends EventListItem {
+  summary?: string | null;
   content?: string | null;
+  cover_image_url?: string | null;
   owner_id?: string | null;
   address?: string | null;
   online_url?: string | null;
@@ -58,9 +60,9 @@ export interface EventsPageResponse {
   previous_cursor: string | null;
 }
 
-/** Contrato de POST /events/search confirmado na API. */
+/** Contrato de POST /events/search. A API utiliza JSON em snake_case. */
 export interface EventsFilter {
-  eventCategory?: EventCategory;
+  event_category?: EventCategory;
   format?: EventFormat;
 }
 
@@ -69,18 +71,20 @@ export interface CreateEventPayload {
   title: string;
   category: EventCategory;
   format: EventFormat;
-  startDate?: string;
-  endDate?: string;
+  start_date?: string;
+  end_date?: string;
 }
 
-/** Contrato de PATCH /events confirmado na API. */
+/** Contrato de PATCH /events/{eventId}. */
 export interface UpdateEventPayload {
-  id: number;
   title?: string;
-  description?: string;
-  eventCategory?: EventCategory;
-  startDate?: string;
-  endDate?: string;
+  summary?: string;
+  content?: string;
+  cover_image_url?: string;
+  category?: EventCategory;
+  format?: EventFormat;
+  start_date?: string;
+  end_date?: string;
 }
 
 export interface ActivityPayload {

@@ -23,6 +23,8 @@ interface ApiEvent {
   summary?: string | null;
   description?: string | null;
   content?: string | null;
+  coverImageUrl?: string | null;
+  cover_image_url?: string | null;
   format: EventListItem['format'];
   category: EventListItem['category'];
   startDate?: string | null;
@@ -118,8 +120,10 @@ export class EventsService {
     return this.api.post<ApiEvent>('/events', payload).pipe(map((event) => this.toDetails(event)));
   }
 
-  update(payload: UpdateEventPayload): Observable<EventDetails> {
-    return this.api.patch<ApiEvent>('/events', payload).pipe(map((event) => this.toDetails(event)));
+  update(id: number | string, payload: UpdateEventPayload): Observable<EventDetails> {
+    return this.api.patch<ApiEvent>(`/events/${encodeURIComponent(id)}`, payload).pipe(
+      map((event) => this.toDetails(event)),
+    );
   }
 
   deleteEvent(id: number | string): Observable<void> {
@@ -190,8 +194,10 @@ export class EventsService {
     const listItem = this.toListItem(event);
     return {
       ...listItem,
+      summary: event.summary ?? event.description ?? null,
       description: event.content ?? event.description ?? event.summary ?? null,
       content: event.content ?? null,
+      cover_image_url: event.coverImageUrl ?? event.cover_image_url ?? null,
       owner_id: event.ownerId ?? event.owner_id ?? null,
       address: event.address ?? null,
       online_url: event.onlineUrl ?? event.online_url ?? null,
