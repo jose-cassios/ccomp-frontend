@@ -53,7 +53,6 @@ export class EventEditorComponent implements OnInit {
     format: this.fb.nonNullable.control<EventFormat>('IN_PERSON', Validators.required),
     start_date: ['', Validators.required],
     end_date: ['', Validators.required],
-    collaborator_email: ['', Validators.email],
   });
   readonly presentationForm = this.fb.nonNullable.group({
     summary: ['', [Validators.minLength(4), Validators.maxLength(255)]],
@@ -70,7 +69,10 @@ export class EventEditorComponent implements OnInit {
 
   readonly event = signal<EventDetails | null>(null);
   readonly editingExisting = signal(false);
+  readonly creationFlow = signal(true);
+  readonly creationCompleted = signal(false);
   readonly activeStep = signal<EventEditorStep>('details');
+  readonly lastUnlockedStep = signal(0);
   readonly activities = signal<EventActivity[]>([]);
   readonly editors = signal<EventEditor[]>([]);
   readonly ownedEventIds = signal<ReadonlySet<number>>(new Set());
@@ -89,6 +91,16 @@ export class EventEditorComponent implements OnInit {
   });
   readonly canDelete = computed(() => this.isAdmin() || this.isOwner());
   readonly canManageTeam = computed(() => this.isOwner());
+  readonly showOperationFeedback = computed(() =>
+    this.operation() === 'loading' || this.operation() === 'deleting',
+  );
+  readonly isStepAvailable = (step: EventEditorStep): boolean =>
+    !this.creationFlow() || this.stepIndex(step) <= this.lastUnlockedStep();
+  readonly isStepComplete = (step: EventEditorStep): boolean => {
+    if (!this.creationFlow() && this.event()) return step !== this.activeStep();
+    return this.creationCompleted() || this.stepIndex(step) < this.lastUnlockedStep();
+  };
+  readonly isCreationComplete = computed(() => this.creationFlow() && this.creationCompleted());
   readonly operationLabel = computed(() => {
     switch (this.operation()) {
       case 'loading': return 'Carregando evento...';
@@ -115,6 +127,8 @@ export class EventEditorComponent implements OnInit {
     if (!id) return;
 
     this.editingExisting.set(true);
+    this.creationFlow.set(false);
+    this.lastUnlockedStep.set(this.steps.length - 1);
     if (!/^\d+$/.test(id)) {
       this.errorMessage.set('O identificador do evento é inválido.');
       return;
@@ -131,7 +145,6 @@ export class EventEditorComponent implements OnInit {
     }
 
     const value = this.form.getRawValue();
-    const collaboratorEmail = value.collaborator_email.trim();
     const currentEvent = this.event();
     if (this.editingExisting() && !currentEvent) return;
 
@@ -156,13 +169,11 @@ export class EventEditorComponent implements OnInit {
           this.editingExisting.set(true);
           this.ownedEventIds.update((ids) => new Set(ids).add(savedEvent.id));
           this.location.replaceState(`/eventos/${savedEvent.id}/editar`);
-          this.activeStep.set('presentation');
-          this.successMessage.set('Evento criado. Complete a página do evento antes de montar a programação.');
-          this.addInitialCollaborator(savedEvent.id, collaboratorEmail);
+          this.advanceTo('presentation');
           return;
         }
 
-        this.successMessage.set('Informações do evento salvas com sucesso.');
+        this.advanceTo('presentation');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível salvar o evento.'));
@@ -189,7 +200,7 @@ export class EventEditorComponent implements OnInit {
     ).subscribe({
       next: (savedEvent) => {
         this.applyEvent(savedEvent, presentation);
-        this.successMessage.set('Página do evento atualizada com sucesso.');
+        this.advanceTo('schedule');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível atualizar a página do evento.'));
@@ -198,13 +209,8 @@ export class EventEditorComponent implements OnInit {
   }
 
   selectStep(step: EventEditorStep): void {
-    if (step === 'details') {
-      this.activeStep.set(step);
-      return;
-    }
-
-    if (!this.event()) {
-      this.errorMessage.set('Salve as informações básicas antes de configurar as próximas etapas.');
+    if (!this.isStepAvailable(step)) {
+      this.errorMessage.set('Avance pelas etapas para continuar a criação do evento.');
       return;
     }
 
@@ -214,6 +220,48 @@ export class EventEditorComponent implements OnInit {
     }
 
     this.activeStep.set(step);
+  }
+
+  continueFromSchedule(): void {
+    if (!this.event() || this.isBusy()) return;
+    this.errorMessage.set(null);
+    this.advanceTo('team');
+  }
+
+  continueFromTeam(): void {
+    if (!this.event() || this.isBusy()) return;
+    this.errorMessage.set(null);
+    this.advanceTo('review');
+  }
+
+  completeCreation(): void {
+    const currentEvent = this.event();
+    if (!currentEvent || this.isBusy()) return;
+    if (this.form.invalid || this.presentationForm.invalid || !this.hasValidDates()) {
+      this.form.markAllAsTouched();
+      this.presentationForm.markAllAsTouched();
+      this.errorMessage.set('Revise as informações do evento antes de concluir.');
+      return;
+    }
+
+    this.operation.set('saving');
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    const presentation = this.presentationForm.getRawValue();
+    this.eventsService.update(currentEvent.id, this.buildCompleteUpdatePayload()).pipe(
+      finalize(() => this.operation.set('idle')),
+    ).subscribe({
+      next: (savedEvent) => {
+        this.applyEvent(savedEvent, presentation);
+        this.creationCompleted.set(true);
+        this.successMessage.set(this.creationFlow()
+          ? 'Evento criado com sucesso! A página já está pronta para ser compartilhada.'
+          : 'Alterações do evento salvas com sucesso.');
+      },
+      error: (error: unknown) => {
+        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível concluir o evento.'));
+      },
+    });
   }
 
   deleteEvent(): void {
@@ -246,6 +294,7 @@ export class EventEditorComponent implements OnInit {
     const payload: ActivityPayload = this.activityForm.getRawValue();
     this.operation.set('activity');
     this.errorMessage.set(null);
+    this.successMessage.set(null);
     this.eventsService.createActivity(currentEvent.id, payload).pipe(
       finalize(() => this.operation.set('idle')),
     ).subscribe({
@@ -253,7 +302,6 @@ export class EventEditorComponent implements OnInit {
         this.activities.update((activities) => [...activities, activity]);
         this.activityForm.reset({ title: '', description: '' });
         this.loadActivities(currentEvent.id);
-        this.successMessage.set('Atividade adicionada à programação.');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível adicionar a atividade.'));
@@ -266,12 +314,12 @@ export class EventEditorComponent implements OnInit {
     if (typeof window !== 'undefined' && !window.confirm(`Excluir a atividade “${activity.title}”?`)) return;
 
     this.operation.set('activity');
+    this.successMessage.set(null);
     this.eventsService.deleteActivity(activity.id).pipe(
       finalize(() => this.operation.set('idle')),
     ).subscribe({
       next: () => {
         this.activities.update((activities) => activities.filter((item) => item.id !== activity.id));
-        this.successMessage.set('Atividade removida da programação.');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível excluir a atividade.'));
@@ -289,13 +337,13 @@ export class EventEditorComponent implements OnInit {
     const email = this.editorForm.controls.email.value.trim();
     this.operation.set('editor');
     this.errorMessage.set(null);
+    this.successMessage.set(null);
     this.eventsService.addEditor(currentEvent.id, email).pipe(
       finalize(() => this.operation.set('idle')),
     ).subscribe({
-      next: (response) => {
+      next: () => {
         this.editorForm.reset({ email: '' });
         this.loadEditors(currentEvent.id);
-        this.successMessage.set(response.response ?? response.message ?? 'Editor adicionado à equipe.');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível adicionar o editor.'));
@@ -308,12 +356,12 @@ export class EventEditorComponent implements OnInit {
     if (!currentEvent || !this.canManageTeam() || this.isBusy()) return;
 
     this.operation.set('editor');
+    this.successMessage.set(null);
     this.eventsService.removeEditor(currentEvent.id, editor.email_address).pipe(
       finalize(() => this.operation.set('idle')),
     ).subscribe({
-      next: (response) => {
+      next: () => {
         this.editors.update((editors) => editors.filter((item) => item.id !== editor.id));
-        this.successMessage.set(response.response ?? response.message ?? 'Editor removido da equipe.');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível remover o editor.'));
@@ -374,25 +422,6 @@ export class EventEditorComponent implements OnInit {
     });
   }
 
-  private addInitialCollaborator(eventId: number, email: string): void {
-    if (!email) return;
-
-    this.eventsService.addEditor(eventId, email).subscribe({
-      next: (response) => {
-        this.loadEditors(eventId);
-        this.successMessage.set(
-          response.response ?? response.message ?? 'Colaborador adicionado à equipe do evento.',
-        );
-      },
-      error: (error: unknown) => {
-        this.errorMessage.set(this.getErrorMessage(
-          error,
-          'O evento foi criado, mas não foi possível adicionar o colaborador informado.',
-        ));
-      },
-    });
-  }
-
   private buildBasicUpdatePayload(): UpdateEventPayload {
     const value = this.form.getRawValue();
     return {
@@ -434,7 +463,6 @@ export class EventEditorComponent implements OnInit {
       format: enrichedEvent.format ?? 'IN_PERSON',
       start_date: this.toLocalInput(enrichedEvent.start_date),
       end_date: this.toLocalInput(enrichedEvent.end_date),
-      collaborator_email: '',
     }, { emitEvent: false });
     this.presentationForm.reset({
       summary: enrichedEvent.summary ?? '',
@@ -448,6 +476,15 @@ export class EventEditorComponent implements OnInit {
     const start = this.form.controls.start_date.value;
     const end = this.form.controls.end_date.value;
     return Boolean(start && end && new Date(start).getTime() <= new Date(end).getTime());
+  }
+
+  private advanceTo(step: EventEditorStep): void {
+    this.lastUnlockedStep.update((lastStep) => Math.max(lastStep, this.stepIndex(step)));
+    this.activeStep.set(step);
+  }
+
+  private stepIndex(step: EventEditorStep): number {
+    return this.steps.findIndex((item) => item.value === step);
   }
 
   private toLocalInput(value: string | null): string {

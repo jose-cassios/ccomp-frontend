@@ -59,7 +59,6 @@ describe('EventEditorComponent', () => {
       format: createdEvent.format,
       start_date: '2026-09-10T08:00',
       end_date: '2026-09-10T18:00',
-      collaborator_email: '',
     });
 
     component.save();
@@ -73,6 +72,8 @@ describe('EventEditorComponent', () => {
     });
     expect(component.event()?.id).toBe(createdEvent.id);
     expect(component.activeStep()).toBe('presentation');
+    expect(component.successMessage()).toBeNull();
+    expect(eventsService.addEditor).not.toHaveBeenCalled();
   });
 
   it('should send page details through PATCH /events/{eventId}', () => {
@@ -82,7 +83,6 @@ describe('EventEditorComponent', () => {
       format: createdEvent.format,
       start_date: '2026-09-10T08:00',
       end_date: '2026-09-10T18:00',
-      collaborator_email: '',
     });
     component.save();
     component.presentationForm.setValue({
@@ -112,7 +112,6 @@ describe('EventEditorComponent', () => {
       format: createdEvent.format,
       start_date: '2026-09-10T08:00',
       end_date: '2026-09-10T18:00',
-      collaborator_email: '',
     });
     component.save();
     component.activityForm.setValue({ title: 'Abertura', description: '' });
@@ -123,18 +122,38 @@ describe('EventEditorComponent', () => {
     expect(eventsService.getActivities).toHaveBeenCalledWith(createdEvent.id);
   });
 
-  it('should add the initial collaborator after creating the event', () => {
+  it('should reserve the success confirmation for the final review step', () => {
     component.form.setValue({
       title: createdEvent.title,
       category: createdEvent.category,
       format: createdEvent.format,
       start_date: '2026-09-10T08:00',
       end_date: '2026-09-10T18:00',
-      collaborator_email: 'moderador@ifma.edu.br',
     });
 
     component.save();
+    component.presentationForm.setValue({
+      summary: 'Palestras e oficinas para a comunidade.',
+      content: 'Uma programação completa com atividades para estudantes.',
+      cover_image_url: '',
+    });
+    component.savePresentation();
+    component.continueFromSchedule();
+    component.continueFromTeam();
 
-    expect(eventsService.addEditor).toHaveBeenCalledWith(createdEvent.id, 'moderador@ifma.edu.br');
+    expect(component.activeStep()).toBe('review');
+    expect(component.successMessage()).toBeNull();
+
+    component.completeCreation();
+
+    expect(component.creationCompleted()).toBe(true);
+    expect(component.successMessage()).toContain('Evento criado com sucesso');
+  });
+
+  it('should not allow jumping ahead before the prior stage is completed', () => {
+    component.selectStep('review');
+
+    expect(component.activeStep()).toBe('details');
+    expect(component.errorMessage()).toContain('Avance pelas etapas');
   });
 });

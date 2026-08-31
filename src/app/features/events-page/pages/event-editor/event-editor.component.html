@@ -3,8 +3,8 @@
     <div>
       <a routerLink="/eventos" class="back-link">← Voltar para eventos</a>
       <span class="eyebrow">Organização de evento</span>
-      <h1>{{ event() ? 'Gerenciar evento' : 'Criar evento' }}</h1>
-      <p>Crie a estrutura do evento e complete a página, programação e equipe em seguida.</p>
+      <h1>{{ creationFlow() && !isCreationComplete() ? 'Criar evento' : 'Gerenciar evento' }}</h1>
+      <p>Preencha cada etapa e revise tudo antes de concluir a criação.</p>
     </div>
     @if (event()) {
       <div class="header-actions">
@@ -13,7 +13,9 @@
             Excluir evento
           </button>
         }
-        <a class="button button--outline" [routerLink]="['/eventos', event()!.id]">Ver página pública</a>
+        @if (!creationFlow() || isCreationComplete()) {
+          <a class="button button--outline" [routerLink]="['/eventos', event()!.id]">Ver página pública</a>
+        }
       </div>
     }
   </header>
@@ -23,7 +25,8 @@
       <button
         type="button"
         [class.active]="activeStep() === step.value"
-        [class.complete]="event() && activeStep() !== step.value"
+        [class.complete]="isStepComplete(step.value)"
+        [disabled]="!isStepAvailable(step.value)"
         (click)="selectStep(step.value)"
       >
         <span>{{ index + 1 }}</span>
@@ -41,9 +44,6 @@
               <span>Etapa 1</span>
               <h2>Informações do evento</h2>
             </div>
-            @if (hasUnsavedChanges()) {
-              <strong class="unsaved">Alterações não salvas</strong>
-            }
           </div>
 
           <div class="form-grid">
@@ -83,20 +83,12 @@
               <input type="datetime-local" formControlName="end_date" />
             </label>
 
-            <label class="field field--wide">
-              <span>Colaborador inicial</span>
-              <input type="email" formControlName="collaborator_email" placeholder="colaborador@ifma.edu.br" />
-              <small>Opcional. Após criar o evento, este membro da equipe será incluído como editor.</small>
-              @if (form.controls.collaborator_email.touched && form.controls.collaborator_email.invalid) {
-                <strong>Informe um e-mail válido.</strong>
-              }
-            </label>
           </div>
 
           <footer class="form-footer">
             <span>Os campos marcados com * são obrigatórios.</span>
             <button class="button button--primary" type="submit" [disabled]="isBusy()">
-              {{ event() ? 'Salvar informações' : 'Criar e continuar' }}
+              Próximo: página do evento
             </button>
           </footer>
         </form>
@@ -109,11 +101,8 @@
               <span>Etapa 2</span>
               <h2>Monte a página do evento</h2>
             </div>
-            @if (hasUnsavedChanges()) {
-              <strong class="unsaved">Alterações não salvas</strong>
-            }
           </div>
-          <p class="card-copy">Essas informações são enviadas pelo PATCH e aparecem para quem acessar o evento.</p>
+          <p class="card-copy">Complete a página que será apresentada às pessoas interessadas no evento.</p>
 
           <div class="form-grid">
             <label class="field field--wide">
@@ -153,7 +142,7 @@
 
           <footer class="form-footer">
             <span>Você poderá alterar estes dados sempre que precisar.</span>
-            <button class="button button--primary" type="submit" [disabled]="isBusy()">Salvar página do evento</button>
+            <button class="button button--primary" type="submit" [disabled]="isBusy()">Próximo: programação</button>
           </footer>
         </form>
       }
@@ -165,7 +154,6 @@
               <span>Etapa 3</span>
               <h2 id="schedule-title">Programação</h2>
             </div>
-            <button class="button button--outline" type="button" (click)="selectStep('review')">Revisar evento</button>
           </div>
           <p class="card-copy">Monte uma agenda simples com as atividades que serão apresentadas aos participantes.</p>
 
@@ -195,6 +183,11 @@
               <p class="empty-inline">Ainda não há atividades cadastradas.</p>
             }
           </div>
+
+          <footer class="form-footer">
+            <span>Se desejar, adicione atividades agora. Você também poderá editar depois.</span>
+            <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="continueFromSchedule()">Próximo: equipe</button>
+          </footer>
         </section>
       }
 
@@ -239,6 +232,11 @@
               <p class="empty-inline">Nenhum editor adicional foi incluído.</p>
             }
           </div>
+
+          <footer class="form-footer">
+            <span>Você pode incluir colaboradores nesta etapa sempre que precisar.</span>
+            <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="continueFromTeam()">Próximo: revisão</button>
+          </footer>
         </section>
       }
 
@@ -251,7 +249,7 @@
             </div>
             <button class="button button--outline" type="button" (click)="selectStep('details')">Editar informações</button>
           </div>
-          <p class="card-copy">Confira os dados antes de divulgar o link do evento para a comunidade.</p>
+          <p class="card-copy">Confira os dados antes de concluir a criação do evento.</p>
 
           <dl class="review-list">
             <div><dt>Evento</dt><dd>{{ form.controls.title.value }}</dd></div>
@@ -262,8 +260,10 @@
           </dl>
 
           <div class="review-actions">
-            <button class="button button--secondary" type="button" (click)="selectStep('schedule')">Ver programação</button>
-            <a class="button button--primary" [routerLink]="['/eventos', event()!.id]">Abrir página do evento</a>
+            <button class="button button--secondary" type="button" (click)="selectStep('schedule')">Voltar à programação</button>
+            <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="completeCreation()">
+              {{ creationFlow() ? 'Concluir criação' : 'Salvar alterações' }}
+            </button>
           </div>
         </section>
       }
@@ -272,9 +272,9 @@
     <div class="editor-card loading-card" role="status">Carregando informações do evento...</div>
   }
 
-  @if (operationLabel() || errorMessage() || successMessage()) {
+  @if (showOperationFeedback() || errorMessage() || successMessage()) {
     <aside class="feedback-viewport" aria-live="polite" aria-atomic="true">
-      @if (operationLabel()) {
+      @if (showOperationFeedback()) {
         <div class="feedback-toast feedback-toast--loading" role="status"><span class="spinner"></span>{{ operationLabel() }}</div>
       }
       @if (errorMessage()) {
