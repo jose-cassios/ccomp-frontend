@@ -26,6 +26,8 @@ interface ApiEvent {
   content?: string | null;
   coverImageUrl?: string | null;
   cover_image_url?: string | null;
+  enrollmentCount?: number | null;
+  enrollment_count?: number | null;
   format: EventListItem['format'];
   category: EventListItem['category'];
   startDate?: string | null;
@@ -206,6 +208,7 @@ export class EventsService {
       slug: event.slug,
       description: event.summary ?? event.description ?? null,
       cover_image_url: event.coverImageUrl ?? event.cover_image_url ?? null,
+      enrollment_count: event.enrollmentCount ?? event.enrollment_count ?? null,
       format: event.format,
       category: event.category,
       start_date: event.startDate ?? event.start_date ?? null,

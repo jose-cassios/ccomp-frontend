@@ -1,6 +1,6 @@
 <main class="events-page">
   <header class="page-header">
-    <h1>Agenda de eventos</h1>
+    <h1>Eventos</h1>
     <div class="page-actions">
       <button type="button" (click)="openCalendar()">Ver calendário</button>
       @if (canManageEvents()) {
@@ -15,10 +15,13 @@
 
   @if (loading()) {
     <p class="empty-state" role="status">Carregando eventos...</p>
-  } @else if (featuredEvent(); as featured) {
-    <app-evento-destaque [evento]="featured" (selected)="openEvent($event)" />
+  } @else if (!errorMessage()) {
+    @if (featuredEvent(); as featured) {
+      <app-evento-destaque [evento]="featured" (selected)="openEvent($event)" />
+    }
+
     <app-proximos-eventos
-      [eventos]="remainingEvents()"
+      [eventos]="events()"
       [selectedCategory]="selectedCategory()"
       [selectedFormat]="selectedFormat()"
       [hasMore]="nextCursor() !== null"
@@ -28,11 +31,6 @@
       (formatChanged)="changeFormat($event)"
       (loadMore)="loadMore()"
     />
-  } @else if (!errorMessage()) {
-    <section class="empty-state">
-      <h2>Nenhum evento disponível</h2>
-      <p>Não há eventos publicados para este filtro no momento.</p>
-    </section>
   }
 
   @if (calendarOpen()) {

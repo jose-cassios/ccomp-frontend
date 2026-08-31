@@ -45,10 +45,18 @@ export class EventsPageComponent implements OnInit {
   readonly canManageEvents = computed(() =>
     this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
   );
-  readonly featuredEvent = computed(() => this.events()[0] ?? null);
-  readonly remainingEvents = computed(() => {
-    const featuredId = this.featuredEvent()?.id;
-    return this.events().filter((event) => event.id !== featuredId);
+  readonly featuredEvent = computed(() => {
+    const eventsWithEnrollments = this.events().filter(
+      (event) => (event.enrollment_count ?? 0) > 0,
+    );
+
+    return eventsWithEnrollments.reduce<EventListItem | null>(
+      (mostSubscribed, event) =>
+        !mostSubscribed || (event.enrollment_count ?? 0) > (mostSubscribed.enrollment_count ?? 0)
+          ? event
+          : mostSubscribed,
+      null,
+    );
   });
   readonly categoryLabel = eventCategoryLabel;
   readonly formatLabel = eventFormatLabel;

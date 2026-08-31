@@ -61,13 +61,25 @@ describe('EventsPageComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should keep past, ongoing and future events in the public catalog', () => {
+  it('should keep every returned event in the public card catalog', () => {
     expect(eventsService.search).toHaveBeenCalledWith({});
     expect(component.events()).toEqual(catalog);
     expect(fixture.nativeElement.textContent).toContain('Evento passado');
     expect(fixture.nativeElement.textContent).toContain('Evento futuro');
-    expect((fixture.nativeElement.querySelector('.featured__media img') as HTMLImageElement).src)
-      .toBe('https://example.com/passado.jpg');
+    expect(fixture.nativeElement.querySelectorAll('.event-card')).toHaveLength(2);
+    expect(fixture.nativeElement.querySelector('app-evento-destaque')).toBeNull();
+  });
+
+  it('should only show a featured event when the API supplies enrollment totals', () => {
+    component.events.set([
+      { ...catalog[0], enrollment_count: 4 },
+      { ...catalog[1], enrollment_count: 9 },
+    ]);
+    fixture.detectChanges();
+
+    expect(component.featuredEvent()?.id).toBe(2);
+    expect(fixture.nativeElement.querySelector('app-evento-destaque')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.event-card')).toHaveLength(2);
   });
 
   it('should not show the public event proposal call to action', () => {

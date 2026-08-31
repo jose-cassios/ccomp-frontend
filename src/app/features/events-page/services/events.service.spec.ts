@@ -131,6 +131,7 @@ describe('EventsService', () => {
         slug: 'semana-de-computacao',
         summary: 'Palestras e oficinas.',
         coverImageUrl: 'https://example.com/semana.jpg',
+        enrollmentCount: 18,
         format: 'IN_PERSON',
         category: 'ACADEMIC_EDUCATIONAL',
         startDate: '2026-09-10T08:00:00',
@@ -144,6 +145,7 @@ describe('EventsService', () => {
       expect(page.content[0]).toMatchObject({
         description: 'Palestras e oficinas.',
         cover_image_url: 'https://example.com/semana.jpg',
+        enrollment_count: 18,
         start_date: '2026-09-10T08:00:00',
         end_date: '2026-09-10T18:00:00',
       });

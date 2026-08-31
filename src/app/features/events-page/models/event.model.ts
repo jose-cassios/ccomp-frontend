@@ -42,6 +42,8 @@ export interface EventListItem {
   slug: string;
   description: string | null;
   cover_image_url?: string | null;
+  /** Total de inscrições, quando disponibilizado pela API. */
+  enrollment_count?: number | null;
   format: EventFormat;
   category: EventCategory;
   start_date: string | null;
