@@ -29,3 +29,20 @@ dd { margin: .18rem 0 0; color: #344650; font-size: .75rem; font-weight: 700; }
 .load-more:disabled { cursor: wait; opacity: .65; }
 .no-results { border: 1px dashed #bdc9ce; border-radius: 12px; padding: 1.5rem; color: #647681; text-align: center; }
 @media (max-width:900px) { .section-heading { align-items: stretch; flex-direction: column; } .filters { display: grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); } select { box-sizing: border-box; width: 100%; } }
+@media (max-width:640px) {
+  .events-list { margin-top: 28px; }
+  .section-heading { gap: 14px; margin-bottom: 14px; }
+  .events-grid { grid-template-columns: 1fr; gap: 13px; }
+  .event-card__media { height: 148px; }
+  .event-card__body { padding: 15px; }
+  .event-card h3 { margin-top: .62rem; }
+  dl { grid-template-columns: 1fr; margin: .75rem 0; }
+  dl div { display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; gap: .5rem; }
+  dd { margin: 0; text-align: right; }
+  .event-card button { min-height: 42px; }
+}
+@media (max-width:390px) {
+  .filters { grid-template-columns: 1fr; }
+  .event-card__media { height: 128px; }
+  .tags span { font-size: .58rem; }
+}

@@ -17,3 +17,5 @@ button:hover { transform: translateY(-1px); background: #ecf8ef; }
 .featured__mark { display: grid; place-items: center; min-height: 300px; }
 .featured__mark span { display: grid; width: 92px; height: 92px; place-items: center; border: 2px solid rgba(255,255,255,.35); border-radius: 25px; font-size: 2rem; font-weight: 900; transform: rotate(-6deg); }
 @media (max-width:760px) { .featured { grid-template-columns: 1fr; } .featured__media { min-height: 210px; border-top: 1px solid rgba(255,255,255,.14); border-left: 0; } .featured__media::after { background: linear-gradient(180deg,rgba(11,69,34,.25),transparent 38%); } }
+@media (min-width:761px) and (max-width:980px) { .featured { grid-template-columns: minmax(0,1fr) minmax(240px,.72fr); } .featured__copy { padding: 28px; } .featured__media, .featured__mark { min-height: 260px; } }
+@media (max-width:480px) { .featured__copy { padding: 20px 18px; } .featured__media, .featured__mark { min-height: 180px; } .featured__mark span { width: 72px; height: 72px; border-radius: 20px; font-size: 1.55rem; } .featured dl { grid-template-columns: 1fr; } .featured button { width: 100%; } }

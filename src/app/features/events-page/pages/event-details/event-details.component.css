@@ -16,3 +16,26 @@
 .enrollment-unavailable, .enrollment-window { margin: 0 0 10px; color: #64748b; font-size: .76rem; line-height: 1.45; }.enrollment-unavailable { border-radius: 7px; padding: 9px; background: #f4f6f7; text-align: center; }.enrollment-window { color: #53646f; }
 .details-layout { display: grid; grid-template-columns: minmax(0,1fr) 270px; align-items: start; gap: 24px; margin-top: 24px; }.content-column { display: grid; gap: 18px; }.content-card, .schedule-card, .info-card { border: 1px solid #dce8df; border-radius: 14px; padding: 24px; background: #fff; box-shadow: 0 6px 20px rgba(25,60,36,.045); }.section-kicker { color: var(--brand-600); font-size: .7rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }.content-card h2, .schedule-card h2, .info-card h2 { margin: 5px 0 14px; color: #022c22; font-size: 1.28rem; }.event-description { margin: 0; color: #52636e; line-height: 1.7; white-space: pre-line; }.info-card { position: sticky; top: 92px; }.info-card dl { display: grid; gap: 0; margin: 0; }.info-card dl div { padding: 13px 0; border-top: 1px solid #e8eeee; }.info-card dl div:first-child { padding-top: 0; border-top: 0; }.info-card dt { color: #71818a; font-size: .65rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }.info-card dd { margin: 4px 0 0; color: #334155; font-size: .86rem; font-weight: 700; }.info-card dd a { color: #176b35; }.activity-list { display: grid; gap: 0; }.activity-list article { display: grid; grid-template-columns: 36px minmax(0,1fr); gap: 12px; border-top: 1px solid #e4ece6; padding: 14px 0; }.activity-list article > span { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 9px; background: #e3f5e8; color: #176b35; font-size: .8rem; font-weight: 900; }.activity-list h3, .activity-list p { margin: 0; }.activity-list h3 { color: #1f3227; font-size: .94rem; }.activity-list p, .empty-activities { margin-top: 4px; color: #64748b; font-size: .86rem; line-height: 1.5; }.empty-activities { margin: 0; border: 1px dashed #cbd8cf; border-radius: 9px; padding: 16px; text-align: center; }.notice { margin: 18px 0; border-radius: 9px; padding: .85rem 1rem; }.notice--error { background: #fff0f0; color: #962828; }.notice--success { background: #e9f7ed; color: #176b35; }
 @media (max-width:900px) { .event-hero, .event-hero--with-cover, .details-layout { grid-template-columns: 1fr; }.event-hero__cover { width: 100%; height: min(52vw,260px); }.info-card { position: static; }.enrollment-card { width: 100%; }.details-page { padding: 26px 14px 52px; } }
+@media (min-width:641px) and (max-width:900px) {
+  .event-hero { grid-template-columns: minmax(0, 1fr) 230px; }
+  .event-hero--with-cover { grid-template-columns: 170px minmax(0, 1fr); }
+  .event-hero--with-cover .enrollment-card { grid-column: 1 / -1; }
+  .event-hero__cover { width: 170px; height: 170px; }
+}
+@media (max-width:640px) {
+  .details-page { padding: 22px 12px 44px; }
+  .event-hero { gap: 16px; margin-top: 14px; padding: 18px; border-radius: 14px; }
+  .event-hero__cover { height: min(58vw, 220px); border-radius: 10px; }
+  .event-hero h1 { margin-top: 11px; font-size: clamp(1.55rem, 8vw, 2rem); }
+  .event-hero__copy > p { font-size: .9rem; }
+  .enrollment-card { padding: 15px; }
+  .content-card, .schedule-card, .info-card { border-radius: 12px; padding: 18px; }
+  .details-layout { gap: 16px; margin-top: 16px; }
+  .activity-list article { gap: 10px; padding: 12px 0; }
+}
+@media (max-width:390px) {
+  .event-hero { padding: 16px; }
+  .tags { gap: .3rem; }
+  .tags span { font-size: .58rem; }
+  .event-date strong { font-size: 1.7rem; }
+}

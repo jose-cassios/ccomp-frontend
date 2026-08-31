@@ -34,3 +34,18 @@
 .calendar-cover { width: 52px; height: 52px; }
 .calendar-list span { display: grid; align-content: center; gap: .22rem; }
 @media (max-width: 700px) { .events-page { padding: 26px 14px 48px; } .page-header, .management__heading { align-items: stretch; flex-direction: column; } .editable-list article { grid-template-columns: 52px minmax(0,1fr); } .editable-list article a { grid-column: 1 / -1; width: 100%; } .page-actions { flex-direction: column; } .page-header a, .management a, .page-actions button { width: 100%; text-align: center; } .management { padding: 18px; } .calendar-list button { grid-template-columns: 52px minmax(0,1fr); } .calendar-list time { display: none; } }
+@media (min-width:701px) and (max-width:980px) {
+  .events-page { padding: 30px 24px 56px; }
+  .page-header { align-items: flex-start; }
+  .calendar-modal { width: min(680px, calc(100vw - 48px)); }
+}
+@media (max-width:520px) {
+  .page-header h1 { font-size: 1.7rem; }
+  .page-actions button, .page-actions a { min-height: 44px; }
+  .modal-backdrop { padding: .5rem; }
+  .calendar-modal { max-height: calc(100dvh - 16px); border-radius: 13px; padding: 16px; }
+  .calendar-modal h2 { margin-bottom: 12px; font-size: 1.22rem; }
+  .calendar-list { gap: 8px; }
+  .calendar-list button { gap: .65rem; padding: .65rem; }
+  .calendar-cover { width: 46px; height: 46px; }
+}
