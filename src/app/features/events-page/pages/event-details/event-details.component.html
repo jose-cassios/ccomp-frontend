@@ -16,7 +16,7 @@
           <span>{{ formatLabel(currentEvent.format) }}</span>
         </div>
         <h1>{{ currentEvent.title }}</h1>
-        <p>{{ currentEvent.description || 'A organização ainda não publicou uma descrição detalhada para este evento.' }}</p>
+        <p class="event-summary">{{ currentEvent.summary || 'A organização ainda não publicou um resumo para este evento.' }}</p>
       </div>
 
       <aside class="enrollment-card">
@@ -48,7 +48,7 @@
         <article class="content-card">
           <span class="section-kicker">Sobre o evento</span>
           <h2>Apresentação</h2>
-          <p class="event-description">{{ currentEvent.description || 'A organização ainda não publicou uma descrição detalhada para este evento.' }}</p>
+          <p class="event-description">{{ currentEvent.content || currentEvent.description || 'A organização ainda não publicou uma descrição detalhada para este evento.' }}</p>
         </article>
 
         <section class="schedule-card" aria-labelledby="schedule-title">

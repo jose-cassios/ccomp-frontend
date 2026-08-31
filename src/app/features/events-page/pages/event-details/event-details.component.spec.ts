@@ -14,7 +14,9 @@ describe('EventDetailsComponent', () => {
     id: 7,
     title: 'Encontro de Pesquisa',
     slug: 'encontro-de-pesquisa',
-    description: 'Apresentação de projetos e oportunidades de pesquisa.',
+    summary: 'Apresentação de projetos e oportunidades de pesquisa.',
+    content: 'Descrição completa da programação, das atividades e das informações para participação.',
+    description: 'Descrição completa da programação, das atividades e das informações para participação.',
     cover_image_url: 'https://example.com/pesquisa.jpg',
     format: 'IN_PERSON',
     category: 'ACADEMIC_EDUCATIONAL',
@@ -44,8 +46,9 @@ describe('EventDetailsComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should render the event description returned by the API adapter', () => {
-    expect(fixture.nativeElement.querySelector('.event-description')?.textContent).toContain(event.description);
+  it('should use the summary in the hero and keep the full content in the presentation', () => {
+    expect(fixture.nativeElement.querySelector('.event-summary')?.textContent).toContain(event.summary);
+    expect(fixture.nativeElement.querySelector('.event-description')?.textContent).toContain(event.content);
   });
 
   it('should render the event cover image', () => {
