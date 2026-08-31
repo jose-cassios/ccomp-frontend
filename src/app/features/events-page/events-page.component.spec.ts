@@ -16,6 +16,7 @@ describe('EventsPageComponent', () => {
       title: 'Evento passado',
       slug: 'evento-passado',
       description: null,
+      cover_image_url: 'https://example.com/passado.jpg',
       category: 'ACADEMIC_EDUCATIONAL',
       format: 'IN_PERSON',
       start_date: '2025-01-10T08:00:00',
@@ -65,6 +66,8 @@ describe('EventsPageComponent', () => {
     expect(component.events()).toEqual(catalog);
     expect(fixture.nativeElement.textContent).toContain('Evento passado');
     expect(fixture.nativeElement.textContent).toContain('Evento futuro');
+    expect((fixture.nativeElement.querySelector('.featured__media img') as HTMLImageElement).src)
+      .toBe('https://example.com/passado.jpg');
   });
 
   it('should not show the public event proposal call to action', () => {

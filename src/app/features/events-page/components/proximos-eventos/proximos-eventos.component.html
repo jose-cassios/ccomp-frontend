@@ -34,6 +34,9 @@
       <article class="event-card">
         <div class="event-card__accent" aria-hidden="true"></div>
         <div class="event-card__body">
+          @if (event.cover_image_url; as coverImageUrl) {
+            <img class="event-card__cover" [src]="coverImageUrl" [alt]="'Capa do evento ' + event.title" />
+          }
           <div class="tags">
             <span>{{ categoryLabel(event.category) }}</span>
             <span>{{ formatLabel(event.format) }}</span>

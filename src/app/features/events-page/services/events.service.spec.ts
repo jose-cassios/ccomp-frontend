@@ -129,6 +129,7 @@ describe('EventsService', () => {
         title: 'Semana de Computação',
         slug: 'semana-de-computacao',
         summary: 'Palestras e oficinas.',
+        coverImageUrl: 'https://example.com/semana.jpg',
         format: 'IN_PERSON',
         category: 'ACADEMIC_EDUCATIONAL',
         startDate: '2026-09-10T08:00:00',
@@ -141,6 +142,7 @@ describe('EventsService', () => {
     service.search().subscribe((page) => {
       expect(page.content[0]).toMatchObject({
         description: 'Palestras e oficinas.',
+        cover_image_url: 'https://example.com/semana.jpg',
         start_date: '2026-09-10T08:00:00',
         end_date: '2026-09-10T18:00:00',
       });

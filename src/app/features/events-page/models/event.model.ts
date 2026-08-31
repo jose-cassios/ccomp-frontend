@@ -36,6 +36,7 @@ export interface EventListItem {
   title: string;
   slug: string;
   description: string | null;
+  cover_image_url?: string | null;
   format: EventFormat;
   category: EventCategory;
   start_date: string | null;
@@ -45,7 +46,6 @@ export interface EventListItem {
 export interface EventDetails extends EventListItem {
   summary?: string | null;
   content?: string | null;
-  cover_image_url?: string | null;
   owner_id?: string | null;
   address?: string | null;
   online_url?: string | null;

@@ -63,6 +63,13 @@
                 <time [attr.datetime]="event.start_date">
                   {{ event.start_date | date: 'dd/MM' }}
                 </time>
+                <span class="calendar-cover" aria-hidden="true">
+                  @if (event.cover_image_url; as coverImageUrl) {
+                    <img [src]="coverImageUrl" [alt]="''" />
+                  } @else {
+                    {{ event.title.slice(0, 1).toUpperCase() }}
+                  }
+                </span>
                 <span>
                   <strong>{{ event.title }}</strong>
                   {{ event.start_date | date: 'HH:mm' }} · {{ formatLabel(event.format) }}
@@ -95,6 +102,13 @@
         <div class="editable-list">
           @for (event of createdEvents(); track event.id) {
             <article>
+              <span class="editable-list__cover" aria-hidden="true">
+                @if (event.cover_image_url; as coverImageUrl) {
+                  <img [src]="coverImageUrl" [alt]="''" />
+                } @else {
+                  {{ event.title.slice(0, 1).toUpperCase() }}
+                }
+              </span>
               <div>
                 <span>Evento criado por você</span>
                 <h3>{{ event.title }}</h3>

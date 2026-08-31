@@ -11,6 +11,9 @@
             <span class="month">{{ item.start_date | date: 'MMM' }}</span>
             <span class="day">{{ item.start_date | date: 'dd' }}</span>
           </div>
+          @if (item.cover_image_url; as coverImageUrl) {
+            <img class="agenda-cover" [src]="coverImageUrl" [alt]="'Capa do evento ' + item.title" />
+          }
           <div class="agenda-info">
             <span class="agenda-tag">{{ categoryLabel(item.category) }}</span>
             <h4>{{ item.title }}</h4>

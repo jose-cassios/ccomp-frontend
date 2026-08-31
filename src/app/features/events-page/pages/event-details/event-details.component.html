@@ -6,7 +6,10 @@
   } @else if (errorMessage() && !event()) {
     <p class="notice notice--error" role="alert">{{ errorMessage() }}</p>
   } @else if (event(); as currentEvent) {
-    <article class="event-hero">
+    <article class="event-hero" [class.event-hero--with-cover]="currentEvent.cover_image_url">
+      @if (currentEvent.cover_image_url; as coverImageUrl) {
+        <img class="event-hero__cover" [src]="coverImageUrl" [alt]="'Capa do evento ' + currentEvent.title" />
+      }
       <div class="event-hero__copy">
         <div class="tags">
           <span>{{ categoryLabel(currentEvent.category) }}</span>

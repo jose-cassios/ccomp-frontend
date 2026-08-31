@@ -28,4 +28,22 @@ describe('ProximosEventosComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Todos os eventos');
     expect(fixture.nativeElement.textContent).not.toContain('Período');
   });
+
+  it('should render a cover image in an event card', () => {
+    fixture.componentRef.setInput('eventos', [{
+      id: 1,
+      title: 'Semana da Computação',
+      slug: 'semana-da-computacao',
+      description: null,
+      cover_image_url: 'https://example.com/semana.jpg',
+      category: 'ACADEMIC_EDUCATIONAL',
+      format: 'IN_PERSON',
+      start_date: '2026-09-10T08:00:00',
+      end_date: '2026-09-10T18:00:00',
+    }]);
+    fixture.detectChanges();
+
+    const cover = fixture.nativeElement.querySelector('.event-card__cover') as HTMLImageElement;
+    expect(cover.src).toBe('https://example.com/semana.jpg');
+  });
 });
