@@ -103,6 +103,7 @@ describe('EventsService', () => {
       enrollment_end_date: '2026-09-09T18:00',
       enrollment_paused: false,
     }).subscribe();
+    service.publish(12).subscribe();
 
     expect(api.post).toHaveBeenCalledWith('/events', {
       title: 'Semana da Computação',
@@ -124,6 +125,7 @@ describe('EventsService', () => {
       enrollment_end_date: '2026-09-09T18:00',
       enrollment_paused: false,
     });
+    expect(api.patch).toHaveBeenCalledWith('/events/12', { status: 'PUBLISHED' });
   });
 
   it('should normalize the camelCase event contract returned by the API', () => {

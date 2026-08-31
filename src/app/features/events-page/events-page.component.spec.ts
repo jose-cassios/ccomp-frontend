@@ -42,7 +42,7 @@ describe('EventsPageComponent', () => {
       imports: [EventsPageComponent],
       providers: [
         provideRouter([]),
-        { provide: AuthService, useValue: { hasAnyRole: () => false } },
+        { provide: AuthService, useValue: { hasAnyRole: () => false, currentUserState: () => null } },
         {
           provide: EventsService,
           useValue: eventsService,

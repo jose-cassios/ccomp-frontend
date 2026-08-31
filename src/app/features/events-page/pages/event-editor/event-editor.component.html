@@ -8,12 +8,17 @@
     </div>
     @if (event()) {
       <div class="header-actions">
+        @if (canPublish()) {
+          <button class="button button--publish" type="button" [disabled]="isBusy()" (click)="publish()">
+            {{ operation() === 'publishing' ? 'Publicando...' : 'Publicar evento' }}
+          </button>
+        }
         @if (canDelete()) {
           <button class="button button--danger" type="button" [disabled]="isBusy()" (click)="deleteEvent()">
             Excluir evento
           </button>
         }
-        @if (!creationFlow() || isCreationComplete()) {
+        @if (event()!.status === 'PUBLISHED') {
           <a class="button button--outline" [routerLink]="['/eventos', event()!.id]">Ver página pública</a>
         }
       </div>

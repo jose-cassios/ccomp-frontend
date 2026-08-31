@@ -23,9 +23,10 @@ import {
   eventEnrollmentStateLabel,
   eventPublicationStatusLabel,
 } from '../../models/event.model';
+import { MyEventsStoreService } from '../../services/my-events-store.service';
 import { EventsService } from '../../services/events.service';
 
-type EditorOperation = 'idle' | 'loading' | 'saving' | 'deleting' | 'activity' | 'editor';
+type EditorOperation = 'idle' | 'loading' | 'saving' | 'publishing' | 'deleting' | 'activity' | 'editor';
 type EventEditorStep = 'details' | 'presentation' | 'schedule' | 'team' | 'review';
 
 const EDITOR_STEPS: ReadonlyArray<{ value: EventEditorStep; label: string }> = [
@@ -49,6 +50,7 @@ export class EventEditorComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly eventsService = inject(EventsService);
+  private readonly myEventsStore = inject(MyEventsStoreService);
   private readonly authService = inject(AuthService);
 
   readonly form = this.fb.nonNullable.group({
@@ -103,6 +105,14 @@ export class EventEditorComponent implements OnInit {
       || Boolean(currentEvent?.owner_id && currentUserId && currentEvent.owner_id === currentUserId);
   });
   readonly canDelete = computed(() => this.isAdmin() || this.isOwner());
+  readonly canPublish = computed(() => {
+    const currentEvent = this.event();
+    return Boolean(
+      currentEvent
+      && currentEvent.status !== 'PUBLISHED'
+      && (this.isAdmin() || this.isOwner()),
+    );
+  });
   readonly canManageTeam = computed(() => this.isOwner());
   readonly canViewEnrollments = computed(() =>
     this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
@@ -124,6 +134,7 @@ export class EventEditorComponent implements OnInit {
     switch (this.operation()) {
       case 'loading': return 'Carregando evento...';
       case 'saving': return 'Salvando informações do evento...';
+      case 'publishing': return 'Publicando evento...';
       case 'deleting': return 'Excluindo evento...';
       case 'activity': return 'Atualizando programação...';
       case 'editor': return 'Atualizando equipe...';
@@ -190,6 +201,7 @@ export class EventEditorComponent implements OnInit {
         if (!currentEvent) {
           this.editingExisting.set(true);
           this.ownedEventIds.update((ids) => new Set(ids).add(savedEvent.id));
+          this.myEventsStore.remember(savedEvent.id);
           this.location.replaceState(`/eventos/${savedEvent.id}/editar`);
           this.advanceTo('presentation');
           return;
@@ -263,6 +275,11 @@ export class EventEditorComponent implements OnInit {
   }
 
   completeCreation(): void {
+    if (this.creationFlow()) {
+      this.publish();
+      return;
+    }
+
     const currentEvent = this.event();
     if (!currentEvent || this.isBusy()) return;
     if (
@@ -286,13 +303,53 @@ export class EventEditorComponent implements OnInit {
     ).subscribe({
       next: (savedEvent) => {
         this.applyEvent(savedEvent, presentation);
-        this.creationCompleted.set(true);
-        this.successMessage.set(this.creationFlow()
-          ? 'Evento criado como rascunho. Publique-o quando a API disponibilizar esta ação.'
-          : 'Alterações do evento salvas com sucesso.');
+        this.successMessage.set('Alterações do evento salvas com sucesso.');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível concluir o evento.'));
+      },
+    });
+  }
+
+  publish(): void {
+    const currentEvent = this.event();
+    if (!currentEvent || !this.canPublish() || this.isBusy()) return;
+    if (
+      this.form.invalid
+      || this.presentationForm.invalid
+      || !this.hasValidDates()
+      || !this.hasValidEnrollmentDates()
+    ) {
+      this.form.markAllAsTouched();
+      this.presentationForm.markAllAsTouched();
+      this.errorMessage.set('Revise as informações do evento antes de publicar.');
+      return;
+    }
+
+    this.operation.set('publishing');
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    const presentation = this.presentationForm.getRawValue();
+    this.eventsService.update(currentEvent.id, this.buildCompleteUpdatePayload()).pipe(
+      switchMap((savedEvent) => {
+        this.applyEvent(savedEvent, presentation);
+        return this.eventsService.publish(savedEvent.id);
+      }),
+      finalize(() => this.operation.set('idle')),
+    ).subscribe({
+      next: (publishedEvent) => {
+        this.applyEvent(publishedEvent, presentation);
+        if (publishedEvent.status !== 'PUBLISHED') {
+          this.errorMessage.set('O evento foi salvo, mas a API não confirmou a publicação. Ele permanece como rascunho.');
+          return;
+        }
+
+        this.creationCompleted.set(true);
+        this.myEventsStore.forget(publishedEvent.id);
+        this.successMessage.set('Evento publicado com sucesso! A página já está disponível para o público.');
+      },
+      error: (error: unknown) => {
+        this.errorMessage.set(this.getErrorMessage(error, 'O evento foi salvo, mas não foi possível publicá-lo.'));
       },
     });
   }
@@ -309,6 +366,7 @@ export class EventEditorComponent implements OnInit {
     ).subscribe({
       next: () => {
         this.hasUnsavedChanges.set(false);
+        this.myEventsStore.forget(currentEvent.id);
         void this.router.navigate(['/eventos']);
       },
       error: (error: unknown) => {
@@ -424,6 +482,9 @@ export class EventEditorComponent implements OnInit {
     ).subscribe({
       next: (event) => {
         this.applyEvent(event);
+        if (event.owner_id && event.owner_id === this.authService.currentUserState()?.id) {
+          this.myEventsStore.remember(event.id);
+        }
         this.loadActivities(event.id);
         this.loadEditors(event.id);
         this.loadEnrollments(event.id);

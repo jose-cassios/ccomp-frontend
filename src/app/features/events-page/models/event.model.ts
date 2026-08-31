@@ -111,6 +111,7 @@ export interface UpdateEventPayload {
   summary?: string;
   content?: string;
   cover_image_url?: string;
+  status?: EventPublicationStatus;
   category?: EventCategory;
   format?: EventFormat;
   start_date?: string;

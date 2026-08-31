@@ -29,6 +29,7 @@ describe('EventEditorComponent', () => {
       enrollment_end_date: payload.enrollment_end_date ?? null,
       enrollment_paused: payload.enrollment_paused ?? false,
     })),
+    publish: vi.fn(() => of({ ...createdEvent, status: 'PUBLISHED' as const })),
     getById: vi.fn(() => of(createdEvent)),
     getActivities: vi.fn(() => of({ content: [], next_cursor: null })),
     getEditors: vi.fn(() => of({ content: [], next_cursor: null })),
@@ -183,7 +184,7 @@ describe('EventEditorComponent', () => {
     expect(eventsService.getActivities).toHaveBeenCalledWith(createdEvent.id);
   });
 
-  it('should reserve the success confirmation for the final review step', () => {
+  it('should publish the event and show the success confirmation in the final review step', () => {
     component.form.setValue({
       title: createdEvent.title,
       category: createdEvent.category,
@@ -211,7 +212,8 @@ describe('EventEditorComponent', () => {
     component.completeCreation();
 
     expect(component.creationCompleted()).toBe(true);
-    expect(component.successMessage()).toContain('Evento criado como rascunho');
+    expect(eventsService.publish).toHaveBeenCalledWith(createdEvent.id);
+    expect(component.successMessage()).toContain('Evento publicado com sucesso');
   });
 
   it('should not allow jumping ahead before the prior stage is completed', () => {

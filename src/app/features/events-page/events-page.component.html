@@ -15,18 +15,31 @@
 
   @if (loading()) {
     <p class="empty-state" role="status">Carregando eventos...</p>
-  } @else if (!errorMessage()) {
-    <app-proximos-eventos
-      [eventos]="events()"
-      [selectedCategory]="selectedCategory()"
-      [selectedFormat]="selectedFormat()"
-      [hasMore]="nextCursor() !== null"
-      [loadingMore]="loadingMore()"
-      (selected)="openEvent($event)"
-      (categoryChanged)="changeCategory($event)"
-      (formatChanged)="changeFormat($event)"
-      (loadMore)="loadMore()"
-    />
+  } @else {
+    @if (myDrafts().length) {
+      <app-proximos-eventos
+        [eventos]="myDrafts()"
+        heading="Seus rascunhos"
+        [showFilters]="false"
+        [draftMode]="true"
+        [hasMore]="false"
+        (selected)="openDraft($event)"
+      />
+    }
+
+    @if (!errorMessage()) {
+      <app-proximos-eventos
+        [eventos]="events()"
+        [selectedCategory]="selectedCategory()"
+        [selectedFormat]="selectedFormat()"
+        [hasMore]="nextCursor() !== null"
+        [loadingMore]="loadingMore()"
+        (selected)="openEvent($event)"
+        (categoryChanged)="changeCategory($event)"
+        (formatChanged)="changeFormat($event)"
+        (loadMore)="loadMore()"
+      />
+    }
   }
 
   @if (calendarOpen()) {

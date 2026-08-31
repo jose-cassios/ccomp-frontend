@@ -13,6 +13,7 @@ h1 { margin: 5px 0 6px; color: #022c22; font-size: clamp(1.75rem, 4vw, 2.45rem);
 .button--primary { background: var(--brand-600); color: #fff; }
 .button--secondary { border-color: #cbd5e1; background: #fff; color: #475569; }
 .button--outline { border-color: #b9d3c0; background: #fff; color: #176b35; }
+.button--publish { background: #173d2a; color: #fff; }
 .button--danger { border-color: #fecdd3; background: #fff1f2; color: #9f1239; }
 .event-steps { overflow-x: auto; margin-bottom: 22px; padding: 4px; border: 1px solid #dce8df; border-radius: 12px; background: #fff; }
 .event-steps button { display: inline-flex; flex: 1 0 170px; align-items: center; gap: 9px; border: 0; border-radius: 8px; padding: 10px 12px; background: transparent; color: #64748b; cursor: pointer; font: inherit; font-size: .82rem; font-weight: 750; text-align: left; }

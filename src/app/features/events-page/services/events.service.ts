@@ -153,6 +153,10 @@ export class EventsService {
     );
   }
 
+  publish(id: number | string): Observable<EventDetails> {
+    return this.update(id, { status: 'PUBLISHED' });
+  }
+
   deleteEvent(id: number | string): Observable<void> {
     return this.api.delete<void>(`/events/${encodeURIComponent(id)}`);
   }

@@ -19,6 +19,9 @@ import {
 })
 export class ProximosEventosComponent {
   readonly eventos = input.required<readonly EventListItem[]>();
+  readonly heading = input('Todos os eventos');
+  readonly showFilters = input(true);
+  readonly draftMode = input(false);
   readonly selectedCategory = input<EventCategory | null>(null);
   readonly selectedFormat = input<EventFormat | null>(null);
   readonly hasMore = input(false);

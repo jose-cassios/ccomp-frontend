@@ -1,12 +1,13 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { catchError, finalize, forkJoin, of } from 'rxjs';
 import { CONTENT_MANAGEMENT_ROLES } from '../auth/config/auth.config';
 import { AuthService } from '../auth/services/auth.service';
 import { ProximosEventosComponent } from './components/proximos-eventos/proximos-eventos.component';
 import {
   EventCategory,
+  EventDetails,
   EventFormat,
   EventListItem,
   EventsFilter,
@@ -14,6 +15,7 @@ import {
   eventFormatLabel,
 } from './models/event.model';
 import { EventsService } from './services/events.service';
+import { MyEventsStoreService } from './services/my-events-store.service';
 
 @Component({
   selector: 'app-events-page',
@@ -26,8 +28,10 @@ export class EventsPageComponent implements OnInit {
   private readonly eventsService = inject(EventsService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly myEventsStore = inject(MyEventsStoreService);
 
   readonly events = signal<EventListItem[]>([]);
+  readonly myDrafts = signal<EventDetails[]>([]);
   readonly selectedCategory = signal<EventCategory | null>(null);
   readonly selectedFormat = signal<EventFormat | null>(null);
   readonly nextCursor = signal<string | null>(null);
@@ -46,6 +50,7 @@ export class EventsPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.reload();
+    this.loadMyDrafts();
   }
 
   reload(): void {
@@ -113,6 +118,27 @@ export class EventsPageComponent implements OnInit {
 
   openEvent(id: number): void {
     void this.router.navigate(['/eventos', id]);
+  }
+
+  openDraft(id: number): void {
+    void this.router.navigate(['/eventos', id, 'editar']);
+  }
+
+  private loadMyDrafts(): void {
+    const ids = this.myEventsStore.ids();
+    if (!ids.length) return;
+
+    forkJoin(ids.map((id) => this.eventsService.getById(id).pipe(
+      catchError(() => of(null)),
+    ))).subscribe({
+      next: (loadedEvents) => {
+        const drafts = loadedEvents.filter((event): event is EventDetails => event?.status === 'DRAFT');
+        loadedEvents
+          .filter((event): event is EventDetails => Boolean(event && event.status !== 'DRAFT'))
+          .forEach((event) => this.myEventsStore.forget(event.id));
+        this.myDrafts.set(drafts);
+      },
+    });
   }
 
   private buildFilter(): EventsFilter {
