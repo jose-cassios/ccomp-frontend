@@ -21,13 +21,11 @@
       [eventos]="remainingEvents()"
       [selectedCategory]="selectedCategory()"
       [selectedFormat]="selectedFormat()"
-      [selectedTiming]="selectedTiming()"
       [hasMore]="nextCursor() !== null"
       [loadingMore]="loadingMore()"
       (selected)="openEvent($event)"
       (categoryChanged)="changeCategory($event)"
       (formatChanged)="changeFormat($event)"
-      (timingChanged)="changeTiming($event)"
       (loadMore)="loadMore()"
     />
   } @else if (!errorMessage()) {

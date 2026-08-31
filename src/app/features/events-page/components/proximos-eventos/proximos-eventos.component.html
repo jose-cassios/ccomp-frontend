@@ -3,18 +3,6 @@
     <h2 id="events-list-title">Todos os eventos</h2>
     <div class="filters">
       <label>
-        <span>Período</span>
-        <select
-          [value]="selectedTiming() || ''"
-          (change)="timingChanged.emit($any($event.target).value || null)"
-        >
-          <option value="">Todos</option>
-          @for (timing of timings; track timing.value) {
-            <option [value]="timing.value">{{ timing.label }}</option>
-          }
-        </select>
-      </label>
-      <label>
         <span>Formato</span>
         <select
           [value]="selectedFormat() || ''"
@@ -40,10 +28,6 @@
       </label>
     </div>
   </div>
-
-  @if (selectedTiming() === 'FUTURE') {
-    <p class="api-note">A API atual disponibiliza apenas eventos em andamento; os próximos eventos aparecerão aqui quando esse filtro for suportado.</p>
-  }
 
   <div class="events-grid">
     @for (event of eventos(); track event.id) {

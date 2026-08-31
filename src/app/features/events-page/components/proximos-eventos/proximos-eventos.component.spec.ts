@@ -23,8 +23,9 @@ describe('ProximosEventosComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should expose timing, format and category filters', () => {
-    expect(fixture.nativeElement.querySelectorAll('select')).toHaveLength(3);
+  it('should expose format and category filters without restricting dates', () => {
+    expect(fixture.nativeElement.querySelectorAll('select')).toHaveLength(2);
     expect(fixture.nativeElement.textContent).toContain('Todos os eventos');
+    expect(fixture.nativeElement.textContent).not.toContain('Período');
   });
 });

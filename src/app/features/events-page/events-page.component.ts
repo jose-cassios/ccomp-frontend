@@ -11,7 +11,6 @@ import {
   EventFormat,
   EventListItem,
   EventsFilter,
-  EventTiming,
   eventCategoryLabel,
   eventFormatLabel,
 } from './models/event.model';
@@ -33,7 +32,6 @@ export class EventsPageComponent implements OnInit {
   readonly createdEvents = signal<EventListItem[]>([]);
   readonly selectedCategory = signal<EventCategory | null>(null);
   readonly selectedFormat = signal<EventFormat | null>(null);
-  readonly selectedTiming = signal<EventTiming | null>(null);
   readonly nextCursor = signal<string | null>(null);
   readonly loading = signal(true);
   readonly loadingMore = signal(false);
@@ -67,7 +65,7 @@ export class EventsPageComponent implements OnInit {
       finalize(() => this.loading.set(false)),
     ).subscribe({
       next: (page) => {
-        this.events.set(this.applyTimingFilter(page.content));
+        this.events.set(page.content);
         this.nextCursor.set(page.next_cursor);
       },
       error: () => {
@@ -87,7 +85,7 @@ export class EventsPageComponent implements OnInit {
     ).subscribe({
       next: (page) => {
         const byId = new Map(this.events().map((event) => [event.id, event]));
-        this.applyTimingFilter(page.content).forEach((event) => byId.set(event.id, event));
+        page.content.forEach((event) => byId.set(event.id, event));
         this.events.set([...byId.values()]);
         this.nextCursor.set(page.next_cursor);
       },
@@ -102,11 +100,6 @@ export class EventsPageComponent implements OnInit {
 
   changeFormat(format: EventFormat | null): void {
     this.selectedFormat.set(format);
-    this.reload();
-  }
-
-  changeTiming(timing: EventTiming | null): void {
-    this.selectedTiming.set(timing);
     this.reload();
   }
 
@@ -153,16 +146,4 @@ export class EventsPageComponent implements OnInit {
     };
   }
 
-  private applyTimingFilter(events: EventListItem[]): EventListItem[] {
-    const timing = this.selectedTiming();
-    if (!timing) return events;
-
-    const now = Date.now();
-    return events.filter((event) => {
-      const start = event.start_date ? new Date(event.start_date).getTime() : Number.NaN;
-      const end = event.end_date ? new Date(event.end_date).getTime() : Number.NaN;
-      if (timing === 'IN_PROGRESS') return start <= now && end >= now;
-      return start > now;
-    });
-  }
 }
