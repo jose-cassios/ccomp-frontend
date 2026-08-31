@@ -51,7 +51,8 @@ export class EventDetailsComponent implements OnInit {
       : of([]);
     this.eventsService.getById(id).pipe(finalize(() => this.loading.set(false))).subscribe({
       next: (event) => {
-        this.event.set(event);
+        this.event.set({ ...event, activities: event.activities ?? [] });
+        this.loadActivities(event.id);
         subscriptions.subscribe((items) => this.subscribed.set(items.some((item) => item.id === event.id)));
       },
       error: (error: unknown) => this.errorMessage.set(this.getErrorMessage(error)),
@@ -82,6 +83,14 @@ export class EventDetailsComponent implements OnInit {
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível alterar sua inscrição.'));
       },
+    });
+  }
+
+  private loadActivities(eventId: number): void {
+    this.eventsService.getActivities(eventId).pipe(
+      catchError(() => of({ content: [], next_cursor: null })),
+    ).subscribe((page) => {
+      this.event.update((event) => event ? { ...event, activities: page.content } : event);
     });
   }
 

@@ -53,6 +53,7 @@ export class EventEditorComponent implements OnInit {
     format: this.fb.nonNullable.control<EventFormat>('IN_PERSON', Validators.required),
     start_date: ['', Validators.required],
     end_date: ['', Validators.required],
+    collaborator_email: ['', Validators.email],
   });
   readonly presentationForm = this.fb.nonNullable.group({
     summary: ['', [Validators.minLength(4), Validators.maxLength(255)]],
@@ -130,6 +131,7 @@ export class EventEditorComponent implements OnInit {
     }
 
     const value = this.form.getRawValue();
+    const collaboratorEmail = value.collaborator_email.trim();
     const currentEvent = this.event();
     if (this.editingExisting() && !currentEvent) return;
 
@@ -156,6 +158,7 @@ export class EventEditorComponent implements OnInit {
           this.location.replaceState(`/eventos/${savedEvent.id}/editar`);
           this.activeStep.set('presentation');
           this.successMessage.set('Evento criado. Complete a página do evento antes de montar a programação.');
+          this.addInitialCollaborator(savedEvent.id, collaboratorEmail);
           return;
         }
 
@@ -249,6 +252,7 @@ export class EventEditorComponent implements OnInit {
       next: (activity) => {
         this.activities.update((activities) => [...activities, activity]);
         this.activityForm.reset({ title: '', description: '' });
+        this.loadActivities(currentEvent.id);
         this.successMessage.set('Atividade adicionada à programação.');
       },
       error: (error: unknown) => {
@@ -339,6 +343,7 @@ export class EventEditorComponent implements OnInit {
     ).subscribe({
       next: (event) => {
         this.applyEvent(event);
+        this.loadActivities(event.id);
         this.loadEditors(event.id);
       },
       error: (error: unknown) => {
@@ -358,6 +363,33 @@ export class EventEditorComponent implements OnInit {
     this.eventsService.getEditors(eventId).subscribe({
       next: (page) => this.editors.set(page.content.filter((editor) => editor.active)),
       error: () => this.editors.set([]),
+    });
+  }
+
+  private loadActivities(eventId: number): void {
+    this.eventsService.getActivities(eventId).subscribe({
+      next: (page) => this.activities.set(page.content),
+      // A atividade recém-criada continua visível caso a listagem falhe pontualmente.
+      error: () => undefined,
+    });
+  }
+
+  private addInitialCollaborator(eventId: number, email: string): void {
+    if (!email) return;
+
+    this.eventsService.addEditor(eventId, email).subscribe({
+      next: (response) => {
+        this.loadEditors(eventId);
+        this.successMessage.set(
+          response.response ?? response.message ?? 'Colaborador adicionado à equipe do evento.',
+        );
+      },
+      error: (error: unknown) => {
+        this.errorMessage.set(this.getErrorMessage(
+          error,
+          'O evento foi criado, mas não foi possível adicionar o colaborador informado.',
+        ));
+      },
     });
   }
 
@@ -402,6 +434,7 @@ export class EventEditorComponent implements OnInit {
       format: enrichedEvent.format ?? 'IN_PERSON',
       start_date: this.toLocalInput(enrichedEvent.start_date),
       end_date: this.toLocalInput(enrichedEvent.end_date),
+      collaborator_email: '',
     }, { emitEvent: false });
     this.presentationForm.reset({
       summary: enrichedEvent.summary ?? '',

@@ -26,11 +26,12 @@ describe('EventEditorComponent', () => {
     create: vi.fn(() => of(createdEvent)),
     update: vi.fn(() => of(createdEvent)),
     getById: vi.fn(() => of(createdEvent)),
+    getActivities: vi.fn(() => of({ content: [], next_cursor: null })),
     getEditors: vi.fn(() => of({ content: [], next_cursor: null })),
     deleteEvent: vi.fn(() => of(void 0)),
-    createActivity: vi.fn(),
+    createActivity: vi.fn(() => of({ id: 21, event_id: createdEvent.id, title: 'Abertura', description: null })),
     deleteActivity: vi.fn(),
-    addEditor: vi.fn(),
+    addEditor: vi.fn(() => of({ message: 'Editor adicionado.' })),
     removeEditor: vi.fn(),
   };
 
@@ -58,6 +59,7 @@ describe('EventEditorComponent', () => {
       format: createdEvent.format,
       start_date: '2026-09-10T08:00',
       end_date: '2026-09-10T18:00',
+      collaborator_email: '',
     });
 
     component.save();
@@ -80,6 +82,7 @@ describe('EventEditorComponent', () => {
       format: createdEvent.format,
       start_date: '2026-09-10T08:00',
       end_date: '2026-09-10T18:00',
+      collaborator_email: '',
     });
     component.save();
     component.presentationForm.setValue({
@@ -100,5 +103,38 @@ describe('EventEditorComponent', () => {
       start_date: '2026-09-10T08:00',
       end_date: '2026-09-10T18:00',
     });
+  });
+
+  it('should persist an activity and refresh the saved schedule', () => {
+    component.form.setValue({
+      title: createdEvent.title,
+      category: createdEvent.category,
+      format: createdEvent.format,
+      start_date: '2026-09-10T08:00',
+      end_date: '2026-09-10T18:00',
+      collaborator_email: '',
+    });
+    component.save();
+    component.activityForm.setValue({ title: 'Abertura', description: '' });
+
+    component.saveActivity();
+
+    expect(eventsService.createActivity).toHaveBeenCalledWith(createdEvent.id, { title: 'Abertura', description: '' });
+    expect(eventsService.getActivities).toHaveBeenCalledWith(createdEvent.id);
+  });
+
+  it('should add the initial collaborator after creating the event', () => {
+    component.form.setValue({
+      title: createdEvent.title,
+      category: createdEvent.category,
+      format: createdEvent.format,
+      start_date: '2026-09-10T08:00',
+      end_date: '2026-09-10T18:00',
+      collaborator_email: 'moderador@ifma.edu.br',
+    });
+
+    component.save();
+
+    expect(eventsService.addEditor).toHaveBeenCalledWith(createdEvent.id, 'moderador@ifma.edu.br');
   });
 });

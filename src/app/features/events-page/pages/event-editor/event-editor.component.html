@@ -82,6 +82,15 @@
               <span>Término *</span>
               <input type="datetime-local" formControlName="end_date" />
             </label>
+
+            <label class="field field--wide">
+              <span>Colaborador inicial</span>
+              <input type="email" formControlName="collaborator_email" placeholder="colaborador@ifma.edu.br" />
+              <small>Opcional. Após criar o evento, este membro da equipe será incluído como editor.</small>
+              @if (form.controls.collaborator_email.touched && form.controls.collaborator_email.invalid) {
+                <strong>Informe um e-mail válido.</strong>
+              }
+            </label>
           </div>
 
           <footer class="form-footer">

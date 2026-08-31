@@ -7,6 +7,7 @@ import {
   ApiMessage,
   CreateEventPayload,
   EventActivity,
+  EventActivitiesPage,
   EventDetails,
   EventEditor,
   EventEditorsPage,
@@ -67,6 +68,12 @@ interface ApiEventEditorsPage {
     };
     active: boolean;
   }>;
+  nextCursor?: string | null;
+  next_cursor?: string | null;
+}
+
+interface ApiEventActivitiesPage {
+  content: ApiEventActivity[];
   nextCursor?: string | null;
   next_cursor?: string | null;
 }
@@ -170,7 +177,22 @@ export class EventsService {
     return this.api.post<ApiEventActivity>(
       `/events/${encodeURIComponent(eventId)}/activities`,
       payload,
-    ).pipe(map((activity) => this.toActivity(activity)));
+    ).pipe(map((activity) => this.toActivity(activity, eventId)));
+  }
+
+  getActivities(eventId: number | string, cursor?: string): Observable<EventActivitiesPage> {
+    let params = new HttpParams();
+    if (cursor) params = params.set('cursor', cursor);
+
+    return this.api.get<ApiEventActivitiesPage>(
+      `/events/${encodeURIComponent(eventId)}/activities`,
+      { params },
+    ).pipe(
+      map((page) => ({
+        content: page.content.map((activity) => this.toActivity(activity, eventId)),
+        next_cursor: page.nextCursor ?? page.next_cursor ?? null,
+      })),
+    );
   }
 
   deleteActivity(activityId: number | string): Observable<ApiMessage> {
@@ -205,10 +227,10 @@ export class EventsService {
     };
   }
 
-  private toActivity(activity: ApiEventActivity): EventActivity {
+  private toActivity(activity: ApiEventActivity, fallbackEventId: number | string = 0): EventActivity {
     return {
       id: activity.id,
-      event_id: activity.eventId ?? activity.event_id ?? 0,
+      event_id: activity.eventId ?? activity.event_id ?? Number(fallbackEventId),
       title: activity.title,
       description: activity.description ?? null,
     };

@@ -30,6 +30,11 @@ export interface EventEditorsPage {
   next_cursor: string | null;
 }
 
+export interface EventActivitiesPage {
+  content: EventActivity[];
+  next_cursor: string | null;
+}
+
 /** Modelo normalizado para a interface, independente do formato da resposta da API. */
 export interface EventListItem {
   id: number;

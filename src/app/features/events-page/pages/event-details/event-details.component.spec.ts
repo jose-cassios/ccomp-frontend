@@ -37,7 +37,14 @@ describe('EventDetailsComponent', () => {
         },
         {
           provide: EventsService,
-          useValue: { getById: () => of(event), getSubscriptions: () => of([]) },
+          useValue: {
+            getById: () => of(event),
+            getSubscriptions: () => of([]),
+            getActivities: () => of({
+              content: [{ id: 3, event_id: event.id, title: 'Abertura', description: null }],
+              next_cursor: null,
+            }),
+          },
         },
       ],
     }).compileComponents();
@@ -54,5 +61,9 @@ describe('EventDetailsComponent', () => {
   it('should render the event cover image', () => {
     const cover = fixture.nativeElement.querySelector('.event-hero__cover') as HTMLImageElement;
     expect(cover.src).toBe('https://example.com/pesquisa.jpg');
+  });
+
+  it('should load the schedule from the activities endpoint', () => {
+    expect(fixture.nativeElement.textContent).toContain('Abertura');
   });
 });

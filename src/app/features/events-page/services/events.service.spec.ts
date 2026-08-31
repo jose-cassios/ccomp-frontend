@@ -9,6 +9,7 @@ describe('EventsService', () => {
     get: vi.fn((endpoint: string) => {
       if (endpoint.startsWith('/users/me/')) return of([]);
       if (endpoint.endsWith('/editors')) return of({ content: [], nextCursor: null });
+      if (endpoint.endsWith('/activities')) return of({ content: [], nextCursor: null });
       return of({
         id: 9,
         title: 'Evento de teste',
@@ -155,12 +156,14 @@ describe('EventsService', () => {
     service.addEditor(12, 'moderator@ifma.edu.br').subscribe();
     service.removeEditor(12, 'moderator@ifma.edu.br').subscribe();
     service.createActivity(12, { title: 'Palestra' }).subscribe();
+    service.getActivities(12).subscribe();
     service.deleteActivity(7).subscribe();
 
     expect(api.delete).toHaveBeenCalledWith('/events/12');
     expect(api.post).toHaveBeenCalledWith('/events/12/editors/moderator%40ifma.edu.br', null);
     expect(api.delete).toHaveBeenCalledWith('/events/12/editors/moderator%40ifma.edu.br');
     expect(api.post).toHaveBeenCalledWith('/events/12/activities', { title: 'Palestra' });
+    expect(api.get).toHaveBeenCalledWith('/events/12/activities', { params: expect.any(HttpParams) });
     expect(api.delete).toHaveBeenCalledWith('/events/activities/7');
   });
 });
