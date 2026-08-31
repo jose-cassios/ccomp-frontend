@@ -14,6 +14,12 @@
         <div class="tags">
           <span>{{ categoryLabel(currentEvent.category) }}</span>
           <span>{{ formatLabel(currentEvent.format) }}</span>
+          @if (currentEvent.status; as publicationStatus) {
+            <span>{{ publicationStatusLabel(publicationStatus) }}</span>
+          }
+          @if (currentEvent.execution_status; as executionStatus) {
+            <span>{{ executionStatusLabel(executionStatus) }}</span>
+          }
         </div>
         <h1>{{ currentEvent.title }}</h1>
         <p class="event-summary">{{ currentEvent.summary || 'A organização ainda não publicou um resumo para este evento.' }}</p>
@@ -28,15 +34,35 @@
           <span>Início</span>
           <strong>{{ currentEvent.start_date | date: 'dd/MM/yyyy, HH:mm' }}</strong>
         </div>
-        <button type="button" [disabled]="subscriptionBusy()" (click)="toggleSubscription()">
-          @if (subscriptionBusy()) {
-            Processando...
-          } @else if (subscribed()) {
-            Cancelar inscrição
-          } @else {
-            Inscrever-se
-          }
-        </button>
+        <div class="enrollment-card__copy">
+          <span>Inscrições</span>
+          <strong [class.enrollment-status--open]="currentEvent.enrollment_status === 'OPEN'">
+            {{ enrollmentStatusLabel(currentEvent.enrollment_status) }}
+          </strong>
+        </div>
+        @if (subscribed() || canSubscribe()) {
+          <button type="button" [disabled]="subscriptionBusy()" (click)="toggleSubscription()">
+            @if (subscriptionBusy()) {
+              Processando...
+            } @else if (subscribed()) {
+              Cancelar inscrição
+            } @else {
+              Inscrever-se
+            }
+          </button>
+        } @else {
+          <p class="enrollment-unavailable">{{ enrollmentStatusLabel(currentEvent.enrollment_status) }}</p>
+        }
+        @if (currentEvent.enrollment_start_date || currentEvent.enrollment_end_date) {
+          <p class="enrollment-window">
+            @if (currentEvent.enrollment_start_date) {
+              Abertura: {{ currentEvent.enrollment_start_date | date: 'dd/MM, HH:mm' }}
+            }
+            @if (currentEvent.enrollment_end_date) {
+              · Encerramento: {{ currentEvent.enrollment_end_date | date: 'dd/MM, HH:mm' }}
+            }
+          </p>
+        }
         @if (canEdit()) {
           <a class="edit-link" [routerLink]="['/eventos', currentEvent.id, 'editar']">Área do organizador</a>
         }

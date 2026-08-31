@@ -22,9 +22,13 @@ describe('EventEditorComponent', () => {
     activities: [],
   };
   const eventsService = {
-    getCreatedEvents: vi.fn(() => of([])),
     create: vi.fn(() => of(createdEvent)),
-    update: vi.fn(() => of(createdEvent)),
+    update: vi.fn((_eventId: number, payload: { enrollment_start_date?: string; enrollment_end_date?: string; enrollment_paused?: boolean }) => of({
+      ...createdEvent,
+      enrollment_start_date: payload.enrollment_start_date ?? null,
+      enrollment_end_date: payload.enrollment_end_date ?? null,
+      enrollment_paused: payload.enrollment_paused ?? false,
+    })),
     getById: vi.fn(() => of(createdEvent)),
     getActivities: vi.fn(() => of({ content: [], next_cursor: null })),
     getEditors: vi.fn(() => of({ content: [], next_cursor: null })),
@@ -42,7 +46,7 @@ describe('EventEditorComponent', () => {
       providers: [
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({}) } } },
-        { provide: AuthService, useValue: { hasAnyRole: () => false } },
+        { provide: AuthService, useValue: { hasAnyRole: () => false, currentUserState: () => null } },
         { provide: EventsService, useValue: eventsService },
       ],
     }).compileComponents();
@@ -59,6 +63,9 @@ describe('EventEditorComponent', () => {
       format: createdEvent.format,
       start_date: '2026-09-10T08:00',
       end_date: '2026-09-10T18:00',
+      enrollment_start_date: '',
+      enrollment_end_date: '',
+      enrollment_paused: false,
     });
 
     component.save();
@@ -76,6 +83,30 @@ describe('EventEditorComponent', () => {
     expect(eventsService.addEditor).not.toHaveBeenCalled();
   });
 
+  it('should preserve the dates filled in the form when an API response omits them', () => {
+    eventsService.create.mockReturnValueOnce(of({
+      ...createdEvent,
+      start_date: null,
+      end_date: null,
+    }));
+    component.form.setValue({
+      title: createdEvent.title,
+      category: createdEvent.category,
+      format: createdEvent.format,
+      start_date: '2026-09-10T08:00',
+      end_date: '2026-09-10T18:00',
+      enrollment_start_date: '',
+      enrollment_end_date: '',
+      enrollment_paused: false,
+    });
+
+    component.save();
+
+    expect(component.form.controls.start_date.value).toBe('2026-09-10T08:00');
+    expect(component.form.controls.end_date.value).toBe('2026-09-10T18:00');
+    expect(component.activeStep()).toBe('presentation');
+  });
+
   it('should send page details through PATCH /events/{eventId}', () => {
     component.form.setValue({
       title: createdEvent.title,
@@ -83,6 +114,9 @@ describe('EventEditorComponent', () => {
       format: createdEvent.format,
       start_date: '2026-09-10T08:00',
       end_date: '2026-09-10T18:00',
+      enrollment_start_date: '2026-08-10T08:00',
+      enrollment_end_date: '2026-09-09T18:00',
+      enrollment_paused: false,
     });
     component.save();
     component.presentationForm.setValue({
@@ -102,7 +136,31 @@ describe('EventEditorComponent', () => {
       format: createdEvent.format,
       start_date: '2026-09-10T08:00',
       end_date: '2026-09-10T18:00',
+      enrollment_start_date: '2026-08-10T08:00',
+      enrollment_end_date: '2026-09-09T18:00',
+      enrollment_paused: false,
     });
+  });
+
+  it('should accept registrations before the event, but not after it ends', () => {
+    component.form.setValue({
+      title: createdEvent.title,
+      category: createdEvent.category,
+      format: createdEvent.format,
+      start_date: '2026-09-10T08:00',
+      end_date: '2026-09-10T18:00',
+      enrollment_start_date: '2026-08-10T08:00',
+      enrollment_end_date: '2026-09-10T17:00',
+      enrollment_paused: false,
+    });
+
+    expect(component.enrollmentDatesError()).toBeNull();
+
+    component.form.controls.enrollment_end_date.setValue('2026-09-11T08:00');
+
+    expect(component.enrollmentDatesError()).toBe('As inscrições devem encerrar até o término do evento.');
+    component.save();
+    expect(eventsService.create).not.toHaveBeenCalled();
   });
 
   it('should persist an activity and refresh the saved schedule', () => {
@@ -112,6 +170,9 @@ describe('EventEditorComponent', () => {
       format: createdEvent.format,
       start_date: '2026-09-10T08:00',
       end_date: '2026-09-10T18:00',
+      enrollment_start_date: '',
+      enrollment_end_date: '',
+      enrollment_paused: false,
     });
     component.save();
     component.activityForm.setValue({ title: 'Abertura', description: '' });
@@ -129,6 +190,9 @@ describe('EventEditorComponent', () => {
       format: createdEvent.format,
       start_date: '2026-09-10T08:00',
       end_date: '2026-09-10T18:00',
+      enrollment_start_date: '',
+      enrollment_end_date: '',
+      enrollment_paused: false,
     });
 
     component.save();
@@ -147,7 +211,7 @@ describe('EventEditorComponent', () => {
     component.completeCreation();
 
     expect(component.creationCompleted()).toBe(true);
-    expect(component.successMessage()).toContain('Evento criado com sucesso');
+    expect(component.successMessage()).toContain('Evento criado como rascunho');
   });
 
   it('should not allow jumping ahead before the prior stage is completed', () => {

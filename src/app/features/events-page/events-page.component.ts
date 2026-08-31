@@ -4,7 +4,6 @@ import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { CONTENT_MANAGEMENT_ROLES } from '../auth/config/auth.config';
 import { AuthService } from '../auth/services/auth.service';
-import { EventoDestaqueComponent } from './components/evento-destaque/evento-destaque.component';
 import { ProximosEventosComponent } from './components/proximos-eventos/proximos-eventos.component';
 import {
   EventCategory,
@@ -19,7 +18,7 @@ import { EventsService } from './services/events.service';
 @Component({
   selector: 'app-events-page',
   standalone: true,
-  imports: [DatePipe, RouterLink, EventoDestaqueComponent, ProximosEventosComponent],
+  imports: [DatePipe, RouterLink, ProximosEventosComponent],
   templateUrl: './events-page.component.html',
   styleUrl: './events-page.component.css',
 })
@@ -29,15 +28,12 @@ export class EventsPageComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly events = signal<EventListItem[]>([]);
-  readonly createdEvents = signal<EventListItem[]>([]);
   readonly selectedCategory = signal<EventCategory | null>(null);
   readonly selectedFormat = signal<EventFormat | null>(null);
   readonly nextCursor = signal<string | null>(null);
   readonly loading = signal(true);
   readonly loadingMore = signal(false);
-  readonly createdEventsLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
-  readonly createdEventsError = signal<string | null>(null);
   readonly calendarOpen = signal(false);
   readonly calendarEvents = signal<EventListItem[]>([]);
   readonly calendarLoading = signal(false);
@@ -45,25 +41,11 @@ export class EventsPageComponent implements OnInit {
   readonly canManageEvents = computed(() =>
     this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
   );
-  readonly featuredEvent = computed(() => {
-    const eventsWithEnrollments = this.events().filter(
-      (event) => (event.enrollment_count ?? 0) > 0,
-    );
-
-    return eventsWithEnrollments.reduce<EventListItem | null>(
-      (mostSubscribed, event) =>
-        !mostSubscribed || (event.enrollment_count ?? 0) > (mostSubscribed.enrollment_count ?? 0)
-          ? event
-          : mostSubscribed,
-      null,
-    );
-  });
   readonly categoryLabel = eventCategoryLabel;
   readonly formatLabel = eventFormatLabel;
 
   ngOnInit(): void {
     this.reload();
-    if (this.canManageEvents()) this.loadCreatedEvents();
   }
 
   reload(): void {
@@ -131,17 +113,6 @@ export class EventsPageComponent implements OnInit {
 
   openEvent(id: number): void {
     void this.router.navigate(['/eventos', id]);
-  }
-
-  private loadCreatedEvents(): void {
-    this.createdEventsLoading.set(true);
-    this.createdEventsError.set(null);
-    this.eventsService.getCreatedEvents().pipe(
-      finalize(() => this.createdEventsLoading.set(false)),
-    ).subscribe({
-      next: (events) => this.createdEvents.set(events),
-      error: () => this.createdEventsError.set('Não foi possível carregar os eventos que você criou.'),
-    });
   }
 
   private buildFilter(): EventsFilter {

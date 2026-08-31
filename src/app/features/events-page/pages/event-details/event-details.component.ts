@@ -8,7 +8,10 @@ import { AuthService } from '../../../auth/services/auth.service';
 import {
   EventDetails,
   eventCategoryLabel,
+  eventEnrollmentStatusLabel,
+  eventExecutionStatusLabel,
   eventFormatLabel,
+  eventPublicationStatusLabel,
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 
@@ -37,6 +40,10 @@ export class EventDetailsComponent implements OnInit {
   );
   readonly categoryLabel = eventCategoryLabel;
   readonly formatLabel = eventFormatLabel;
+  readonly publicationStatusLabel = eventPublicationStatusLabel;
+  readonly executionStatusLabel = eventExecutionStatusLabel;
+  readonly enrollmentStatusLabel = eventEnrollmentStatusLabel;
+  readonly canSubscribe = computed(() => this.event()?.enrollment_status === 'OPEN');
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -46,14 +53,10 @@ export class EventDetailsComponent implements OnInit {
       return;
     }
 
-    const subscriptions = this.isAuthenticated()
-      ? this.eventsService.getSubscriptions().pipe(catchError(() => of([])))
-      : of([]);
     this.eventsService.getById(id).pipe(finalize(() => this.loading.set(false))).subscribe({
       next: (event) => {
         this.event.set({ ...event, activities: event.activities ?? [] });
         this.loadActivities(event.id);
-        subscriptions.subscribe((items) => this.subscribed.set(items.some((item) => item.id === event.id)));
       },
       error: (error: unknown) => this.errorMessage.set(this.getErrorMessage(error)),
     });
@@ -65,6 +68,11 @@ export class EventDetailsComponent implements OnInit {
 
     if (!this.isAuthenticated()) {
       void this.router.navigate(['/login'], { queryParams: { returnUrl: `/eventos/${event.id}` } });
+      return;
+    }
+
+    if (!this.subscribed() && !this.canSubscribe()) {
+      this.errorMessage.set('As inscrições não estão abertas para este evento no momento.');
       return;
     }
 
@@ -81,6 +89,11 @@ export class EventDetailsComponent implements OnInit {
         this.successMessage.set(response.response ?? response.message ?? 'Inscrição atualizada com sucesso.');
       },
       error: (error: unknown) => {
+        if (!this.subscribed() && error instanceof HttpErrorResponse && error.status === 409) {
+          this.subscribed.set(true);
+          this.successMessage.set('Você já possui uma inscrição ativa neste evento.');
+          return;
+        }
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível alterar sua inscrição.'));
       },
     });

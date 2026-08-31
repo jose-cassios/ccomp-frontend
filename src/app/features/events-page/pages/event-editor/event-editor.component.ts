@@ -4,8 +4,8 @@ import { Component, HostListener, computed, inject, OnInit, signal } from '@angu
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { finalize, Observable } from 'rxjs';
-import { ADMINISTRATION_ROLES } from '../../../auth/config/auth.config';
+import { finalize, Observable, of, switchMap } from 'rxjs';
+import { ADMINISTRATION_ROLES, CONTENT_MANAGEMENT_ROLES } from '../../../auth/config/auth.config';
 import { AuthService } from '../../../auth/services/auth.service';
 import {
   ActivityPayload,
@@ -16,8 +16,12 @@ import {
   EventCategory,
   EventDetails,
   EventEditor,
+  EventEnrollment,
   EventFormat,
   UpdateEventPayload,
+  eventExecutionStatusLabel,
+  eventEnrollmentStateLabel,
+  eventPublicationStatusLabel,
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 
@@ -53,6 +57,9 @@ export class EventEditorComponent implements OnInit {
     format: this.fb.nonNullable.control<EventFormat>('IN_PERSON', Validators.required),
     start_date: ['', Validators.required],
     end_date: ['', Validators.required],
+    enrollment_start_date: [''],
+    enrollment_end_date: [''],
+    enrollment_paused: false,
   });
   readonly presentationForm = this.fb.nonNullable.group({
     summary: ['', [Validators.minLength(4), Validators.maxLength(255)]],
@@ -75,6 +82,10 @@ export class EventEditorComponent implements OnInit {
   readonly lastUnlockedStep = signal(0);
   readonly activities = signal<EventActivity[]>([]);
   readonly editors = signal<EventEditor[]>([]);
+  readonly enrollments = signal<EventEnrollment[]>([]);
+  readonly enrollmentsNextCursor = signal<string | null>(null);
+  readonly enrollmentsLoading = signal(false);
+  readonly enrollmentsError = signal<string | null>(null);
   readonly ownedEventIds = signal<ReadonlySet<number>>(new Set());
   readonly operation = signal<EditorOperation>('idle');
   readonly errorMessage = signal<string | null>(null);
@@ -86,11 +97,16 @@ export class EventEditorComponent implements OnInit {
   readonly isBusy = computed(() => this.operation() !== 'idle');
   readonly isAdmin = computed(() => this.authService.hasAnyRole(ADMINISTRATION_ROLES));
   readonly isOwner = computed(() => {
-    const eventId = this.event()?.id;
-    return eventId !== undefined && this.ownedEventIds().has(eventId);
+    const currentEvent = this.event();
+    const currentUserId = this.authService.currentUserState()?.id;
+    return (currentEvent !== null && this.ownedEventIds().has(currentEvent.id))
+      || Boolean(currentEvent?.owner_id && currentUserId && currentEvent.owner_id === currentUserId);
   });
   readonly canDelete = computed(() => this.isAdmin() || this.isOwner());
   readonly canManageTeam = computed(() => this.isOwner());
+  readonly canViewEnrollments = computed(() =>
+    this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
+  );
   readonly showOperationFeedback = computed(() =>
     this.operation() === 'loading' || this.operation() === 'deleting',
   );
@@ -101,6 +117,9 @@ export class EventEditorComponent implements OnInit {
     return this.creationCompleted() || this.stepIndex(step) < this.lastUnlockedStep();
   };
   readonly isCreationComplete = computed(() => this.creationFlow() && this.creationCompleted());
+  readonly enrollmentStateLabel = eventEnrollmentStateLabel;
+  readonly publicationStatusLabel = eventPublicationStatusLabel;
+  readonly executionStatusLabel = eventExecutionStatusLabel;
   readonly operationLabel = computed(() => {
     switch (this.operation()) {
       case 'loading': return 'Carregando evento...';
@@ -122,7 +141,6 @@ export class EventEditorComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadOwnedEvents();
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return;
 
@@ -138,9 +156,9 @@ export class EventEditorComponent implements OnInit {
 
   save(): void {
     if (this.isBusy()) return;
-    if (this.form.invalid || !this.hasValidDates()) {
+    if (this.form.invalid || !this.hasValidDates() || !this.hasValidEnrollmentDates()) {
       this.form.markAllAsTouched();
-      this.errorMessage.set('Revise os campos obrigatórios e o período do evento.');
+      this.errorMessage.set('Revise os campos obrigatórios, as datas do evento e o período de inscrições.');
       return;
     }
 
@@ -159,7 +177,11 @@ export class EventEditorComponent implements OnInit {
           format: value.format,
           start_date: value.start_date,
           end_date: value.end_date,
-        } satisfies CreateEventPayload);
+        } satisfies CreateEventPayload).pipe(
+          switchMap((createdEvent) => this.hasEnrollmentSettings()
+            ? this.eventsService.update(createdEvent.id, this.buildBasicUpdatePayload())
+            : of(createdEvent)),
+        );
 
     request.pipe(finalize(() => this.operation.set('idle'))).subscribe({
       next: (savedEvent) => {
@@ -184,10 +206,15 @@ export class EventEditorComponent implements OnInit {
   savePresentation(): void {
     const currentEvent = this.event();
     if (!currentEvent || this.isBusy()) return;
-    if (this.form.invalid || this.presentationForm.invalid || !this.hasValidDates()) {
+    if (
+      this.form.invalid
+      || this.presentationForm.invalid
+      || !this.hasValidDates()
+      || !this.hasValidEnrollmentDates()
+    ) {
       this.form.markAllAsTouched();
       this.presentationForm.markAllAsTouched();
-      this.errorMessage.set('Revise os dados da página do evento antes de salvar.');
+      this.errorMessage.set('Revise as informações e as datas de inscrição antes de continuar.');
       return;
     }
 
@@ -231,13 +258,19 @@ export class EventEditorComponent implements OnInit {
   continueFromTeam(): void {
     if (!this.event() || this.isBusy()) return;
     this.errorMessage.set(null);
+    this.loadEnrollments(this.event()!.id);
     this.advanceTo('review');
   }
 
   completeCreation(): void {
     const currentEvent = this.event();
     if (!currentEvent || this.isBusy()) return;
-    if (this.form.invalid || this.presentationForm.invalid || !this.hasValidDates()) {
+    if (
+      this.form.invalid
+      || this.presentationForm.invalid
+      || !this.hasValidDates()
+      || !this.hasValidEnrollmentDates()
+    ) {
       this.form.markAllAsTouched();
       this.presentationForm.markAllAsTouched();
       this.errorMessage.set('Revise as informações do evento antes de concluir.');
@@ -255,7 +288,7 @@ export class EventEditorComponent implements OnInit {
         this.applyEvent(savedEvent, presentation);
         this.creationCompleted.set(true);
         this.successMessage.set(this.creationFlow()
-          ? 'Evento criado com sucesso! A página já está pronta para ser compartilhada.'
+          ? 'Evento criado como rascunho. Publique-o quando a API disponibilizar esta ação.'
           : 'Alterações do evento salvas com sucesso.');
       },
       error: (error: unknown) => {
@@ -393,17 +426,11 @@ export class EventEditorComponent implements OnInit {
         this.applyEvent(event);
         this.loadActivities(event.id);
         this.loadEditors(event.id);
+        this.loadEnrollments(event.id);
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível carregar o evento.'));
       },
-    });
-  }
-
-  private loadOwnedEvents(): void {
-    this.eventsService.getCreatedEvents().subscribe({
-      next: (events) => this.ownedEventIds.set(new Set(events.map((event) => event.id))),
-      error: () => undefined,
     });
   }
 
@@ -422,6 +449,44 @@ export class EventEditorComponent implements OnInit {
     });
   }
 
+  loadMoreEnrollments(): void {
+    const currentEvent = this.event();
+    const nextCursor = this.enrollmentsNextCursor();
+    if (!currentEvent || !nextCursor || this.enrollmentsLoading()) return;
+
+    this.enrollmentsLoading.set(true);
+    this.eventsService.getEnrollments(currentEvent.id, nextCursor).pipe(
+      finalize(() => this.enrollmentsLoading.set(false)),
+    ).subscribe({
+      next: (page) => {
+        const byId = new Map(this.enrollments().map((enrollment) => [enrollment.id, enrollment]));
+        page.content.forEach((enrollment) => byId.set(enrollment.id, enrollment));
+        this.enrollments.set([...byId.values()]);
+        this.enrollmentsNextCursor.set(page.next_cursor);
+      },
+      error: () => this.enrollmentsError.set('Não foi possível carregar mais inscritos.'),
+    });
+  }
+
+  private loadEnrollments(eventId: number): void {
+    if (!this.canViewEnrollments() || this.enrollmentsLoading()) return;
+
+    this.enrollmentsLoading.set(true);
+    this.enrollmentsError.set(null);
+    this.eventsService.getEnrollments(eventId).pipe(
+      finalize(() => this.enrollmentsLoading.set(false)),
+    ).subscribe({
+      next: (page) => {
+        this.enrollments.set(page.content);
+        this.enrollmentsNextCursor.set(page.next_cursor);
+      },
+      error: () => {
+        this.enrollments.set([]);
+        this.enrollmentsError.set('Não foi possível carregar os inscritos deste evento.');
+      },
+    });
+  }
+
   private buildBasicUpdatePayload(): UpdateEventPayload {
     const value = this.form.getRawValue();
     return {
@@ -430,6 +495,9 @@ export class EventEditorComponent implements OnInit {
       format: value.format,
       start_date: value.start_date,
       end_date: value.end_date,
+      ...(value.enrollment_start_date ? { enrollment_start_date: value.enrollment_start_date } : {}),
+      ...(value.enrollment_end_date ? { enrollment_end_date: value.enrollment_end_date } : {}),
+      enrollment_paused: value.enrollment_paused,
     };
   }
 
@@ -447,8 +515,28 @@ export class EventEditorComponent implements OnInit {
     event: EventDetails,
     presentation?: { summary: string; content: string; cover_image_url: string },
   ): void {
+    const currentEvent = this.event();
+    const formValue = this.form.getRawValue();
     const enrichedEvent: EventDetails = {
+      ...(currentEvent ?? {}),
       ...event,
+      title: event.title ?? currentEvent?.title ?? formValue.title,
+      slug: event.slug ?? currentEvent?.slug ?? '',
+      format: event.format ?? currentEvent?.format ?? formValue.format,
+      category: event.category ?? currentEvent?.category ?? formValue.category,
+      start_date: event.start_date ?? currentEvent?.start_date ?? formValue.start_date ?? null,
+      end_date: event.end_date ?? currentEvent?.end_date ?? formValue.end_date ?? null,
+      enrollment_start_date: event.enrollment_start_date
+        ?? currentEvent?.enrollment_start_date
+        ?? formValue.enrollment_start_date
+        ?? null,
+      enrollment_end_date: event.enrollment_end_date
+        ?? currentEvent?.enrollment_end_date
+        ?? formValue.enrollment_end_date
+        ?? null,
+      enrollment_paused: event.enrollment_paused
+        ?? currentEvent?.enrollment_paused
+        ?? formValue.enrollment_paused,
       summary: event.summary ?? presentation?.summary ?? null,
       content: event.content ?? presentation?.content ?? null,
       cover_image_url: event.cover_image_url ?? presentation?.cover_image_url ?? null,
@@ -463,6 +551,9 @@ export class EventEditorComponent implements OnInit {
       format: enrichedEvent.format ?? 'IN_PERSON',
       start_date: this.toLocalInput(enrichedEvent.start_date),
       end_date: this.toLocalInput(enrichedEvent.end_date),
+      enrollment_start_date: this.toLocalInput(enrichedEvent.enrollment_start_date ?? null),
+      enrollment_end_date: this.toLocalInput(enrichedEvent.enrollment_end_date ?? null),
+      enrollment_paused: enrichedEvent.enrollment_paused ?? false,
     }, { emitEvent: false });
     this.presentationForm.reset({
       summary: enrichedEvent.summary ?? '',
@@ -476,6 +567,32 @@ export class EventEditorComponent implements OnInit {
     const start = this.form.controls.start_date.value;
     const end = this.form.controls.end_date.value;
     return Boolean(start && end && new Date(start).getTime() <= new Date(end).getTime());
+  }
+
+  enrollmentDatesError(): string | null {
+    const start = this.form.controls.enrollment_start_date.value;
+    const end = this.form.controls.enrollment_end_date.value;
+    const eventEnd = this.form.controls.end_date.value;
+
+    if (!start && !end) return null;
+    if (!start || !end) return 'Informe a abertura e o encerramento das inscrições.';
+    if (new Date(start).getTime() > new Date(end).getTime()) {
+      return 'O encerramento deve ocorrer depois da abertura das inscrições.';
+    }
+    if (eventEnd && new Date(end).getTime() > new Date(eventEnd).getTime()) {
+      return 'As inscrições devem encerrar até o término do evento.';
+    }
+
+    return null;
+  }
+
+  private hasValidEnrollmentDates(): boolean {
+    return this.enrollmentDatesError() === null;
+  }
+
+  private hasEnrollmentSettings(): boolean {
+    const value = this.form.getRawValue();
+    return Boolean(value.enrollment_start_date || value.enrollment_end_date || value.enrollment_paused);
   }
 
   private advanceTo(step: EventEditorStep): void {

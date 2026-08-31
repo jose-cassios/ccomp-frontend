@@ -8,7 +8,10 @@ export type EventCategory =
   | 'OTHER';
 
 export type EventFormat = 'IN_PERSON' | 'HYBRID' | 'ONLINE';
-export type EventTiming = 'IN_PROGRESS' | 'FUTURE';
+export type EventPublicationStatus = 'DRAFT' | 'PUBLISHED' | 'UNLISTED' | 'CANCELED';
+export type EventExecutionStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'FINISHED';
+export type EventEnrollmentStatus = 'UPCOMING' | 'OPEN' | 'PAUSED' | 'SOLD_OUT' | 'CLOSED';
+export type EventEnrollmentState = 'CONFIRMED' | 'CHECKED_IN' | 'CANCELED';
 
 export interface EventActivity {
   id: number;
@@ -35,6 +38,22 @@ export interface EventActivitiesPage {
   next_cursor: string | null;
 }
 
+export interface EventEnrollment {
+  id: number;
+  status: EventEnrollmentState;
+  created_at: string | null;
+  user: {
+    id: string;
+    name: string;
+    email_address: string;
+  } | null;
+}
+
+export interface EventEnrollmentsPage {
+  content: EventEnrollment[];
+  next_cursor: string | null;
+}
+
 /** Modelo normalizado para a interface, independente do formato da resposta da API. */
 export interface EventListItem {
   id: number;
@@ -42,8 +61,6 @@ export interface EventListItem {
   slug: string;
   description: string | null;
   cover_image_url?: string | null;
-  /** Total de inscrições, quando disponibilizado pela API. */
-  enrollment_count?: number | null;
   format: EventFormat;
   category: EventCategory;
   start_date: string | null;
@@ -56,6 +73,12 @@ export interface EventDetails extends EventListItem {
   owner_id?: string | null;
   address?: string | null;
   online_url?: string | null;
+  status?: EventPublicationStatus | null;
+  execution_status?: EventExecutionStatus | null;
+  enrollment_start_date?: string | null;
+  enrollment_end_date?: string | null;
+  enrollment_paused?: boolean | null;
+  enrollment_status?: EventEnrollmentStatus | null;
   activities?: EventActivity[];
 }
 
@@ -73,7 +96,7 @@ export interface EventsFilter {
   format?: EventFormat;
 }
 
-/** Contrato de POST /events confirmado na API. */
+/** Contrato de POST /events. */
 export interface CreateEventPayload {
   title: string;
   category: EventCategory;
@@ -92,6 +115,9 @@ export interface UpdateEventPayload {
   format?: EventFormat;
   start_date?: string;
   end_date?: string;
+  enrollment_start_date?: string;
+  enrollment_end_date?: string;
+  enrollment_paused?: boolean;
 }
 
 export interface ActivityPayload {
@@ -130,18 +156,49 @@ export const EVENT_FORMAT_OPTIONS: ReadonlyArray<{
   { value: 'ONLINE', label: 'Online' },
 ];
 
-export const EVENT_TIMING_OPTIONS: ReadonlyArray<{
-  value: EventTiming;
-  label: string;
-}> = [
-  { value: 'IN_PROGRESS', label: 'Em andamento' },
-  { value: 'FUTURE', label: 'Futuros' },
-];
-
 export function eventCategoryLabel(category?: EventCategory | null): string {
   return EVENT_CATEGORY_OPTIONS.find((option) => option.value === category)?.label ?? 'Não informada';
 }
 
 export function eventFormatLabel(format?: EventFormat | null): string {
   return EVENT_FORMAT_OPTIONS.find((option) => option.value === format)?.label ?? 'Não informado';
+}
+
+export function eventPublicationStatusLabel(status?: EventPublicationStatus | null): string {
+  const labels: Record<EventPublicationStatus, string> = {
+    DRAFT: 'Rascunho',
+    PUBLISHED: 'Publicado',
+    UNLISTED: 'Não listado',
+    CANCELED: 'Cancelado',
+  };
+  return status ? labels[status] : 'Não informado';
+}
+
+export function eventExecutionStatusLabel(status?: EventExecutionStatus | null): string {
+  const labels: Record<EventExecutionStatus, string> = {
+    NOT_STARTED: 'Ainda não iniciou',
+    IN_PROGRESS: 'Em andamento',
+    FINISHED: 'Finalizado',
+  };
+  return status ? labels[status] : 'Não informado';
+}
+
+export function eventEnrollmentStatusLabel(status?: EventEnrollmentStatus | null): string {
+  const labels: Record<EventEnrollmentStatus, string> = {
+    UPCOMING: 'Inscrições em breve',
+    OPEN: 'Inscrições abertas',
+    PAUSED: 'Inscrições pausadas',
+    SOLD_OUT: 'Vagas esgotadas',
+    CLOSED: 'Inscrições encerradas',
+  };
+  return status ? labels[status] : 'Inscrições indisponíveis';
+}
+
+export function eventEnrollmentStateLabel(state?: EventEnrollmentState | null): string {
+  const labels: Record<EventEnrollmentState, string> = {
+    CONFIRMED: 'Confirmada',
+    CHECKED_IN: 'Presença confirmada',
+    CANCELED: 'Cancelada',
+  };
+  return state ? labels[state] : 'Não informado';
 }

@@ -70,18 +70,6 @@ describe('EventsPageComponent', () => {
     expect(fixture.nativeElement.querySelector('app-evento-destaque')).toBeNull();
   });
 
-  it('should only show a featured event when the API supplies enrollment totals', () => {
-    component.events.set([
-      { ...catalog[0], enrollment_count: 4 },
-      { ...catalog[1], enrollment_count: 9 },
-    ]);
-    fixture.detectChanges();
-
-    expect(component.featuredEvent()?.id).toBe(2);
-    expect(fixture.nativeElement.querySelector('app-evento-destaque')).not.toBeNull();
-    expect(fixture.nativeElement.querySelectorAll('.event-card')).toHaveLength(2);
-  });
-
   it('should not show the public event proposal call to action', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Quer propor um evento ou palestra?');
     expect(fixture.nativeElement.querySelector('a[href="/eventos/novo"]')).toBeNull();

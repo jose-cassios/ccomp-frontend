@@ -83,6 +83,31 @@
               <input type="datetime-local" formControlName="end_date" />
             </label>
 
+            <fieldset class="enrollment-settings field--wide">
+              <legend>Período de inscrições</legend>
+              <p>As datas acima definem quando o evento acontece. Configure aqui, separadamente, quando as pessoas poderão se inscrever.</p>
+              <div class="form-grid">
+                <label class="field">
+                  <span>Abertura das inscrições</span>
+                  <input type="datetime-local" formControlName="enrollment_start_date" />
+                </label>
+                <label class="field">
+                  <span>Encerramento das inscrições</span>
+                  <input type="datetime-local" formControlName="enrollment_end_date" />
+                </label>
+                <label class="toggle-field field--wide">
+                  <input type="checkbox" formControlName="enrollment_paused" />
+                  <span>
+                    <strong>Pausar inscrições</strong>
+                    <small>Use quando precisar interromper temporariamente novas inscrições.</small>
+                  </span>
+                </label>
+              </div>
+              @if (enrollmentDatesError(); as error) {
+                <strong class="field-error">{{ error }}</strong>
+              }
+            </fieldset>
+
           </div>
 
           <footer class="form-footer">
@@ -138,6 +163,7 @@
                 <figcaption>Prévia da imagem de capa</figcaption>
               </figure>
             }
+
           </div>
 
           <footer class="form-footer">
@@ -256,13 +282,54 @@
             <div><dt>Resumo</dt><dd>{{ presentationForm.controls.summary.value || 'Ainda não informado' }}</dd></div>
             <div><dt>Formato</dt><dd>{{ form.controls.format.value }}</dd></div>
             <div><dt>Início</dt><dd>{{ form.controls.start_date.value || 'Não informado' }}</dd></div>
+            <div><dt>Publicação</dt><dd>{{ publicationStatusLabel(event()?.status) }}</dd></div>
+            <div><dt>Execução</dt><dd>{{ executionStatusLabel(event()?.execution_status) }}</dd></div>
+            <div><dt>Inscrições</dt><dd>{{ form.controls.enrollment_start_date.value ? 'Configuradas' : 'Ainda fechadas' }}</dd></div>
             <div><dt>Atividades</dt><dd>{{ activities().length }} cadastrada(s)</dd></div>
           </dl>
+
+          @if (canViewEnrollments()) {
+            <section class="review-enrollments" aria-labelledby="enrollments-title">
+              <div class="card-heading">
+                <div>
+                  <span>Participantes</span>
+                  <h3 id="enrollments-title">Inscritos</h3>
+                </div>
+                <strong>{{ enrollments().length }} carregado(s)</strong>
+              </div>
+
+              @if (enrollmentsLoading() && !enrollments().length) {
+                <p class="empty-inline">Carregando inscritos...</p>
+              } @else if (enrollmentsError()) {
+                <p class="access-note" role="alert">{{ enrollmentsError() }}</p>
+              } @else if (enrollments().length) {
+                <div class="team-list enrollment-list">
+                  @for (enrollment of enrollments(); track enrollment.id) {
+                    <article>
+                      <span class="member-avatar">{{ enrollment.user?.name?.charAt(0) || '?' }}</span>
+                      <span>
+                        <strong>{{ enrollment.user?.name || 'Participante' }}</strong>
+                        <small>{{ enrollment.user?.email_address || 'E-mail não informado' }}</small>
+                      </span>
+                      <em>{{ enrollmentStateLabel(enrollment.status) }}</em>
+                    </article>
+                  }
+                </div>
+                @if (enrollmentsNextCursor()) {
+                  <button class="text-button" type="button" [disabled]="enrollmentsLoading()" (click)="loadMoreEnrollments()">
+                    {{ enrollmentsLoading() ? 'Carregando...' : 'Carregar mais inscritos' }}
+                  </button>
+                }
+              } @else {
+                <p class="empty-inline">Ainda não há inscritos neste evento.</p>
+              }
+            </section>
+          }
 
           <div class="review-actions">
             <button class="button button--secondary" type="button" (click)="selectStep('schedule')">Voltar à programação</button>
             <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="completeCreation()">
-              {{ creationFlow() ? 'Concluir criação' : 'Salvar alterações' }}
+              {{ creationFlow() && !creationCompleted() ? 'Concluir criação' : 'Salvar alterações' }}
             </button>
           </div>
         </section>

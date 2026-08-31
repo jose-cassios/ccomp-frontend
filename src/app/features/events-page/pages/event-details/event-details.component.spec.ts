@@ -39,7 +39,6 @@ describe('EventDetailsComponent', () => {
           provide: EventsService,
           useValue: {
             getById: () => of(event),
-            getSubscriptions: () => of([]),
             getActivities: () => of({
               content: [{ id: 3, event_id: event.id, title: 'Abertura', description: null }],
               next_cursor: null,

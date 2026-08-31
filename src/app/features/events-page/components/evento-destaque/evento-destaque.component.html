@@ -4,9 +4,6 @@
     <div class="tags">
       <span>{{ categoryLabel(evento().category) }}</span>
       <span>{{ formatLabel(evento().format) }}</span>
-      @if (evento().enrollment_count; as enrollmentCount) {
-        <span>{{ enrollmentCount }} {{ enrollmentCount === 1 ? 'inscrição' : 'inscrições' }}</span>
-      }
     </div>
     <h2 id="featured-event-title">{{ evento().title }}</h2>
     <p>{{ evento().description || 'Consulte os detalhes e a programação deste evento.' }}</p>
