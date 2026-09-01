@@ -4,11 +4,12 @@ import { Component, HostListener, computed, inject, OnInit, signal } from '@angu
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { finalize, Observable, of, switchMap } from 'rxjs';
+import { catchError, finalize, map, Observable, of, switchMap } from 'rxjs';
 import { ADMINISTRATION_ROLES, CONTENT_MANAGEMENT_ROLES } from '../../../auth/config/auth.config';
 import { AuthService } from '../../../auth/services/auth.service';
 import {
   ActivityPayload,
+  ApiMessage,
   CreateEventPayload,
   EVENT_CATEGORY_OPTIONS,
   EVENT_FORMAT_OPTIONS,
@@ -22,6 +23,7 @@ import {
   eventExecutionStatusLabel,
   eventEnrollmentStateLabel,
   eventPublicationStatusLabel,
+  apiMessage,
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 
@@ -83,6 +85,7 @@ export class EventEditorComponent implements OnInit {
   readonly activities = signal<EventActivity[]>([]);
   readonly editingActivityId = signal<number | null>(null);
   readonly editors = signal<EventEditor[]>([]);
+  readonly editorAccessResolved = signal(false);
   readonly enrollments = signal<EventEnrollment[]>([]);
   readonly enrollmentsNextCursor = signal<string | null>(null);
   readonly enrollmentsLoading = signal(false);
@@ -109,6 +112,7 @@ export class EventEditorComponent implements OnInit {
       editor.active && editor.user_id === currentUserId,
     ));
   });
+  readonly canEditEvent = computed(() => this.isAdmin() || this.isOwner() || this.isAssignedEditor());
   readonly canDelete = computed(() => this.isAdmin() || this.isOwner());
   readonly canPublish = computed(() => {
     const currentEvent = this.event();
@@ -464,11 +468,26 @@ export class EventEditorComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
     this.eventsService.addEditor(currentEvent.id, email).pipe(
+      switchMap((response) => this.eventsService.getEditors(currentEvent.id).pipe(
+        map((page) => ({
+          response,
+          editors: page.content.filter((editor) => editor.active),
+        })),
+        // A API já confirmou a inclusão; uma falha pontual na recarga não deve
+        // transformar essa confirmação em uma falsa falha para o organizador.
+        catchError(() => of({ response, editors: null as EventEditor[] | null })),
+      )),
       finalize(() => this.operation.set('idle')),
     ).subscribe({
-      next: () => {
+      next: ({ response, editors }: { response: ApiMessage; editors: EventEditor[] | null }) => {
         this.editorForm.reset({ email: '' });
-        this.loadEditors(currentEvent.id);
+        if (editors !== null) this.editors.set(editors);
+
+        const message = apiMessage(response, 'Colaborador adicionado à equipe com sucesso.');
+        this.successMessage.set(editors === null
+          ? `${message} A lista da equipe não pôde ser atualizada agora; recarregue a página para conferi-la.`
+          : message,
+        );
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível adicionar o editor.'));
@@ -527,9 +546,16 @@ export class EventEditorComponent implements OnInit {
   }
 
   private loadEditors(eventId: number): void {
+    this.editorAccessResolved.set(false);
     this.eventsService.getEditors(eventId).subscribe({
-      next: (page) => this.editors.set(page.content.filter((editor) => editor.active)),
-      error: () => this.editors.set([]),
+      next: (page) => {
+        this.editors.set(page.content.filter((editor) => editor.active));
+        this.editorAccessResolved.set(true);
+      },
+      error: () => {
+        this.editors.set([]);
+        this.editorAccessResolved.set(true);
+      },
     });
   }
 

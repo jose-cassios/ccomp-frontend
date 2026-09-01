@@ -47,9 +47,10 @@ export const routes: Routes = [
             import('./features/events-page/pages/event-editor/event-editor.component').then(
               (module) => module.EventEditorComponent,
             ),
-          canActivate: [authGuard, roleGuard],
+          // A autorização do evento é conferida pela API para dono ou editor atribuído.
+          // Exigir apenas cargo aqui impediria um colaborador válido de abrir o evento.
+          canActivate: [authGuard],
           canDeactivate: [pendingEventChangesGuard],
-          data: { roles: CONTENT_MANAGEMENT_ROLES },
         },
         {
           path: 'eventos/:id',
