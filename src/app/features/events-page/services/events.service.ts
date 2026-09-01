@@ -1,6 +1,6 @@
 import { HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, map, switchMap } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
 import {
   ActivityPayload,
@@ -14,8 +14,10 @@ import {
   EventEnrollment,
   EventEnrollmentsPage,
   EventListItem,
+  EventPublicationStatus,
   EventsFilter,
   EventsPageResponse,
+  UpdateActivityPayload,
   UpdateEventPayload,
 } from '../models/event.model';
 
@@ -59,6 +61,8 @@ interface ApiEventActivity {
   event_id?: number;
   title: string;
   description?: string | null;
+  displayOrder?: number | null;
+  display_order?: number | null;
 }
 
 interface ApiEventsPage {
@@ -75,8 +79,9 @@ interface ApiEventEditorsPage {
     eventId?: number;
     event_id?: number;
     user?: {
+      id?: string;
       name?: string;
-      emailAddress?: string;
+      emailAddress?: string | { value?: string; address?: string };
       email_address?: string;
     };
     active: boolean;
@@ -143,6 +148,14 @@ export class EventsService {
     );
   }
 
+  getCreatedEvents(nextCursor?: string, pageSize = 12): Observable<EventsPageResponse> {
+    return this.getUserEventsPage('/users/me/created-events', nextCursor, pageSize);
+  }
+
+  getMySubscriptions(nextCursor?: string, pageSize = 50): Observable<EventsPageResponse> {
+    return this.getUserEventsPage('/users/me/events-subscriptions', nextCursor, pageSize);
+  }
+
   create(payload: CreateEventPayload): Observable<EventDetails> {
     return this.api.post<ApiEvent>('/events', payload).pipe(map((event) => this.toDetails(event)));
   }
@@ -153,8 +166,15 @@ export class EventsService {
     );
   }
 
+  updateStatus(id: number | string, status: EventPublicationStatus): Observable<EventDetails> {
+    const eventId = encodeURIComponent(id);
+    return this.api.patch<ApiMessage>(`/events/${eventId}/status/${status}`, null).pipe(
+      switchMap(() => this.getById(id)),
+    );
+  }
+
   publish(id: number | string): Observable<EventDetails> {
-    return this.update(id, { status: 'PUBLISHED' });
+    return this.updateStatus(id, 'PUBLISHED');
   }
 
   deleteEvent(id: number | string): Observable<void> {
@@ -221,7 +241,7 @@ export class EventsService {
 
   updateActivity(
     activityId: number | string,
-    payload: Partial<ActivityPayload> & { displayOrder?: number },
+    payload: UpdateActivityPayload,
   ): Observable<EventActivity> {
     return this.api.patch<ApiEventActivity>(
       `/events/activities/${encodeURIComponent(activityId)}`,
@@ -263,6 +283,9 @@ export class EventsService {
       category: event.category,
       start_date: event.startDate ?? event.start_date ?? null,
       end_date: event.endDate ?? event.end_date ?? null,
+      status: event.status ?? null,
+      enrollment_start_date: event.enrollmentStartDate ?? event.enrollment_start_date ?? null,
+      enrollment_end_date: event.enrollmentEndDate ?? event.enrollment_end_date ?? null,
     };
   }
 
@@ -292,17 +315,41 @@ export class EventsService {
       event_id: activity.eventId ?? activity.event_id ?? Number(fallbackEventId),
       title: activity.title,
       description: activity.description ?? null,
+      display_order: activity.displayOrder ?? activity.display_order ?? null,
     };
   }
 
   private toEditor(editor: ApiEventEditorsPage['content'][number]): EventEditor {
+    const emailAddress = editor.user?.emailAddress;
+    const email = typeof emailAddress === 'string'
+      ? emailAddress
+      : emailAddress?.value ?? emailAddress?.address ?? editor.user?.email_address ?? '';
+
     return {
       id: editor.id,
       event_id: editor.eventId ?? editor.event_id ?? 0,
+      user_id: editor.user?.id ?? null,
       name: editor.user?.name ?? 'Editor',
-      email_address: editor.user?.emailAddress ?? editor.user?.email_address ?? '',
+      email_address: email,
       active: editor.active,
     };
+  }
+
+  private getUserEventsPage(
+    endpoint: string,
+    nextCursor?: string,
+    pageSize = 12,
+  ): Observable<EventsPageResponse> {
+    let params = new HttpParams().set('pageSize', pageSize.toString());
+    if (nextCursor) params = params.set('nextCursor', nextCursor);
+
+    return this.api.get<ApiEventsPage>(endpoint, { params }).pipe(
+      map((page) => ({
+        content: page.content.map((event) => this.toListItem(event)),
+        next_cursor: page.nextCursor ?? page.next_cursor ?? null,
+        previous_cursor: page.previousCursor ?? page.previous_cursor ?? null,
+      })),
+    );
   }
 
   private toEnrollment(enrollment: ApiEnrollment): EventEnrollment {

@@ -1,13 +1,12 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { catchError, finalize, forkJoin, of } from 'rxjs';
+import { finalize } from 'rxjs';
 import { CONTENT_MANAGEMENT_ROLES } from '../auth/config/auth.config';
 import { AuthService } from '../auth/services/auth.service';
 import { ProximosEventosComponent } from './components/proximos-eventos/proximos-eventos.component';
 import {
   EventCategory,
-  EventDetails,
   EventFormat,
   EventListItem,
   EventsFilter,
@@ -15,7 +14,6 @@ import {
   eventFormatLabel,
 } from './models/event.model';
 import { EventsService } from './services/events.service';
-import { MyEventsStoreService } from './services/my-events-store.service';
 
 @Component({
   selector: 'app-events-page',
@@ -28,15 +26,18 @@ export class EventsPageComponent implements OnInit {
   private readonly eventsService = inject(EventsService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
-  private readonly myEventsStore = inject(MyEventsStoreService);
 
   readonly events = signal<EventListItem[]>([]);
-  readonly myDrafts = signal<EventDetails[]>([]);
+  readonly myEvents = signal<EventListItem[]>([]);
   readonly selectedCategory = signal<EventCategory | null>(null);
   readonly selectedFormat = signal<EventFormat | null>(null);
   readonly nextCursor = signal<string | null>(null);
   readonly loading = signal(true);
   readonly loadingMore = signal(false);
+  readonly myEventsNextCursor = signal<string | null>(null);
+  readonly myEventsLoading = signal(false);
+  readonly myEventsLoadingMore = signal(false);
+  readonly myEventsError = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly calendarOpen = signal(false);
   readonly calendarEvents = signal<EventListItem[]>([]);
@@ -50,7 +51,7 @@ export class EventsPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.reload();
-    this.loadMyDrafts();
+    this.loadMyEvents();
   }
 
   reload(): void {
@@ -124,20 +125,37 @@ export class EventsPageComponent implements OnInit {
     void this.router.navigate(['/eventos', id, 'editar']);
   }
 
-  private loadMyDrafts(): void {
-    const ids = this.myEventsStore.ids();
-    if (!ids.length) return;
+  loadMoreMyEvents(): void {
+    const cursor = this.myEventsNextCursor();
+    if (!cursor || this.myEventsLoadingMore()) return;
 
-    forkJoin(ids.map((id) => this.eventsService.getById(id).pipe(
-      catchError(() => of(null)),
-    ))).subscribe({
-      next: (loadedEvents) => {
-        const drafts = loadedEvents.filter((event): event is EventDetails => event?.status === 'DRAFT');
-        loadedEvents
-          .filter((event): event is EventDetails => Boolean(event && event.status !== 'DRAFT'))
-          .forEach((event) => this.myEventsStore.forget(event.id));
-        this.myDrafts.set(drafts);
+    this.myEventsLoadingMore.set(true);
+    this.eventsService.getCreatedEvents(cursor).pipe(
+      finalize(() => this.myEventsLoadingMore.set(false)),
+    ).subscribe({
+      next: (page) => {
+        const byId = new Map(this.myEvents().map((event) => [event.id, event]));
+        page.content.forEach((event) => byId.set(event.id, event));
+        this.myEvents.set([...byId.values()]);
+        this.myEventsNextCursor.set(page.next_cursor);
       },
+      error: () => this.myEventsError.set('Não foi possível carregar mais eventos criados por você.'),
+    });
+  }
+
+  private loadMyEvents(): void {
+    if (!this.canManageEvents()) return;
+
+    this.myEventsLoading.set(true);
+    this.myEventsError.set(null);
+    this.eventsService.getCreatedEvents().pipe(
+      finalize(() => this.myEventsLoading.set(false)),
+    ).subscribe({
+      next: (page) => {
+        this.myEvents.set(page.content);
+        this.myEventsNextCursor.set(page.next_cursor);
+      },
+      error: () => this.myEventsError.set('Não foi possível carregar os eventos criados por você.'),
     });
   }
 
@@ -146,7 +164,7 @@ export class EventsPageComponent implements OnInit {
     const format = this.selectedFormat();
 
     return {
-      ...(eventCategory ? { event_category: eventCategory } : {}),
+      ...(eventCategory ? { category: eventCategory } : {}),
       ...(format ? { format } : {}),
     };
   }

@@ -35,6 +35,7 @@ describe('EventEditorComponent', () => {
     getEditors: vi.fn(() => of({ content: [], next_cursor: null })),
     deleteEvent: vi.fn(() => of(void 0)),
     createActivity: vi.fn(() => of({ id: 21, event_id: createdEvent.id, title: 'Abertura', description: null })),
+    updateActivity: vi.fn(() => of({ id: 21, event_id: createdEvent.id, title: 'Abertura atualizada', description: 'Boas-vindas' })),
     deleteActivity: vi.fn(),
     addEditor: vi.fn(() => of({ message: 'Editor adicionado.' })),
     removeEditor: vi.fn(),
@@ -182,6 +183,35 @@ describe('EventEditorComponent', () => {
 
     expect(eventsService.createActivity).toHaveBeenCalledWith(createdEvent.id, { title: 'Abertura', description: '' });
     expect(eventsService.getActivities).toHaveBeenCalledWith(createdEvent.id);
+  });
+
+  it('should update an existing activity through the activity PATCH route', () => {
+    component.form.setValue({
+      title: createdEvent.title,
+      category: createdEvent.category,
+      format: createdEvent.format,
+      start_date: '2026-09-10T08:00',
+      end_date: '2026-09-10T18:00',
+      enrollment_start_date: '',
+      enrollment_end_date: '',
+      enrollment_paused: false,
+    });
+    component.save();
+    component.editActivity({
+      id: 21,
+      event_id: createdEvent.id,
+      title: 'Abertura',
+      description: null,
+    });
+    component.activityForm.setValue({ title: 'Abertura atualizada', description: 'Boas-vindas' });
+
+    component.saveActivity();
+
+    expect(eventsService.updateActivity).toHaveBeenCalledWith(21, {
+      title: 'Abertura atualizada',
+      description: 'Boas-vindas',
+    });
+    expect(component.editingActivityId()).toBeNull();
   });
 
   it('should publish the event and show the success confirmation in the final review step', () => {

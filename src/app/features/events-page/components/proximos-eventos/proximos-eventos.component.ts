@@ -8,6 +8,7 @@ import {
   EventListItem,
   eventCategoryLabel,
   eventFormatLabel,
+  eventPublicationStatusLabel,
 } from '../../models/event.model';
 
 @Component({
@@ -21,7 +22,7 @@ export class ProximosEventosComponent {
   readonly eventos = input.required<readonly EventListItem[]>();
   readonly heading = input('Todos os eventos');
   readonly showFilters = input(true);
-  readonly draftMode = input(false);
+  readonly manageMode = input(false);
   readonly selectedCategory = input<EventCategory | null>(null);
   readonly selectedFormat = input<EventFormat | null>(null);
   readonly hasMore = input(false);
@@ -34,4 +35,5 @@ export class ProximosEventosComponent {
   readonly formats = EVENT_FORMAT_OPTIONS;
   readonly categoryLabel = eventCategoryLabel;
   readonly formatLabel = eventFormatLabel;
+  readonly publicationStatusLabel = eventPublicationStatusLabel;
 }

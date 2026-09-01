@@ -188,17 +188,28 @@
           </div>
           <p class="card-copy">Monte uma agenda simples com as atividades que serão apresentadas aos participantes.</p>
 
-          <form class="inline-form" [formGroup]="activityForm" (ngSubmit)="saveActivity()">
-            <label class="field">
-              <span>Atividade *</span>
-              <input type="text" formControlName="title" maxlength="255" placeholder="Ex.: Abertura" />
-            </label>
-            <label class="field field--grow">
-              <span>Descrição</span>
-              <input type="text" formControlName="description" maxlength="2000" placeholder="Breve explicação da atividade" />
-            </label>
-            <button class="button button--primary" type="submit" [disabled]="isBusy()">Adicionar</button>
-          </form>
+          @if (canManageActivities()) {
+            <form class="inline-form" [formGroup]="activityForm" (ngSubmit)="saveActivity()">
+              <label class="field">
+                <span>Atividade *</span>
+                <input type="text" formControlName="title" maxlength="255" placeholder="Ex.: Abertura" />
+              </label>
+              <label class="field field--grow">
+                <span>Descrição</span>
+                <input type="text" formControlName="description" maxlength="2000" placeholder="Breve explicação da atividade" />
+              </label>
+              <div class="activity-actions">
+                @if (editingActivityId()) {
+                  <button class="button button--secondary" type="button" [disabled]="isBusy()" (click)="cancelActivityEdit()">Cancelar</button>
+                }
+                <button class="button button--primary" type="submit" [disabled]="isBusy()">
+                  {{ editingActivityId() ? 'Salvar atividade' : 'Adicionar' }}
+                </button>
+              </div>
+            </form>
+          } @else {
+            <p class="access-note">A programação pode ser alterada apenas pelo responsável ou por um editor do evento.</p>
+          }
 
           <div class="timeline-list">
             @for (activity of activities(); track activity.id; let index = $index) {
@@ -208,7 +219,12 @@
                   <h3>{{ activity.title }}</h3>
                   <p>{{ activity.description || 'Sem descrição adicional.' }}</p>
                 </div>
-                <button class="text-button text-button--danger" type="button" [disabled]="isBusy()" (click)="deleteActivity(activity)">Excluir</button>
+                @if (canManageActivities()) {
+                  <div class="timeline-actions">
+                    <button class="text-button" type="button" [disabled]="isBusy()" (click)="editActivity(activity)">Editar</button>
+                    <button class="text-button text-button--danger" type="button" [disabled]="isBusy()" (click)="deleteActivity(activity)">Excluir</button>
+                  </div>
+                }
               </article>
             } @empty {
               <p class="empty-inline">Ainda não há atividades cadastradas.</p>

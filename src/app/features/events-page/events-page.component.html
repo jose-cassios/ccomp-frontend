@@ -16,15 +16,23 @@
   @if (loading()) {
     <p class="empty-state" role="status">Carregando eventos...</p>
   } @else {
-    @if (myDrafts().length) {
-      <app-proximos-eventos
-        [eventos]="myDrafts()"
-        heading="Seus rascunhos"
-        [showFilters]="false"
-        [draftMode]="true"
-        [hasMore]="false"
-        (selected)="openDraft($event)"
-      />
+    @if (canManageEvents()) {
+      @if (myEventsLoading()) {
+        <p class="empty-state" role="status">Carregando seus eventos...</p>
+      } @else if (myEventsError()) {
+        <p class="notice notice--error" role="alert">{{ myEventsError() }}</p>
+      } @else {
+        <app-proximos-eventos
+          [eventos]="myEvents()"
+          heading="Seus eventos"
+          [showFilters]="false"
+          [manageMode]="true"
+          [hasMore]="myEventsNextCursor() !== null"
+          [loadingMore]="myEventsLoadingMore()"
+          (selected)="openDraft($event)"
+          (loadMore)="loadMoreMyEvents()"
+        />
+      }
     }
 
     @if (!errorMessage()) {

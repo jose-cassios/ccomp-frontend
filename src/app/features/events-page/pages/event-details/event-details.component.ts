@@ -57,6 +57,7 @@ export class EventDetailsComponent implements OnInit {
       next: (event) => {
         this.event.set({ ...event, activities: event.activities ?? [] });
         this.loadActivities(event.id);
+        this.loadSubscriptionState(event.id);
       },
       error: (error: unknown) => this.errorMessage.set(this.getErrorMessage(error)),
     });
@@ -104,6 +105,16 @@ export class EventDetailsComponent implements OnInit {
       catchError(() => of({ content: [], next_cursor: null })),
     ).subscribe((page) => {
       this.event.update((event) => event ? { ...event, activities: page.content } : event);
+    });
+  }
+
+  private loadSubscriptionState(eventId: number): void {
+    if (!this.isAuthenticated()) return;
+
+    this.eventsService.getMySubscriptions().pipe(
+      catchError(() => of(null)),
+    ).subscribe((page) => {
+      this.subscribed.set(Boolean(page?.content.some((event) => event.id === eventId)));
     });
   }
 

@@ -18,11 +18,13 @@ export interface EventActivity {
   event_id: number;
   title: string;
   description: string | null;
+  display_order?: number | null;
 }
 
 export interface EventEditor {
   id: number;
   event_id: number;
+  user_id: string | null;
   name: string;
   email_address: string;
   active: boolean;
@@ -65,6 +67,9 @@ export interface EventListItem {
   category: EventCategory;
   start_date: string | null;
   end_date: string | null;
+  status?: EventPublicationStatus | null;
+  enrollment_start_date?: string | null;
+  enrollment_end_date?: string | null;
 }
 
 export interface EventDetails extends EventListItem {
@@ -90,9 +95,9 @@ export interface EventsPageResponse {
   previous_cursor: string | null;
 }
 
-/** Contrato de POST /events/search. A API utiliza JSON em snake_case. */
+/** Contrato de POST /events/search. */
 export interface EventsFilter {
-  event_category?: EventCategory;
+  category?: EventCategory;
   format?: EventFormat;
 }
 
@@ -111,7 +116,6 @@ export interface UpdateEventPayload {
   summary?: string;
   content?: string;
   cover_image_url?: string;
-  status?: EventPublicationStatus;
   category?: EventCategory;
   format?: EventFormat;
   start_date?: string;
@@ -124,6 +128,10 @@ export interface UpdateEventPayload {
 export interface ActivityPayload {
   title: string;
   description?: string;
+}
+
+export interface UpdateActivityPayload extends Partial<ActivityPayload> {
+  display_order?: number;
 }
 
 export interface ApiMessage {

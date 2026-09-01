@@ -33,7 +33,7 @@
 
   <div class="events-grid">
     @for (event of eventos(); track event.id) {
-      <article class="event-card" [class.event-card--draft]="draftMode()">
+      <article class="event-card" [class.event-card--managed]="manageMode()">
         <div class="event-card__media">
           @if (event.cover_image_url; as coverImageUrl) {
             <img class="event-card__cover" [src]="coverImageUrl" [alt]="'Capa do evento ' + event.title" />
@@ -45,8 +45,8 @@
         </div>
         <div class="event-card__body">
           <div class="tags">
-            @if (draftMode()) {
-              <span class="draft-tag">Rascunho</span>
+            @if (manageMode() && event.status; as status) {
+              <span class="status-tag" [class.status-tag--draft]="status === 'DRAFT'" [class.status-tag--published]="status === 'PUBLISHED'" [class.status-tag--unlisted]="status === 'UNLISTED'" [class.status-tag--canceled]="status === 'CANCELED'">{{ publicationStatusLabel(status) }}</span>
             }
             <span>{{ categoryLabel(event.category) }}</span>
             <span>{{ formatLabel(event.format) }}</span>
@@ -63,7 +63,7 @@
               <dd>{{ event.end_date | date: 'dd/MM/yyyy, HH:mm' }}</dd>
             </div>
           </dl>
-          <button type="button" (click)="selected.emit(event.id)">{{ draftMode() ? 'Continuar edição' : 'Ver detalhes' }}</button>
+          <button type="button" (click)="selected.emit(event.id)">{{ manageMode() ? 'Gerenciar evento' : 'Ver detalhes' }}</button>
         </div>
       </article>
     }

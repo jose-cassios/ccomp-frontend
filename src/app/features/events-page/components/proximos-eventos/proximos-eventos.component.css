@@ -8,7 +8,7 @@ select { min-width: 140px; border: 1px solid #cbd8cf; border-radius: 8px; paddin
 .events-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(270px,1fr)); gap: 15px; }
 .event-card { display: flex; min-height: 100%; flex-direction: column; overflow: hidden; border: 1px solid #dfe7ea; border-radius: 13px; background: #fff; box-shadow: 0 6px 20px rgba(24,48,64,.055); transition: transform .2s ease, box-shadow .2s ease; }
 .event-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(24,48,64,.1); }
-.event-card--draft { border-color: #d7c28d; }
+.event-card--managed { border-color: #bfd9c7; }
 .event-card__media { position: relative; height: 164px; overflow: hidden; background: linear-gradient(135deg,#176b34,#0b4522); }
 .event-card__body { display: flex; flex-direction: column; padding: 17px; }
 .event-card__cover { width: 100%; height: 100%; object-fit: cover; background: #edf3ee; transition: transform .35s ease; }
@@ -16,7 +16,10 @@ select { min-width: 140px; border: 1px solid #cbd8cf; border-radius: 8px; paddin
 .event-card__placeholder { display: grid; width: 100%; height: 100%; place-items: center; color: #d2f1db; font-size: 2.5rem; font-weight: 900; }
 .tags { display: flex; flex-wrap: wrap; gap: .35rem; }
 .tags span { border-radius: 999px; padding: .25rem .48rem; background: #eaf7ee; color: #196f39; font-size: .62rem; font-weight: 800; text-transform: uppercase; }
-.tags .draft-tag { background: #fff5d9; color: #946200; }
+.tags .status-tag--draft { background: #fff5d9; color: #946200; }
+.tags .status-tag--published { background: #e0f6e7; color: #126a34; }
+.tags .status-tag--unlisted { background: #eef1f4; color: #596975; }
+.tags .status-tag--canceled { background: #fde7e7; color: #ae3434; }
 h3 { margin: .72rem 0 .38rem; color: #253641; font-size: 1.04rem; }
 .event-card p { display: -webkit-box; flex: 1; min-height: 42px; overflow: hidden; margin: 0; color: #687984; font-size: .86rem; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 dl { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; margin: .85rem 0; }

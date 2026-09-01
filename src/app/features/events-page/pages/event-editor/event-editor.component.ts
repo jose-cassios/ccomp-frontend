@@ -23,7 +23,6 @@ import {
   eventEnrollmentStateLabel,
   eventPublicationStatusLabel,
 } from '../../models/event.model';
-import { MyEventsStoreService } from '../../services/my-events-store.service';
 import { EventsService } from '../../services/events.service';
 
 type EditorOperation = 'idle' | 'loading' | 'saving' | 'publishing' | 'deleting' | 'activity' | 'editor';
@@ -50,7 +49,6 @@ export class EventEditorComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly eventsService = inject(EventsService);
-  private readonly myEventsStore = inject(MyEventsStoreService);
   private readonly authService = inject(AuthService);
 
   readonly form = this.fb.nonNullable.group({
@@ -83,6 +81,7 @@ export class EventEditorComponent implements OnInit {
   readonly activeStep = signal<EventEditorStep>('details');
   readonly lastUnlockedStep = signal(0);
   readonly activities = signal<EventActivity[]>([]);
+  readonly editingActivityId = signal<number | null>(null);
   readonly editors = signal<EventEditor[]>([]);
   readonly enrollments = signal<EventEnrollment[]>([]);
   readonly enrollmentsNextCursor = signal<string | null>(null);
@@ -104,15 +103,22 @@ export class EventEditorComponent implements OnInit {
     return (currentEvent !== null && this.ownedEventIds().has(currentEvent.id))
       || Boolean(currentEvent?.owner_id && currentUserId && currentEvent.owner_id === currentUserId);
   });
+  readonly isAssignedEditor = computed(() => {
+    const currentUserId = this.authService.currentUserState()?.id;
+    return Boolean(currentUserId && this.editors().some((editor) =>
+      editor.active && editor.user_id === currentUserId,
+    ));
+  });
   readonly canDelete = computed(() => this.isAdmin() || this.isOwner());
   readonly canPublish = computed(() => {
     const currentEvent = this.event();
     return Boolean(
       currentEvent
       && currentEvent.status !== 'PUBLISHED'
-      && (this.isAdmin() || this.isOwner()),
+      && (this.isAdmin() || this.isOwner() || this.isAssignedEditor()),
     );
   });
+  readonly canManageActivities = computed(() => this.isOwner() || this.isAssignedEditor());
   readonly canManageTeam = computed(() => this.isOwner());
   readonly canViewEnrollments = computed(() =>
     this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
@@ -201,7 +207,6 @@ export class EventEditorComponent implements OnInit {
         if (!currentEvent) {
           this.editingExisting.set(true);
           this.ownedEventIds.update((ids) => new Set(ids).add(savedEvent.id));
-          this.myEventsStore.remember(savedEvent.id);
           this.location.replaceState(`/eventos/${savedEvent.id}/editar`);
           this.advanceTo('presentation');
           return;
@@ -345,7 +350,6 @@ export class EventEditorComponent implements OnInit {
         }
 
         this.creationCompleted.set(true);
-        this.myEventsStore.forget(publishedEvent.id);
         this.successMessage.set('Evento publicado com sucesso! A página já está disponível para o público.');
       },
       error: (error: unknown) => {
@@ -366,7 +370,6 @@ export class EventEditorComponent implements OnInit {
     ).subscribe({
       next: () => {
         this.hasUnsavedChanges.set(false);
-        this.myEventsStore.forget(currentEvent.id);
         void this.router.navigate(['/eventos']);
       },
       error: (error: unknown) => {
@@ -383,15 +386,23 @@ export class EventEditorComponent implements OnInit {
     }
 
     const payload: ActivityPayload = this.activityForm.getRawValue();
+    const activityId = this.editingActivityId();
     this.operation.set('activity');
     this.errorMessage.set(null);
     this.successMessage.set(null);
-    this.eventsService.createActivity(currentEvent.id, payload).pipe(
+    const request = activityId
+      ? this.eventsService.updateActivity(activityId, payload)
+      : this.eventsService.createActivity(currentEvent.id, payload);
+
+    request.pipe(
       finalize(() => this.operation.set('idle')),
     ).subscribe({
       next: (activity) => {
-        this.activities.update((activities) => [...activities, activity]);
+        this.activities.update((activities) => activityId
+          ? activities.map((item) => item.id === activity.id ? activity : item)
+          : [...activities, activity]);
         this.activityForm.reset({ title: '', description: '' });
+        this.editingActivityId.set(null);
         this.loadActivities(currentEvent.id);
       },
       error: (error: unknown) => {
@@ -411,11 +422,27 @@ export class EventEditorComponent implements OnInit {
     ).subscribe({
       next: () => {
         this.activities.update((activities) => activities.filter((item) => item.id !== activity.id));
+        if (this.editingActivityId() === activity.id) this.cancelActivityEdit();
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível excluir a atividade.'));
       },
     });
+  }
+
+  editActivity(activity: EventActivity): void {
+    if (this.isBusy()) return;
+    this.editingActivityId.set(activity.id);
+    this.activityForm.reset({
+      title: activity.title,
+      description: activity.description ?? '',
+    });
+    this.errorMessage.set(null);
+  }
+
+  cancelActivityEdit(): void {
+    this.editingActivityId.set(null);
+    this.activityForm.reset({ title: '', description: '' });
   }
 
   addEditor(): void {
@@ -482,9 +509,6 @@ export class EventEditorComponent implements OnInit {
     ).subscribe({
       next: (event) => {
         this.applyEvent(event);
-        if (event.owner_id && event.owner_id === this.authService.currentUserState()?.id) {
-          this.myEventsStore.remember(event.id);
-        }
         this.loadActivities(event.id);
         this.loadEditors(event.id);
         this.loadEnrollments(event.id);
