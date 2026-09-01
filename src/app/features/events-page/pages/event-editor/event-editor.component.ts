@@ -349,8 +349,15 @@ export class EventEditorComponent implements OnInit {
           return;
         }
 
+        const shouldOpenPublicPage = this.creationFlow() && !this.creationCompleted();
         this.creationCompleted.set(true);
-        this.successMessage.set('Evento publicado com sucesso! A página já está disponível para o público.');
+        const message = 'Evento publicado com sucesso! A página já está disponível para o público.';
+        this.successMessage.set(message);
+        if (shouldOpenPublicPage) {
+          void this.router.navigate(['/eventos', publishedEvent.id], {
+            state: { eventFeedback: message },
+          });
+        }
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'O evento foi salvo, mas não foi possível publicá-lo.'));

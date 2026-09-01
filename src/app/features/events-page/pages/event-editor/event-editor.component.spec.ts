@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { AuthService } from '../../../auth/services/auth.service';
 import { EventDetails } from '../../models/event.model';
@@ -9,6 +9,7 @@ import { EventEditorComponent } from './event-editor.component';
 describe('EventEditorComponent', () => {
   let component: EventEditorComponent;
   let fixture: ComponentFixture<EventEditorComponent>;
+  let router: Router;
 
   const createdEvent: EventDetails = {
     id: 14,
@@ -55,6 +56,8 @@ describe('EventEditorComponent', () => {
 
     fixture = TestBed.createComponent(EventEditorComponent);
     component = fixture.componentInstance;
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
     fixture.detectChanges();
   });
 
@@ -244,6 +247,9 @@ describe('EventEditorComponent', () => {
     expect(component.creationCompleted()).toBe(true);
     expect(eventsService.publish).toHaveBeenCalledWith(createdEvent.id);
     expect(component.successMessage()).toContain('Evento publicado com sucesso');
+    expect(router.navigate).toHaveBeenCalledWith(['/eventos', createdEvent.id], {
+      state: { eventFeedback: expect.stringContaining('Evento publicado com sucesso') },
+    });
   });
 
   it('should not allow jumping ahead before the prior stage is completed', () => {

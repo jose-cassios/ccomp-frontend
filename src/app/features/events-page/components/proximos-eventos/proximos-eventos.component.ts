@@ -23,6 +23,7 @@ export class ProximosEventosComponent {
   readonly heading = input('Todos os eventos');
   readonly showFilters = input(true);
   readonly manageMode = input(false);
+  readonly compactMode = input(false);
   readonly selectedCategory = input<EventCategory | null>(null);
   readonly selectedFormat = input<EventFormat | null>(null);
   readonly hasMore = input(false);

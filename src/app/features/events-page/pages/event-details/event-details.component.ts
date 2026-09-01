@@ -46,6 +46,11 @@ export class EventDetailsComponent implements OnInit {
   readonly canSubscribe = computed(() => this.event()?.enrollment_status === 'OPEN');
 
   ngOnInit(): void {
+    const feedback = this.router.getCurrentNavigation()?.extras.state?.['eventFeedback'];
+    if (typeof feedback === 'string' && feedback.trim()) {
+      this.successMessage.set(feedback);
+    }
+
     const id = this.route.snapshot.paramMap.get('id');
     if (!id || !/^\d+$/.test(id)) {
       this.loading.set(false);

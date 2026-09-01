@@ -5,10 +5,16 @@ h2 { margin: 0; color: #022c22; font-size: clamp(1.35rem,2.5vw,1.7rem); }
 .filters { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 label { display: grid; gap: 4px; color: #53646f; font-size: .72rem; font-weight: 750; }
 select { min-width: 140px; border: 1px solid #cbd8cf; border-radius: 8px; padding: .58rem .7rem; background: #fff; color: #334155; font: inherit; font-size: .82rem; }
-.events-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(270px,1fr)); gap: 15px; }
+.events-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(270px,320px)); gap: 15px; }
+.events-grid--compact { grid-template-columns: repeat(auto-fill,minmax(220px,280px)); gap: 12px; }
 .event-card { display: flex; min-height: 100%; flex-direction: column; overflow: hidden; border: 1px solid #dfe7ea; border-radius: 13px; background: #fff; box-shadow: 0 6px 20px rgba(24,48,64,.055); transition: transform .2s ease, box-shadow .2s ease; }
 .event-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(24,48,64,.1); }
 .event-card--managed { border-color: #bfd9c7; }
+.event-card--compact { min-height: 0; }
+.event-card--compact .event-card__body { padding: 14px; }
+.event-card--compact h3 { margin: .55rem 0 .35rem; font-size: .94rem; }
+.event-card__meta { flex: 0 !important; min-height: 0 !important; margin: 0 0 .75rem !important; color: #647681 !important; font-size: .76rem !important; }
+.event-card--compact button { margin-top: auto; padding: .55rem .7rem; }
 .event-card__media { position: relative; height: 164px; overflow: hidden; background: linear-gradient(135deg,#176b34,#0b4522); }
 .event-card__body { display: flex; flex-direction: column; padding: 17px; }
 .event-card__cover { width: 100%; height: 100%; object-fit: cover; background: #edf3ee; transition: transform .35s ease; }
@@ -35,7 +41,7 @@ dd { margin: .18rem 0 0; color: #344650; font-size: .75rem; font-weight: 700; }
 @media (max-width:640px) {
   .events-list { margin-top: 28px; }
   .section-heading { gap: 14px; margin-bottom: 14px; }
-  .events-grid { grid-template-columns: 1fr; gap: 13px; }
+  .events-grid, .events-grid--compact { grid-template-columns: 1fr; gap: 13px; }
   .event-card__media { height: 148px; }
   .event-card__body { padding: 15px; }
   .event-card h3 { margin-top: .62rem; }

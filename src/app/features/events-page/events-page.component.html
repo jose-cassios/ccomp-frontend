@@ -27,6 +27,7 @@
           heading="Seus eventos"
           [showFilters]="false"
           [manageMode]="true"
+          [compactMode]="true"
           [hasMore]="myEventsNextCursor() !== null"
           [loadingMore]="myEventsLoadingMore()"
           (selected)="openDraft($event)"
