@@ -1,11 +1,16 @@
 :host { display: block; background: var(--surface-page); }
-.events-page { max-width: 1200px; margin: 0 auto; padding: 34px 20px 64px; color: #263740; }
+.events-page { max-width: 1240px; margin: 0 auto; padding: 26px 20px 56px; color: #263740; }
 .page-header, .management__heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.page-header { margin-bottom: 24px; }
-.page-header h1 { margin: 0; color: var(--text-strong); font-size: clamp(1.65rem, 3vw, 2.2rem); line-height: 1.2; }
-.page-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.page-header a, .management a, .page-actions button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 8px; padding: 0 14px; background: var(--brand-600); color: #fff; cursor: pointer; font: inherit; font-size: .86rem; font-weight: 750; text-decoration: none; white-space: nowrap; }
-.page-actions button { border-color: #cbd4cf; background: #fff; color: #3d4c44; }
+.page-header { align-items: flex-end; margin-bottom: 22px; padding-bottom: 20px; border-bottom: 1px solid #dce5df; }
+.page-intro { display: grid; gap: 4px; max-width: 680px; }
+.page-kicker { color: var(--brand-700); font-size: .76rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.page-header h1 { margin: 0; color: var(--text-strong); font-size: clamp(1.8rem, 3vw, 2.45rem); line-height: 1.08; letter-spacing: -.035em; }
+.page-header p { margin: 2px 0 0; color: var(--text-muted); font-size: .98rem; line-height: 1.45; }
+.page-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.page-action, .management a { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 9px; padding: 0 14px; background: var(--brand-600); color: #fff; cursor: pointer; font: inherit; font-size: .86rem; font-weight: 750; text-decoration: none; white-space: nowrap; }
+.page-action--secondary { border-color: #cbd4cf; background: #fff; color: #3d4c44; }
+.page-action--primary { box-shadow: 0 5px 12px rgba(17, 117, 60, .15); }
+app-proximos-eventos + app-proximos-eventos { display: block; margin-top: 32px; }
 .notice { margin: 16px 0; border-radius: 9px; padding: .85rem 1rem; }
 .notice--error { background: #fff0f0; color: #962828; }
 .empty-state { border: 1px dashed #bdc9ce; border-radius: 14px; padding: 2.5rem 1.5rem; color: #647681; text-align: center; }
@@ -33,7 +38,7 @@
 .calendar-list time { border-radius: 8px; padding: .55rem .35rem; background: #edf1ef; color: #46564d; font-weight: 900; text-align: center; }
 .calendar-cover { width: 52px; height: 52px; }
 .calendar-list span { display: grid; align-content: center; gap: .22rem; }
-@media (max-width: 700px) { .events-page { padding: 26px 14px 48px; } .page-header, .management__heading { align-items: stretch; flex-direction: column; } .editable-list article { grid-template-columns: 52px minmax(0,1fr); } .editable-list article a { grid-column: 1 / -1; width: 100%; } .page-actions { flex-direction: column; } .page-header a, .management a, .page-actions button { width: 100%; text-align: center; } .management { padding: 18px; } .calendar-list button { grid-template-columns: 52px minmax(0,1fr); } .calendar-list time { display: none; } }
+@media (max-width: 700px) { .events-page { padding: 22px 14px 46px; } .page-header, .management__heading { align-items: stretch; flex-direction: column; } .page-header { gap: 16px; padding-bottom: 18px; } .page-header h1 { font-size: clamp(1.8rem, 9vw, 2.25rem); } .page-header p { font-size: .92rem; } .page-actions { justify-content: flex-start; } .editable-list article { grid-template-columns: 52px minmax(0,1fr); } .editable-list article a { grid-column: 1 / -1; width: 100%; } .management { padding: 18px; } .calendar-list button { grid-template-columns: 52px minmax(0,1fr); } .calendar-list time { display: none; } }
 @media (min-width:701px) and (max-width:980px) {
   .events-page { padding: 30px 24px 56px; }
   .page-header { align-items: flex-start; }
@@ -41,7 +46,8 @@
 }
 @media (max-width:520px) {
   .page-header h1 { font-size: 1.7rem; }
-  .page-actions button, .page-actions a { min-height: 44px; }
+  .page-actions { display: grid; grid-template-columns: 1fr; }
+  .page-action { width: 100%; min-height: 44px; }
   .modal-backdrop { padding: .5rem; }
   .calendar-modal { max-height: calc(100dvh - 16px); border-radius: 13px; padding: 16px; }
   .calendar-modal h2 { margin-bottom: 12px; font-size: 1.22rem; }
