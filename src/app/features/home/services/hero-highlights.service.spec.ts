@@ -69,4 +69,30 @@ describe('HeroHighlightsService', () => {
       }));
     });
   });
+
+  it('should preserve the event cover image in the global highlights', () => {
+    api.get.mockReturnValue(of({
+      news: [],
+      events: [{
+        id: 8,
+        title: 'Semana da Computação',
+        slug: 'semana-da-computacao',
+        description: 'Palestras e oficinas.',
+        cover_image_url: 'https://example.com/semana.jpg',
+        category: 'ACADEMIC_EDUCATIONAL',
+        format: 'IN_PERSON',
+        start_date: '2026-09-10T08:00:00',
+        end_date: '2026-09-10T18:00:00',
+      }],
+      clubs: [],
+    }));
+
+    service.getAll().subscribe((highlights) => {
+      expect(highlights[0]).toEqual(expect.objectContaining({
+        source_type: 'EVENT',
+        title: 'Semana da Computação',
+        image_url: 'https://example.com/semana.jpg',
+      }));
+    });
+  });
 });

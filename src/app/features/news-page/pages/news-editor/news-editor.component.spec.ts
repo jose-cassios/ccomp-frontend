@@ -116,4 +116,18 @@ describe('NewsEditorComponent', () => {
     expect(newsService.delete).toHaveBeenCalledWith(savedNews.id);
     expect(component.hasUnsavedChanges()).toBe(false);
   });
+
+  it('should keep success and error feedback visible until dismissed', () => {
+    component.successMessage.set('Notícia salva com sucesso.');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.feedback-toast--success')?.textContent).toContain(
+      'Notícia salva com sucesso.',
+    );
+
+    component.dismissFeedback();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.feedback-viewport')).toBeNull();
+  });
 });

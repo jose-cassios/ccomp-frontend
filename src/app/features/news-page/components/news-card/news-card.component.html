@@ -1,20 +1,29 @@
 <article class="news-card">
   <div class="card-image">
-    <img [src]="news().cover_image_url" [alt]="news().title" />
+    @if (news().cover_image_url; as coverImageUrl) {
+      <img [src]="coverImageUrl" [alt]="news().title" />
+    } @else {
+      <span aria-hidden="true">N</span>
+    }
   </div>
   <div class="card-content">
     <div class="card-meta">
       <span class="meta-category">Notícia</span>
-      <span class="meta-separator">•</span>
-      <span class="meta-date">{{ news().published_at }}</span>
+      @if (news().published_at) {
+        <span class="meta-separator">•</span>
+        <span class="meta-date">{{ news().published_at | date: 'dd/MM/yyyy' }}</span>
+      }
     </div>
     <h3 class="card-title">{{ news().title }}</h3>
     <p class="card-summary">{{ news().summary }}</p>
     <div class="card-footer">
       <a [routerLink]="['/news', news().slug]" class="card-link">
-        Ler mais
+        Ler notícia
         <span class="arrow">→</span>
       </a>
+      @if (canEdit()) {
+        <a [routerLink]="['/noticias', news().id, 'editar']" class="edit-link">Editar</a>
+      }
     </div>
   </div>
 </article>

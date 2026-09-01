@@ -18,6 +18,7 @@ describe('EventoDestaqueComponent', () => {
       title: 'Semana da Computação',
       slug: 'semana-da-computacao',
       description: 'Evento acadêmico',
+      cover_image_url: 'https://example.com/semana.jpg',
       format: 'IN_PERSON',
       category: 'ACADEMIC_EDUCATIONAL',
       start_date: '2026-09-01T09:00:00',
@@ -30,5 +31,10 @@ describe('EventoDestaqueComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should render the event cover image', () => {
+    const cover = fixture.nativeElement.querySelector('img') as HTMLImageElement;
+    expect(cover.src).toBe('https://example.com/semana.jpg');
   });
 });

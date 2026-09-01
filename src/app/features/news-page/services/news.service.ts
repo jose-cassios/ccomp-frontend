@@ -6,6 +6,7 @@ import {
   MessageResponse,
   NewsEditorUser,
   NewsPageResponse,
+  NewsSearchFilter,
   NewsUpdatePayload,
   UserNewsResponse,
 } from '../interface/news.interface';
@@ -18,7 +19,7 @@ export class NewsService {
   constructor(private api: ApiService) {}
 
   getAll(
-    filter: { featured?: boolean } = {},
+    filter: NewsSearchFilter = {},
     nextCursor?: string,
     pageSize = 10,
   ): Observable<NewsPageResponse> {

@@ -57,10 +57,14 @@
           </div>
 
           <div class="promo-image">
-            <div class="event-visual" aria-hidden="true">
-              <span>{{ evento.start_date | date: 'dd' }}</span>
-              <small>{{ evento.start_date | date: 'MMM' }}</small>
-            </div>
+            @if (evento.cover_image_url; as coverImageUrl) {
+              <img class="event-cover" [src]="coverImageUrl" [alt]="'Capa do evento ' + evento.title" />
+            } @else {
+              <div class="event-visual" aria-hidden="true">
+                <span>{{ evento.start_date | date: 'dd' }}</span>
+                <small>{{ evento.start_date | date: 'MMM' }}</small>
+              </div>
+            }
 
             <a
               class="btn-cta-light btn-ver-evento"
