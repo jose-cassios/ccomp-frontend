@@ -124,7 +124,11 @@
               <div class="user-details" role="cell">
                 <div class="user-name-row">
                   <strong>{{ user.name }}</strong>
-                  <span class="status-badge" [class.status-badge--blocked]="user.status_account === 'BLOCKED'">
+                  <span
+                    class="status-badge"
+                    [class.status-badge--blocked]="user.status_account === 'BLOCKED'"
+                    [class.status-badge--inactive]="user.status_account === 'DEACTIVATED'"
+                  >
                     {{ statusLabel(user.status_account) }}
                   </span>
                   <span class="role-badge">{{ roleLabel(user.role) }}</span>
@@ -265,7 +269,13 @@
             <article class="audit-entry">
               <div class="audit-entry__heading">
                 <div>
-                  <span class="audit-action">{{ auditActionLabel(log.action) }}</span>
+                  <span
+                    class="audit-action"
+                    [class.audit-action--danger]="log.action === 'USER_BLOCKED'"
+                    [class.audit-action--info]="log.action === 'USER_CHANGE_ROLE'"
+                  >
+                    {{ auditActionLabel(log.action) }}
+                  </span>
                   <strong>{{ auditTargetLabel(log.target_type) }}: {{ log.target_id }}</strong>
                 </div>
                 <time [attr.datetime]="log.timestamp">{{ log.timestamp | date: 'dd/MM/yyyy, HH:mm' }}</time>

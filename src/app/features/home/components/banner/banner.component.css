@@ -13,7 +13,7 @@
 .bg-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to right, var(--gray-100) 30%, rgba(247, 250, 249, 0.9) 60%, rgba(247, 250, 249, 0.4) 100%);
+  background: rgba(245, 247, 246, 0.88);
 }
 
 .hero-container {
@@ -88,8 +88,8 @@
 /* --- BOTÕES E ÍCONES --- */
 .hero-actions { display: flex; gap: 15px; flex-wrap: wrap; }
 
-.btn-primary-gradient {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+.btn-primary {
+  background: var(--brand-600);
   color: var(--white);
   padding: 15px 30px;
   border-radius: 12px;
@@ -100,12 +100,11 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  box-shadow: 0px 12px 32px rgba(0, 107, 31, 0.2);
-  transition: transform 0.2s;
+  transition: background-color 0.2s;
   text-decoration: none;
 }
 
-.btn-primary-gradient:hover { transform: scale(1.05); }
+.btn-primary:hover { background: var(--brand-700); }
 
 .btn-secondary-light {
   background: var(--gray-200);
@@ -135,17 +134,16 @@
 
 .news-card {
   background: var(--white);
-  border-radius: 20px;
+  border-radius: 16px;
   width: 100%;
   max-width: 450px;
   overflow: hidden;
-  box-shadow: 0px 32px 64px var(--shadow-lg);
-  border: 4px solid var(--white);
+  border: 1px solid var(--border-primary);
 }
 
 .news-img-container { height: 200px; position: relative; }
 .news-img { width: 100%; height: 100%; object-fit: cover; }
-.news-img--placeholder { display: grid; place-items: center; background: linear-gradient(135deg, #063d27, #27a24a); color: #fff; font-size: 2rem; font-weight: 900; letter-spacing: .12em; }
+.news-img--placeholder { display: grid; place-items: center; background: #263b30; color: #fff; font-size: 2rem; font-weight: 900; letter-spacing: .12em; }
 
 .badge-novo-floating {
   position: absolute;
@@ -162,7 +160,6 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  box-shadow: 0 4px 15px var(--shadow-md);
 }
 
 .dot-white { width: 6px; height: 6px; background: var(--white); border-radius: 50%; }
@@ -268,7 +265,7 @@ display: -webkit-box;
     padding-bottom: 80px;
   }
   .bg-overlay {
-    background: linear-gradient(to bottom, var(--gray-100) 30%, rgba(247, 250, 249, 0.95) 70%, rgba(247, 250, 249, 0.8) 100%);
+    background: rgba(245, 247, 246, 0.92);
   }
   .hero-titles { align-items: center; }
   .hero-title { font-size: 2.8rem; }

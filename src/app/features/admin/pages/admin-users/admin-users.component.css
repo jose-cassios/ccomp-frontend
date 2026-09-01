@@ -6,8 +6,8 @@ h1 { margin: .25rem 0 .5rem; font-size: clamp(1.75rem, 4vw, 2.4rem); }
 h2 { margin: 0; font-size: 1.2rem; }
 p { color: #60707c; }
 .refresh-button, .assign-button, .block-button, .unlock-button, .load-more-button, .exact-search-button, .admin-tab { border: 0; border-radius: .45rem; cursor: pointer; font-weight: 700; padding: .7rem 1rem; }
-.refresh-button, .assign-button, .unlock-button, .load-more-button { background: var(--brand-500); color: #fff; }
-.exact-search-button { border: 1px solid #b8c5cb; background: #fff; color: #315f4b; }
+.assign-button, .unlock-button { background: var(--brand-500); color: #fff; }
+.refresh-button, .load-more-button, .exact-search-button { border: 1px solid #b8c5cb; background: #fff; color: #3d4c44; }
 .block-button { background: #fff0f0; color: #aa2e2e; }
 button:disabled { cursor: not-allowed; opacity: .6; }
 .admin-tabs { display: flex; gap: .25rem; border-bottom: 1px solid #dce4e8; margin-top: 1.5rem; }
@@ -17,7 +17,7 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .notice--error { background: #fff0f0; color: #9a2727; }
 .notice--success { background: #ecf9f0; color: #19713a; }
 .overview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0; }
-.metric-card, .users-card, .operations-card, .audit-card { background: #fff; border: 1px solid #dce4e8; border-radius: .75rem; box-shadow: 0 3px 12px rgba(24, 48, 64, .06); }
+.metric-card, .users-card, .operations-card, .audit-card { background: #fff; border: 1px solid #dce4e8; border-radius: .75rem; }
 .metric-card { padding: 1.1rem; }
 .metric-card span, .user-details span, .user-details small, .audit-entry small { color: #667782; display: block; }
 .metric-card strong { display: block; font-size: 1.15rem; margin-top: .45rem; }
@@ -35,7 +35,10 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .user-details .status-badge, .user-details .role-badge, .audit-action { display: inline-flex; padding: .2rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 800; text-transform: uppercase; }
 .user-details .status-badge, .audit-action { background: #e8f6ec; color: #19713a; }
 .user-details .status-badge--blocked { background: #fff0f0; color: #aa2e2e; }
+.user-details .status-badge--inactive { background: #eef1f3; color: #596975; }
 .user-details .role-badge { background: #eef4ff; color: #315f9a; }
+.audit-action--danger { background: var(--danger-bg); color: var(--danger-text); }
+.audit-action--info { background: var(--info-bg); color: var(--info-text); }
 .management-actions { display: flex; align-items: flex-end; flex-direction: column; gap: .6rem; }
 .role-actions, .account-actions { gap: .5rem; flex-wrap: wrap; justify-content: flex-end; }
 .load-more-button { display: block; margin: 1rem auto 0; }

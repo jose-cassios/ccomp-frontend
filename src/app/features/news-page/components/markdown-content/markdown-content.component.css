@@ -27,8 +27,8 @@
   padding: 0.8rem 1rem;
   border-left: 4px solid var(--brand-500);
   border-radius: 0 8px 8px 0;
-  background: #f0fdf4;
-  color: #365342;
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
 }
 .markdown-content pre {
   margin: 1.25rem 0;
@@ -41,7 +41,7 @@
 .markdown-content code {
   padding: 0.15em 0.35em;
   border-radius: 4px;
-  background: #e8f2ea;
+  background: #edf1ef;
   font-family: Consolas, 'Courier New', monospace;
   font-size: 0.9em;
 }

@@ -27,7 +27,7 @@
   cursor: pointer;
 }
 
-.markdown-toolbar button:hover:not(:disabled) { background: #e6f4e9; color: var(--brand-700); }
+.markdown-toolbar button:hover:not(:disabled) { background: var(--surface-subtle); color: var(--text-strong); }
 .markdown-toolbar button:disabled { cursor: not-allowed; opacity: 0.45; }
 .markdown-hint { margin-left: auto; padding-right: 6px; color: var(--text-tertiary); font-size: 0.75rem; }
 
