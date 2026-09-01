@@ -1,174 +1,376 @@
-<main class="editor-page">
+<main class="event-editor-page">
   <header class="editor-header">
     <div>
-      <a routerLink="/eventos">← Voltar para eventos</a>
-      <h1>{{ editingExisting() ? 'Editar evento' : 'Novo evento' }}</h1>
-      <p>Cadastre os dados principais e as atividades do evento.</p>
+      <a routerLink="/eventos" class="back-link">← Voltar para eventos</a>
+      <span class="eyebrow">Organização de evento</span>
+      <h1>{{ creationFlow() && !isCreationComplete() ? 'Criar evento' : 'Gerenciar evento' }}</h1>
+      <p>Preencha cada etapa e revise tudo antes de concluir a criação.</p>
     </div>
-    <div class="header-actions">
-      @if (event() && isOwner()) {
-        <button class="button button--danger" type="button" [disabled]="isBusy()" (click)="deleteEvent()">
-          {{ operation() === 'deleting' ? 'Excluindo...' : 'Excluir evento' }}
-        </button>
-      }
-      <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="save()">
-        {{ operation() === 'saving' ? 'Salvando...' : editingExisting() ? 'Salvar alterações' : 'Criar evento' }}
-      </button>
-    </div>
+    @if (event()) {
+      <div class="header-actions">
+        @if (canPublish()) {
+          <button class="button button--publish" type="button" [disabled]="isBusy()" (click)="publish()">
+            {{ operation() === 'publishing' ? 'Publicando...' : 'Publicar evento' }}
+          </button>
+        }
+        @if (canDelete()) {
+          <button class="button button--danger" type="button" [disabled]="isBusy()" (click)="deleteEvent()">
+            Excluir evento
+          </button>
+        }
+        @if (event()!.status === 'PUBLISHED') {
+          <a class="button button--outline" [routerLink]="['/eventos', event()!.id]">Ver página pública</a>
+        }
+      </div>
+    }
   </header>
 
-  @if (operation() === 'loading') {
-    <p class="notice" role="status">Carregando evento...</p>
-  }
-  @if (errorMessage()) {
-    <p class="notice notice--error" role="alert">{{ errorMessage() }}</p>
-  }
-  @if (successMessage()) {
-    <p class="notice notice--success" role="status">{{ successMessage() }}</p>
-  }
-
-  @if (operation() !== 'loading' && (!editingExisting() || event())) {
-    <form class="card" [formGroup]="form" (ngSubmit)="save()">
-      <div class="section-heading">
-        <div>
-          <span>Informações principais</span>
-          <h2>Dados do evento</h2>
-        </div>
-        @if (hasUnsavedChanges()) {
-          <strong class="unsaved">Alterações não salvas</strong>
-        }
-      </div>
-
-      <div class="form-grid">
-        <label class="field field--wide">
-          <span>Título *</span>
-          <input type="text" formControlName="title" maxlength="255" />
-          @if (form.controls.title.touched && form.controls.title.invalid) {
-            <strong>Informe um título entre 4 e 255 caracteres.</strong>
-          }
-        </label>
-
-        @if (editingExisting()) {
-          <label class="field field--wide">
-            <span>Descrição</span>
-            <textarea formControlName="description" rows="5" maxlength="1000"></textarea>
-            @if (form.controls.description.touched && form.controls.description.invalid) {
-              <strong>Informe ao menos 4 caracteres ou deixe o campo vazio.</strong>
-            }
-          </label>
-        }
-
-        @if (canChangeCategory()) {
-          <label class="field">
-            <span>Categoria *</span>
-            <select formControlName="category">
-              @for (category of categories; track category.value) {
-                <option [value]="category.value">{{ category.label }}</option>
-              }
-            </select>
-          </label>
-        }
-
-        @if (!editingExisting()) {
-          <label class="field">
-            <span>Formato *</span>
-            <select formControlName="format">
-              @for (format of formats; track format.value) {
-                <option [value]="format.value">{{ format.label }}</option>
-              }
-            </select>
-          </label>
-        }
-
-        <label class="field">
-          <span>Início *</span>
-          <input type="datetime-local" formControlName="start_date" />
-        </label>
-
-        <label class="field">
-          <span>Término *</span>
-          <input type="datetime-local" formControlName="end_date" />
-        </label>
-      </div>
-
-      <div class="form-footer">
-        <button class="button button--primary" type="submit" [disabled]="isBusy()">
-          {{ editingExisting() ? 'Salvar alterações' : 'Criar evento' }}
-        </button>
-      </div>
-    </form>
-
-    @if (event()) {
-      <section class="card" aria-labelledby="activities-editor-title">
-        <div class="section-heading">
-          <div>
-            <span>Programação</span>
-            <h2 id="activities-editor-title">Atividades</h2>
-          </div>
-        </div>
-
-        <form class="inline-form" [formGroup]="activityForm" (ngSubmit)="saveActivity()">
-          <label class="field">
-            <span>Título *</span>
-            <input type="text" formControlName="title" maxlength="255" />
-          </label>
-          <label class="field field--grow">
-            <span>Descrição</span>
-            <input type="text" formControlName="description" maxlength="2000" />
-          </label>
-          <button class="button button--primary" type="submit" [disabled]="isBusy()">Adicionar</button>
-        </form>
-
-        <div class="item-list">
-          @for (activity of activities(); track activity.id) {
-            <article>
-              <div>
-                <h3>{{ activity.title }}</h3>
-                <p>{{ activity.description || 'Sem descrição.' }}</p>
-              </div>
-              <div>
-                <button class="danger-link" type="button" (click)="deleteActivity(activity)">Excluir</button>
-              </div>
-            </article>
-          } @empty {
-            <p>Não há atividades carregadas nesta sessão.</p>
-          }
-        </div>
-      </section>
+  <nav class="event-steps" aria-label="Etapas de criação do evento">
+    @for (step of steps; track step.value; let index = $index) {
+      <button
+        type="button"
+        [class.active]="activeStep() === step.value"
+        [class.complete]="isStepComplete(step.value)"
+        [disabled]="!isStepAvailable(step.value)"
+        (click)="selectStep(step.value)"
+      >
+        <span>{{ index + 1 }}</span>
+        {{ step.label }}
+      </button>
     }
+  </nav>
 
-    @if (event() && isOwner()) {
-      <section class="card" aria-labelledby="editors-title">
-        <div class="section-heading">
-          <div>
-            <span>Colaboração</span>
-            <h2 id="editors-title">Editores do evento</h2>
+  @if (operation() !== 'loading') {
+    @switch (activeStep()) {
+      @case ('details') {
+        <form class="editor-card event-form" [formGroup]="form" (ngSubmit)="save()">
+          <div class="card-heading">
+            <div>
+              <span>Etapa 1</span>
+              <h2>Informações do evento</h2>
+            </div>
           </div>
-        </div>
-        <p class="section-copy">Informe o e-mail de outro moderador. Apenas o proprietário pode conceder ou remover esse acesso.</p>
 
-        <form class="inline-form" [formGroup]="editorForm" (ngSubmit)="addEditor()">
-          <label class="field field--grow">
-            <span>E-mail do moderador *</span>
-            <input type="email" formControlName="email" placeholder="moderador@ifma.edu.br" />
-            @if (editorForm.controls.email.touched && editorForm.controls.email.invalid) {
-              <strong>Informe um e-mail válido.</strong>
-            }
-          </label>
-          <button class="button button--primary" type="submit" [disabled]="isBusy()">Adicionar editor</button>
+          <div class="form-grid">
+            <label class="field field--wide">
+              <span>Nome do evento *</span>
+              <input type="text" formControlName="title" maxlength="255" placeholder="Ex.: Semana da Computação 2026" />
+              @if (form.controls.title.touched && form.controls.title.invalid) {
+                <strong>Informe um nome entre 4 e 255 caracteres.</strong>
+              }
+            </label>
+
+            <label class="field">
+              <span>Categoria *</span>
+              <select formControlName="category">
+                @for (category of categories; track category.value) {
+                  <option [value]="category.value">{{ category.label }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Formato *</span>
+              <select formControlName="format">
+                @for (format of formats; track format.value) {
+                  <option [value]="format.value">{{ format.label }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Início *</span>
+              <input type="datetime-local" formControlName="start_date" />
+            </label>
+
+            <label class="field">
+              <span>Término *</span>
+              <input type="datetime-local" formControlName="end_date" />
+            </label>
+
+            <fieldset class="enrollment-settings field--wide">
+              <legend>Período de inscrições</legend>
+              <p>As datas acima definem quando o evento acontece. Configure aqui, separadamente, quando as pessoas poderão se inscrever.</p>
+              <div class="form-grid">
+                <label class="field">
+                  <span>Abertura das inscrições</span>
+                  <input type="datetime-local" formControlName="enrollment_start_date" />
+                </label>
+                <label class="field">
+                  <span>Encerramento das inscrições</span>
+                  <input type="datetime-local" formControlName="enrollment_end_date" />
+                </label>
+                <label class="toggle-field field--wide">
+                  <input type="checkbox" formControlName="enrollment_paused" />
+                  <span>
+                    <strong>Pausar inscrições</strong>
+                    <small>Use quando precisar interromper temporariamente novas inscrições.</small>
+                  </span>
+                </label>
+              </div>
+              @if (enrollmentDatesError(); as error) {
+                <strong class="field-error">{{ error }}</strong>
+              }
+            </fieldset>
+
+          </div>
+
+          <footer class="form-footer">
+            <span>Os campos marcados com * são obrigatórios.</span>
+            <button class="button button--primary" type="submit" [disabled]="isBusy()">
+              Próximo: página do evento
+            </button>
+          </footer>
         </form>
+      }
 
-        <div class="item-list">
-          @for (email of editors(); track email) {
-            <article>
-              <code>{{ email }}</code>
-              <button class="danger-link" type="button" (click)="removeEditor(email)">Remover</button>
-            </article>
-          } @empty {
-            <p>A API ainda não disponibiliza a lista de editores já atribuídos.</p>
+      @case ('presentation') {
+        <form class="editor-card event-form" [formGroup]="presentationForm" (ngSubmit)="savePresentation()">
+          <div class="card-heading">
+            <div>
+              <span>Etapa 2</span>
+              <h2>Monte a página do evento</h2>
+            </div>
+          </div>
+          <p class="card-copy">Complete a página que será apresentada às pessoas interessadas no evento.</p>
+
+          <div class="form-grid">
+            <label class="field field--wide">
+              <span>Resumo</span>
+              <textarea formControlName="summary" rows="3" maxlength="255" placeholder="Apresente o evento em poucas linhas."></textarea>
+              <small>Opcional. Caso preenchido, use de 4 a 255 caracteres.</small>
+              @if (presentationForm.controls.summary.touched && presentationForm.controls.summary.invalid) {
+                <strong>O resumo precisa ter entre 4 e 255 caracteres.</strong>
+              }
+            </label>
+
+            <label class="field field--wide">
+              <span>Descrição completa</span>
+              <textarea formControlName="content" rows="8" maxlength="5000" placeholder="Explique a programação, o público, os objetivos e as informações importantes para participação."></textarea>
+              <small>Opcional. Caso preenchida, use de 4 a 5.000 caracteres.</small>
+              @if (presentationForm.controls.content.touched && presentationForm.controls.content.invalid) {
+                <strong>A descrição precisa ter entre 4 e 5.000 caracteres.</strong>
+              }
+            </label>
+
+            <label class="field field--wide">
+              <span>URL da imagem de capa</span>
+              <input type="url" formControlName="cover_image_url" placeholder="https://exemplo.com/imagem-do-evento.jpg" />
+              <small>Opcional. Use uma URL pública iniciada por http:// ou https://.</small>
+              @if (presentationForm.controls.cover_image_url.touched && presentationForm.controls.cover_image_url.invalid) {
+                <strong>Informe uma URL válida para a imagem.</strong>
+              }
+            </label>
+
+            @if (presentationForm.controls.cover_image_url.value; as coverUrl) {
+              <figure class="cover-preview field--wide">
+                <img [src]="coverUrl" [alt]="'Prévia da capa de ' + form.controls.title.value" />
+                <figcaption>Prévia da imagem de capa</figcaption>
+              </figure>
+            }
+
+          </div>
+
+          <footer class="form-footer">
+            <span>Você poderá alterar estes dados sempre que precisar.</span>
+            <button class="button button--primary" type="submit" [disabled]="isBusy()">Próximo: programação</button>
+          </footer>
+        </form>
+      }
+
+      @case ('schedule') {
+        <section class="editor-card" aria-labelledby="schedule-title">
+          <div class="card-heading">
+            <div>
+              <span>Etapa 3</span>
+              <h2 id="schedule-title">Programação</h2>
+            </div>
+          </div>
+          <p class="card-copy">Monte uma agenda simples com as atividades que serão apresentadas aos participantes.</p>
+
+          @if (canManageActivities()) {
+            <form class="inline-form" [formGroup]="activityForm" (ngSubmit)="saveActivity()">
+              <label class="field">
+                <span>Atividade *</span>
+                <input type="text" formControlName="title" maxlength="255" placeholder="Ex.: Abertura" />
+              </label>
+              <label class="field field--grow">
+                <span>Descrição</span>
+                <input type="text" formControlName="description" maxlength="2000" placeholder="Breve explicação da atividade" />
+              </label>
+              <div class="activity-actions">
+                @if (editingActivityId()) {
+                  <button class="button button--secondary" type="button" [disabled]="isBusy()" (click)="cancelActivityEdit()">Cancelar</button>
+                }
+                <button class="button button--primary" type="submit" [disabled]="isBusy()">
+                  {{ editingActivityId() ? 'Salvar atividade' : 'Adicionar' }}
+                </button>
+              </div>
+            </form>
+          } @else {
+            <p class="access-note">A programação pode ser alterada apenas pelo responsável ou por um editor do evento.</p>
           }
-        </div>
-      </section>
+
+          <div class="timeline-list">
+            @for (activity of activities(); track activity.id; let index = $index) {
+              <article>
+                <span class="timeline-index">{{ index + 1 }}</span>
+                <div>
+                  <h3>{{ activity.title }}</h3>
+                  <p>{{ activity.description || 'Sem descrição adicional.' }}</p>
+                </div>
+                @if (canManageActivities()) {
+                  <div class="timeline-actions">
+                    <button class="text-button" type="button" [disabled]="isBusy()" (click)="editActivity(activity)">Editar</button>
+                    <button class="text-button text-button--danger" type="button" [disabled]="isBusy()" (click)="deleteActivity(activity)">Excluir</button>
+                  </div>
+                }
+              </article>
+            } @empty {
+              <p class="empty-inline">Ainda não há atividades cadastradas.</p>
+            }
+          </div>
+
+          <footer class="form-footer">
+            <span>Se desejar, adicione atividades agora. Você também poderá editar depois.</span>
+            <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="continueFromSchedule()">Próximo: equipe</button>
+          </footer>
+        </section>
+      }
+
+      @case ('team') {
+        <section class="editor-card" aria-labelledby="team-title">
+          <div class="card-heading">
+            <div>
+              <span>Etapa 4</span>
+              <h2 id="team-title">Equipe organizadora</h2>
+            </div>
+          </div>
+          <p class="card-copy">Inclua moderadores que poderão editar as informações e a programação.</p>
+
+          @if (canManageTeam()) {
+            <form class="inline-form" [formGroup]="editorForm" (ngSubmit)="addEditor()">
+              <label class="field field--grow">
+                <span>E-mail do moderador *</span>
+                <input type="email" formControlName="email" placeholder="moderador@ifma.edu.br" />
+                @if (editorForm.controls.email.touched && editorForm.controls.email.invalid) {
+                  <strong>Informe um e-mail válido.</strong>
+                }
+              </label>
+              <button class="button button--primary" type="submit" [disabled]="isBusy()">Adicionar à equipe</button>
+            </form>
+          } @else {
+            <p class="access-note">Você pode editar este evento, mas apenas o responsável pode gerenciar a equipe.</p>
+          }
+
+          <div class="team-list">
+            @for (editor of editors(); track editor.id) {
+              <article>
+                <span class="member-avatar">{{ editor.name.charAt(0) }}</span>
+                <span>
+                  <strong>{{ editor.name }}</strong>
+                  <small>{{ editor.email_address }}</small>
+                </span>
+                @if (canManageTeam()) {
+                  <button class="text-button text-button--danger" type="button" [disabled]="isBusy()" (click)="removeEditor(editor)">Remover</button>
+                }
+              </article>
+            } @empty {
+              <p class="empty-inline">Nenhum editor adicional foi incluído.</p>
+            }
+          </div>
+
+          <footer class="form-footer">
+            <span>Você pode incluir colaboradores nesta etapa sempre que precisar.</span>
+            <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="continueFromTeam()">Próximo: revisão</button>
+          </footer>
+        </section>
+      }
+
+      @case ('review') {
+        <section class="editor-card review-card" aria-labelledby="review-title">
+          <div class="card-heading">
+            <div>
+              <span>Etapa 5</span>
+              <h2 id="review-title">Revisão do evento</h2>
+            </div>
+            <button class="button button--outline" type="button" (click)="selectStep('details')">Editar informações</button>
+          </div>
+          <p class="card-copy">Confira os dados antes de concluir a criação do evento.</p>
+
+          <dl class="review-list">
+            <div><dt>Evento</dt><dd>{{ form.controls.title.value }}</dd></div>
+            <div><dt>Resumo</dt><dd>{{ presentationForm.controls.summary.value || 'Ainda não informado' }}</dd></div>
+            <div><dt>Formato</dt><dd>{{ form.controls.format.value }}</dd></div>
+            <div><dt>Início</dt><dd>{{ form.controls.start_date.value || 'Não informado' }}</dd></div>
+            <div><dt>Publicação</dt><dd>{{ publicationStatusLabel(event()?.status) }}</dd></div>
+            <div><dt>Execução</dt><dd>{{ executionStatusLabel(event()?.execution_status) }}</dd></div>
+            <div><dt>Inscrições</dt><dd>{{ form.controls.enrollment_start_date.value ? 'Configuradas' : 'Ainda fechadas' }}</dd></div>
+            <div><dt>Atividades</dt><dd>{{ activities().length }} cadastrada(s)</dd></div>
+          </dl>
+
+          @if (canViewEnrollments()) {
+            <section class="review-enrollments" aria-labelledby="enrollments-title">
+              <div class="card-heading">
+                <div>
+                  <span>Participantes</span>
+                  <h3 id="enrollments-title">Inscritos</h3>
+                </div>
+                <strong>{{ enrollments().length }} carregado(s)</strong>
+              </div>
+
+              @if (enrollmentsLoading() && !enrollments().length) {
+                <p class="empty-inline">Carregando inscritos...</p>
+              } @else if (enrollmentsError()) {
+                <p class="access-note" role="alert">{{ enrollmentsError() }}</p>
+              } @else if (enrollments().length) {
+                <div class="team-list enrollment-list">
+                  @for (enrollment of enrollments(); track enrollment.id) {
+                    <article>
+                      <span class="member-avatar">{{ enrollment.user?.name?.charAt(0) || '?' }}</span>
+                      <span>
+                        <strong>{{ enrollment.user?.name || 'Participante' }}</strong>
+                        <small>{{ enrollment.user?.email_address || 'E-mail não informado' }}</small>
+                      </span>
+                      <em>{{ enrollmentStateLabel(enrollment.status) }}</em>
+                    </article>
+                  }
+                </div>
+                @if (enrollmentsNextCursor()) {
+                  <button class="text-button" type="button" [disabled]="enrollmentsLoading()" (click)="loadMoreEnrollments()">
+                    {{ enrollmentsLoading() ? 'Carregando...' : 'Carregar mais inscritos' }}
+                  </button>
+                }
+              } @else {
+                <p class="empty-inline">Ainda não há inscritos neste evento.</p>
+              }
+            </section>
+          }
+
+          <div class="review-actions">
+            <button class="button button--secondary" type="button" (click)="selectStep('schedule')">Voltar à programação</button>
+            <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="completeCreation()">
+              {{ creationFlow() && !creationCompleted() ? 'Concluir criação' : 'Salvar alterações' }}
+            </button>
+          </div>
+        </section>
+      }
     }
+  } @else {
+    <div class="editor-card loading-card" role="status">Carregando informações do evento...</div>
+  }
+
+  @if (showOperationFeedback() || errorMessage() || successMessage()) {
+    <aside class="feedback-viewport" aria-live="polite" aria-atomic="true">
+      @if (showOperationFeedback()) {
+        <div class="feedback-toast feedback-toast--loading" role="status"><span class="spinner"></span>{{ operationLabel() }}</div>
+      }
+      @if (errorMessage()) {
+        <div class="feedback-toast feedback-toast--error" role="alert"><span class="feedback-icon">!</span><span>{{ errorMessage() }}</span><button type="button" (click)="dismissFeedback()" aria-label="Fechar mensagem">×</button></div>
+      }
+      @if (successMessage()) {
+        <div class="feedback-toast feedback-toast--success" role="status"><span class="feedback-icon">✓</span><span>{{ successMessage() }}</span><button type="button" (click)="dismissFeedback()" aria-label="Fechar mensagem">×</button></div>
+      }
+    </aside>
   }
 </main>

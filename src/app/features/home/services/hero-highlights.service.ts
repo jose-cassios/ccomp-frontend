@@ -30,7 +30,7 @@ export class HeroHighlightsService {
           source_id: event.id,
           title: event.title,
           summary: event.description,
-          image_url: null,
+          image_url: event.cover_image_url ?? null,
           label: 'Evento em destaque',
           link: `/eventos/${event.id}`,
         })),

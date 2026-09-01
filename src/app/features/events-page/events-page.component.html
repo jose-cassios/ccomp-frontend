@@ -1,10 +1,6 @@
 <main class="events-page">
   <header class="page-header">
-    <div>
-      <span>Agenda do curso</span>
-      <h1>Eventos</h1>
-      <p>Programação acadêmica, encontros e atividades da comunidade de Computação.</p>
-    </div>
+    <h1>Eventos</h1>
     <div class="page-actions">
       <button type="button" (click)="openCalendar()">Ver calendário</button>
       @if (canManageEvents()) {
@@ -19,26 +15,40 @@
 
   @if (loading()) {
     <p class="empty-state" role="status">Carregando eventos...</p>
-  } @else if (featuredEvent(); as featured) {
-    <app-evento-destaque [evento]="featured" (selected)="openEvent($event)" />
-    <app-proximos-eventos
-      [eventos]="remainingEvents()"
-      [selectedCategory]="selectedCategory()"
-      [selectedFormat]="selectedFormat()"
-      [selectedTiming]="selectedTiming()"
-      [hasMore]="nextCursor() !== null"
-      [loadingMore]="loadingMore()"
-      (selected)="openEvent($event)"
-      (categoryChanged)="changeCategory($event)"
-      (formatChanged)="changeFormat($event)"
-      (timingChanged)="changeTiming($event)"
-      (loadMore)="loadMore()"
-    />
-  } @else if (!errorMessage()) {
-    <section class="empty-state">
-      <h2>Nenhum evento disponível</h2>
-      <p>Não há eventos publicados para este filtro no momento.</p>
-    </section>
+  } @else {
+    @if (canManageEvents()) {
+      @if (myEventsLoading()) {
+        <p class="empty-state" role="status">Carregando seus eventos...</p>
+      } @else if (myEventsError()) {
+        <p class="notice notice--error" role="alert">{{ myEventsError() }}</p>
+      } @else {
+        <app-proximos-eventos
+          [eventos]="myEvents()"
+          heading="Seus eventos"
+          [showFilters]="false"
+          [manageMode]="true"
+          [compactMode]="true"
+          [hasMore]="myEventsNextCursor() !== null"
+          [loadingMore]="myEventsLoadingMore()"
+          (selected)="openDraft($event)"
+          (loadMore)="loadMoreMyEvents()"
+        />
+      }
+    }
+
+    @if (!errorMessage()) {
+      <app-proximos-eventos
+        [eventos]="events()"
+        [selectedCategory]="selectedCategory()"
+        [selectedFormat]="selectedFormat()"
+        [hasMore]="nextCursor() !== null"
+        [loadingMore]="loadingMore()"
+        (selected)="openEvent($event)"
+        (categoryChanged)="changeCategory($event)"
+        (formatChanged)="changeFormat($event)"
+        (loadMore)="loadMore()"
+      />
+    }
   }
 
   @if (calendarOpen()) {
@@ -69,6 +79,13 @@
                 <time [attr.datetime]="event.start_date">
                   {{ event.start_date | date: 'dd/MM' }}
                 </time>
+                <span class="calendar-cover" aria-hidden="true">
+                  @if (event.cover_image_url; as coverImageUrl) {
+                    <img [src]="coverImageUrl" [alt]="''" />
+                  } @else {
+                    {{ event.title.slice(0, 1).toUpperCase() }}
+                  }
+                </span>
                 <span>
                   <strong>{{ event.title }}</strong>
                   {{ event.start_date | date: 'HH:mm' }} · {{ formatLabel(event.format) }}
@@ -83,36 +100,4 @@
     </div>
   }
 
-  @if (canManageEvents()) {
-    <section class="management" aria-labelledby="created-events-title">
-      <div class="management__heading">
-        <div>
-          <span>Área editorial</span>
-          <h2 id="created-events-title">Eventos que criei</h2>
-        </div>
-        <a routerLink="/eventos/novo">Criar evento</a>
-      </div>
-
-      @if (createdEventsLoading()) {
-        <p>Carregando os seus eventos...</p>
-      } @else if (createdEventsError()) {
-        <p class="notice notice--error" role="alert">{{ createdEventsError() }}</p>
-      } @else if (createdEvents().length) {
-        <div class="editable-list">
-          @for (event of createdEvents(); track event.id) {
-            <article>
-              <div>
-                <span>Evento criado por você</span>
-                <h3>{{ event.title }}</h3>
-                <p>{{ event.start_date | date: 'dd/MM/yyyy, HH:mm' }}</p>
-              </div>
-              <a [routerLink]="['/eventos', event.id, 'editar']">Editar →</a>
-            </article>
-          }
-        </div>
-      } @else {
-        <p>Você ainda não criou eventos.</p>
-      }
-    </section>
-  }
 </main>

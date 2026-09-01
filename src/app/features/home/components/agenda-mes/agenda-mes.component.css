@@ -33,6 +33,7 @@
 
 .agenda-date .month{font-size: 0.8rem; font-weight:bold;}
 .agenda-date .day{font-size: 1.5rem; font-weight:700;}
+.agenda-cover { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: #edf3ee; }
 
 .agenda-info .agenda-tag {
   font-size: 0.7rem;

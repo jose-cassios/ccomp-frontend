@@ -4,23 +4,48 @@ import { of } from 'rxjs';
 
 import { AuthService } from '../auth/services/auth.service';
 import { EventsPageComponent } from './events-page.component';
+import { EventListItem } from './models/event.model';
 import { EventsService } from './services/events.service';
 
 describe('EventsPageComponent', () => {
   let component: EventsPageComponent;
   let fixture: ComponentFixture<EventsPageComponent>;
+  const catalog: EventListItem[] = [
+    {
+      id: 1,
+      title: 'Evento passado',
+      slug: 'evento-passado',
+      description: null,
+      cover_image_url: 'https://example.com/passado.jpg',
+      category: 'ACADEMIC_EDUCATIONAL',
+      format: 'IN_PERSON',
+      start_date: '2025-01-10T08:00:00',
+      end_date: '2025-01-10T12:00:00',
+    },
+    {
+      id: 2,
+      title: 'Evento futuro',
+      slug: 'evento-futuro',
+      description: null,
+      category: 'ACADEMIC_EDUCATIONAL',
+      format: 'ONLINE',
+      start_date: '2027-01-10T08:00:00',
+      end_date: '2027-01-10T12:00:00',
+    },
+  ];
+  const eventsService = {
+    search: vi.fn(() => of({ content: catalog, next_cursor: null, previous_cursor: null })),
+  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [EventsPageComponent],
       providers: [
         provideRouter([]),
-        { provide: AuthService, useValue: { hasAnyRole: () => false } },
+        { provide: AuthService, useValue: { hasAnyRole: () => false, currentUserState: () => null } },
         {
           provide: EventsService,
-          useValue: {
-            search: () => of({ content: [], next_cursor: null, previous_cursor: null }),
-          },
+          useValue: eventsService,
         },
       ],
     })
@@ -34,6 +59,15 @@ describe('EventsPageComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should keep every returned event in the public card catalog', () => {
+    expect(eventsService.search).toHaveBeenCalledWith({});
+    expect(component.events()).toEqual(catalog);
+    expect(fixture.nativeElement.textContent).toContain('Evento passado');
+    expect(fixture.nativeElement.textContent).toContain('Evento futuro');
+    expect(fixture.nativeElement.querySelectorAll('.event-card')).toHaveLength(2);
+    expect(fixture.nativeElement.querySelector('app-evento-destaque')).toBeNull();
   });
 
   it('should not show the public event proposal call to action', () => {
