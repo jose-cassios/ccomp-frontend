@@ -84,6 +84,8 @@ describe('EventEditorComponent', () => {
     });
     expect(component.event()?.id).toBe(createdEvent.id);
     expect(component.activeStep()).toBe('presentation');
+    expect(component.editorAccessResolved()).toBe(true);
+    expect(component.canEditEvent()).toBe(true);
     expect(component.successMessage()).toBeNull();
     expect(eventsService.addEditor).not.toHaveBeenCalled();
   });

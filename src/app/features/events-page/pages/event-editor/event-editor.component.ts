@@ -212,8 +212,12 @@ export class EventEditorComponent implements OnInit {
         this.applyEvent(savedEvent, this.presentationForm.getRawValue());
 
         if (!currentEvent) {
-          this.editingExisting.set(true);
           this.ownedEventIds.update((ids) => new Set(ids).add(savedEvent.id));
+          // This event has just been created by the authenticated user. There is no
+          // editor-list request in this transition, so resolve the edit access here
+          // instead of leaving the next step in its loading state.
+          this.editorAccessResolved.set(true);
+          this.editingExisting.set(true);
           this.location.replaceState(`/eventos/${savedEvent.id}/editar`);
           this.advanceTo('presentation');
           return;
