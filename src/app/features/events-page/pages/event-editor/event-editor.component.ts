@@ -7,6 +7,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, finalize, map, Observable, of, switchMap } from 'rxjs';
 import { ADMINISTRATION_ROLES, CONTENT_MANAGEMENT_ROLES } from '../../../auth/config/auth.config';
 import { AuthService } from '../../../auth/services/auth.service';
+import { apiErrorMessage } from '../../../../core/api/api-error';
 import {
   ActivityPayload,
   ApiMessage,
@@ -21,6 +22,7 @@ import {
   EventFormat,
   UpdateEventPayload,
   eventExecutionStatusLabel,
+  eventEditorStatusLabel,
   eventEnrollmentStateLabel,
   eventPublicationStatusLabel,
   apiMessage,
@@ -140,6 +142,7 @@ export class EventEditorComponent implements OnInit {
   readonly enrollmentStateLabel = eventEnrollmentStateLabel;
   readonly publicationStatusLabel = eventPublicationStatusLabel;
   readonly executionStatusLabel = eventExecutionStatusLabel;
+  readonly editorStatusLabel = eventEditorStatusLabel;
   readonly operationLabel = computed(() => {
     switch (this.operation()) {
       case 'loading': return 'Carregando evento...';
@@ -471,7 +474,7 @@ export class EventEditorComponent implements OnInit {
       switchMap((response) => this.eventsService.getEditors(currentEvent.id).pipe(
         map((page) => ({
           response,
-          editors: page.content.filter((editor) => editor.active),
+          editors: page.content.filter((editor) => editor.status !== 'REVOKED'),
         })),
         // A API já confirmou a inclusão; uma falha pontual na recarga não deve
         // transformar essa confirmação em uma falsa falha para o organizador.
@@ -549,7 +552,7 @@ export class EventEditorComponent implements OnInit {
     this.editorAccessResolved.set(false);
     this.eventsService.getEditors(eventId).subscribe({
       next: (page) => {
-        this.editors.set(page.content.filter((editor) => editor.active));
+        this.editors.set(page.content.filter((editor) => editor.status !== 'REVOKED'));
         this.editorAccessResolved.set(true);
       },
       error: () => {
@@ -728,8 +731,8 @@ export class EventEditorComponent implements OnInit {
 
   private getErrorMessage(error: unknown, fallback: string): string {
     if (error instanceof HttpErrorResponse) {
-      const message = error.error?.message ?? error.error?.response;
-      if (typeof message === 'string' && message.trim()) return message;
+      const message = apiErrorMessage(error, '');
+      if (message) return message;
       if (error.status === 403) return 'Você não tem permissão para realizar esta operação.';
       if (error.status === 404) return 'O recurso solicitado não foi encontrado.';
     }

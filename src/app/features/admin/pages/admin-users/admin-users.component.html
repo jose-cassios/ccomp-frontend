@@ -166,6 +166,7 @@
                       <span class="sr-only">Papel para {{ user.name }}</span>
                       <select
                         [ngModel]="selectedRole(user)"
+                        [disabled]="isBusy() || user.id === currentUser()?.id"
                         (ngModelChange)="selectRole(user.id, $event)"
                       >
                         @for (role of roleOptions; track role.value) {
@@ -176,7 +177,7 @@
                     <button
                       type="button"
                       class="assign-button"
-                      [disabled]="isBusy() || selectedRole(user) === user.role"
+                      [disabled]="isBusy() || user.id === currentUser()?.id || selectedRole(user) === user.role"
                       (click)="changeRole(user)"
                     >
                       {{ pendingUserId() === user.id ? 'Processando...' : 'Salvar papel' }}

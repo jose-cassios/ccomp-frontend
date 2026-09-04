@@ -1,7 +1,8 @@
 import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin } from 'rxjs';
+import { finalize, forkJoin, map, switchMap } from 'rxjs';
+import { apiErrorMessage } from '../../../../core/api/api-error';
 import { AuthService } from '../../../auth/services/auth.service';
 import {
   AdminAuditAction,
@@ -173,20 +174,30 @@ export class AdminUsersComponent implements OnInit {
     this.pendingUserId.set(user.id);
     this.errorMessage.set(null);
     this.successMessage.set(null);
-    this.usersService.assignRole(user.id, role).pipe(finalize(() => this.pendingUserId.set(null))).subscribe({
-      next: () => {
+    this.usersService.assignRole(user.id, role).pipe(
+      switchMap((response) => this.usersService.getById(user.id).pipe(
+        map((updatedUser) => ({ response, updatedUser })),
+      )),
+      finalize(() => this.pendingUserId.set(null)),
+    ).subscribe({
+      next: ({ updatedUser }) => {
         this.users.update((users) => users.map((item) =>
-          item.id === user.id ? { ...item, role } : item,
+          item.id === user.id ? updatedUser : item,
         ));
-        if (user.id === this.currentUser()?.id) {
-          this.currentUser.update((currentUser) => currentUser ? { ...currentUser, role } : currentUser);
+        this.selectedRoles.update((roles) => ({ ...roles, [user.id]: updatedUser.role }));
+        if (updatedUser.role !== role) {
+          this.errorMessage.set('A API respondeu à alteração, mas não confirmou o novo papel na consulta do usuário.');
+          return;
         }
         this.successMessage.set(`Atribuído o papel ${this.roleLabel(role)} para ${user.name}.`);
         this.recentOperations.update((operations) => [
           { userName: user.name, role, at: new Date() }, ...operations,
         ].slice(0, 8));
       },
-      error: () => this.errorMessage.set('Não foi possível atribuir este papel. Tente novamente.'),
+      error: (error: unknown) => this.errorMessage.set(apiErrorMessage(
+        error,
+        'Não foi possível atribuir este papel. Tente novamente.',
+      )),
     });
   }
 

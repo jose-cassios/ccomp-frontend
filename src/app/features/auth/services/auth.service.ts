@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { Observable, catchError, finalize, map, of, switchMap, tap, throwError } from 'rxjs';
 import { ForgotPasswordRequest, LoginRequest, RegisterRequest, ResetPasswordRequest } from '../models/auth-requests.model';
-import { AuthResponse } from '../models/auth-response.model';
+import { AuthResponse, AuthMessageResponse } from '../models/auth-response.model';
 import { User } from '../models/user.model';
 import { ApiService } from '../../../core/api/api.service';
 import { AUTH_CONFIG } from '../config/auth.config';
@@ -16,6 +16,7 @@ interface CurrentUserResponse {
   id: string;
   name: string;
   email_address: string;
+  role?: string;
 }
 
 @Injectable({
@@ -44,9 +45,17 @@ export class AuthService {
     if (token && !this.isExpired(token)) {
       this.currentUser.set(this.getUserFromStorage() ?? this.getUserFromToken(token));
       this.isAuthenticated.set(true);
-      if (!this.currentUser()?.name) {
-        this.loadCurrentUser().subscribe({ error: () => undefined });
-      }
+      // Besides profile data, /users/me reflects role changes already persisted in
+      // the database even while the current access token still contains an old role.
+      this.loadCurrentUser().subscribe({ error: () => undefined });
+      return;
+    }
+
+    if (token && this.getRefreshToken()) {
+      this.refreshToken().pipe(
+        switchMap(() => this.loadCurrentUser()),
+        catchError(() => of(null)),
+      ).subscribe();
       return;
     }
 
@@ -54,8 +63,8 @@ export class AuthService {
   }
 
   // /api/auth/sign-up
-  register(data: RegisterRequest): Observable<string> {
-    return this.api.post<string>('/auth/sign-up', {
+  register(data: RegisterRequest): Observable<AuthMessageResponse> {
+    return this.api.post<AuthMessageResponse>('/auth/sign-up', {
       name: data.name,
       email: data.email,
       password: data.password,
@@ -165,13 +174,19 @@ export class AuthService {
 
   loadCurrentUser(): Observable<User> {
     return this.api.get<CurrentUserResponse>('/users/me').pipe(
-      map((response) => ({
-        ...this.currentUser(),
-        id: response.id,
-        name: response.name,
-        email: response.email_address,
-        email_address: response.email_address,
-      })),
+      map((response) => {
+        const currentUser = this.currentUser();
+        const role = response.role ? this.normalizeRole(response.role) : undefined;
+        return {
+          ...currentUser,
+          id: response.id,
+          name: response.name,
+          email: response.email_address,
+          email_address: response.email_address,
+          role: role ?? currentUser?.role,
+          roles: role ? [role] : currentUser?.roles,
+        };
+      }),
       tap((user) => this.persistUser(user)),
     );
   }
@@ -183,7 +198,13 @@ export class AuthService {
     }
 
     const refreshToken = response.refreshToken ?? response.refresh_token;
-    const user = response.user ?? this.getUserFromToken(token) ?? this.currentUser();
+    const storedUser = this.currentUser();
+    const tokenUser = this.getUserFromToken(token);
+    const user = response.user
+      ? { ...storedUser, ...tokenUser, ...response.user }
+      : tokenUser
+        ? { ...storedUser, ...tokenUser }
+        : storedUser;
 
     if (this.isBrowser()) {
       localStorage.setItem(AUTH_CONFIG.TOKEN_KEY, token);

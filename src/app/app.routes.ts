@@ -42,6 +42,14 @@ export const routes: Routes = [
           data: { roles: CONTENT_MANAGEMENT_ROLES },
         },
         {
+          path: 'eventos/convite-editor',
+          loadComponent: () =>
+            import('./features/events-page/pages/event-editor-invitation/event-editor-invitation.component').then(
+              (module) => module.EventEditorInvitationComponent,
+            ),
+          canActivate: [authGuard],
+        },
+        {
           path: 'eventos/:id/editar',
           loadComponent: () =>
             import('./features/events-page/pages/event-editor/event-editor.component').then(
@@ -87,9 +95,9 @@ export const routes: Routes = [
             import('./features/news-page/pages/news-editor/news-editor.component').then(
               (module) => module.NewsEditorComponent,
             ),
-          canActivate: [authGuard, roleGuard],
+          // A API valida se a pessoa é autora ou editora desta notícia.
+          canActivate: [authGuard],
           canDeactivate: [pendingNewsChangesGuard],
-          data: { roles: NEWS_MANAGEMENT_ROLES },
         },
         { path: 'sobre/apresentacao', component: ApresentacaoComponent },
         { path: 'noticias', component: NewsPageComponent },

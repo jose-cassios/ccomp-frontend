@@ -29,7 +29,7 @@ export class HeroHighlightsService {
           source_type: 'EVENT' as const,
           source_id: event.id,
           title: event.title,
-          summary: event.description,
+          summary: event.summary ?? event.description,
           image_url: event.cover_image_url ?? null,
           label: 'Evento em destaque',
           link: `/eventos/${event.id}`,

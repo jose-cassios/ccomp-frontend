@@ -269,7 +269,7 @@
                 <span class="member-avatar">{{ editor.name.charAt(0) }}</span>
                 <span>
                   <strong>{{ editor.name }}</strong>
-                  <small>{{ editor.email_address }}</small>
+                  <small>{{ editor.email_address }} · {{ editorStatusLabel(editor.status) }}</small>
                 </span>
                 @if (canManageTeam()) {
                   <button class="text-button text-button--danger" type="button" [disabled]="isBusy()" (click)="removeEditor(editor)">Remover</button>

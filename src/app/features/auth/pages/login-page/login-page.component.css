@@ -55,3 +55,13 @@ mat-card-actions {
 .register-link:hover {
   color: var(--brand-500) !important;
 }
+
+.auth-error {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  color: #9f1d35;
+  background: #fff0f2;
+  border: 1px solid #f4bdc6;
+  border-radius: 0.5rem;
+  line-height: 1.45;
+}

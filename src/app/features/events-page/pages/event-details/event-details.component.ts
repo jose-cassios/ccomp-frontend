@@ -14,6 +14,7 @@ import {
   eventPublicationStatusLabel,
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
+import { apiErrorMessage } from '../../../../core/api/api-error';
 
 @Component({
   selector: 'app-event-details',
@@ -125,8 +126,8 @@ export class EventDetailsComponent implements OnInit {
 
   private getErrorMessage(error: unknown, fallback = 'Não foi possível carregar este evento.'): string {
     if (error instanceof HttpErrorResponse) {
-      const message = error.error?.message ?? error.error?.response;
-      if (typeof message === 'string' && message.trim()) return message;
+      const message = apiErrorMessage(error, '');
+      if (message) return message;
       if (error.status === 403) return 'Você não tem permissão para visualizar este evento.';
       if (error.status === 404) return 'O evento solicitado não foi encontrado.';
     }

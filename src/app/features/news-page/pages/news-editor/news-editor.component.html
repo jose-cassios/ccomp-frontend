@@ -23,7 +23,7 @@
       <button type="button" class="button button--secondary mobile-view-button" [class.active]="activeView() === 'preview'" (click)="setView('preview')">
         Pré-visualizar
       </button>
-      @if (news()) {
+      @if (news() && isAuthor()) {
         <button type="button" class="button button--danger" [disabled]="isBusy()" (click)="deleteNews()">
           {{ operation() === 'deleting' ? 'Excluindo...' : 'Excluir' }}
         </button>
@@ -143,15 +143,17 @@
           <span class="content-help">Editores podem ajudar a manter este conteúdo.</span>
         </div>
 
-        <form class="add-editor-form" [formGroup]="editorForm" (ngSubmit)="addEditor()">
-          <label class="field">
-            <span>E-mail do novo editor</span>
-            <input type="email" formControlName="email" placeholder="editor@exemplo.com" />
-          </label>
-          <button type="submit" class="button button--primary" [disabled]="editorForm.invalid || editorsLoading()">
-            Adicionar editor
-          </button>
-        </form>
+        @if (isAuthor()) {
+          <form class="add-editor-form" [formGroup]="editorForm" (ngSubmit)="addEditor()">
+            <label class="field">
+              <span>E-mail do novo editor</span>
+              <input type="email" formControlName="email" placeholder="editor@exemplo.com" />
+            </label>
+            <button type="submit" class="button button--primary" [disabled]="editorForm.invalid || editorsLoading()">
+              Adicionar editor
+            </button>
+          </form>
+        }
 
         @if (editorsLoading() && !editors().length) {
           <div class="editors-empty" role="status">Carregando editores...</div>
@@ -164,9 +166,11 @@
                   <strong>{{ editor.name }}</strong>
                   <small>{{ editor.email_address }}</small>
                 </span>
-                <button type="button" class="remove-editor" [disabled]="editorsLoading()" (click)="removeEditor(editor)">
-                  Remover
-                </button>
+                @if (isAuthor()) {
+                  <button type="button" class="remove-editor" [disabled]="editorsLoading()" (click)="removeEditor(editor)">
+                    Remover
+                  </button>
+                }
               </article>
             }
           </div>

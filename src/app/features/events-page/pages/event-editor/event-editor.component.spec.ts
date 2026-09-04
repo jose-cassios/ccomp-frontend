@@ -224,6 +224,7 @@ describe('EventEditorComponent', () => {
       user_id: 'editor-user',
       name: 'Nova Editora',
       email_address: 'editora@ifma.edu.br',
+      status: 'ACTIVE' as const,
       active: true,
     };
     eventsService.getEditors.mockReturnValueOnce(of({ content: [editor], next_cursor: null }));

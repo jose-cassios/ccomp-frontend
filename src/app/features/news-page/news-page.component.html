@@ -50,6 +50,16 @@
               <app-news-card [news]="noticia" [canEdit]="canEditNews(noticia)"></app-news-card>
             }
           </div>
+          @if (nextCursor() && !hasSearchQuery()) {
+            <button
+              type="button"
+              class="load-more-news"
+              [disabled]="isLoadingMore()"
+              (click)="loadNews(true)"
+            >
+              {{ isLoadingMore() ? 'Carregando...' : 'Carregar mais notícias' }}
+            </button>
+          }
         } @else {
           <div class="empty-state">
             @if (hasSearchQuery()) {
@@ -63,14 +73,16 @@
         <p class="loading-message">Carregando notícias...</p>
       }
 
-      @if (canManageNews()) {
+      @if (showEditorialArea()) {
         <section class="drafts-section" aria-labelledby="drafts-title">
           <div class="drafts-heading">
             <div>
               <span>Área editorial</span>
-              <h2 id="drafts-title">Meus rascunhos</h2>
+              <h2 id="drafts-title">Notícias em edição</h2>
             </div>
-            <a routerLink="/noticias/nova">Criar novo</a>
+            @if (canManageNews()) {
+              <a routerLink="/noticias/nova">Criar novo</a>
+            }
           </div>
 
           @if (draftsLoading()) {
@@ -92,13 +104,15 @@
                   </div>
                   <div class="draft-actions">
                     <a [routerLink]="['/noticias', draft.id, 'editar']">Continuar edição →</a>
-                    <button
-                      type="button"
-                      [disabled]="deletingNewsId() !== null"
-                      (click)="deleteDraft(draft)"
-                    >
-                      {{ deletingNewsId() === draft.id ? 'Excluindo...' : 'Excluir' }}
-                    </button>
+                    @if (canDeleteDraft(draft)) {
+                      <button
+                        type="button"
+                        [disabled]="deletingNewsId() !== null"
+                        (click)="deleteDraft(draft)"
+                      >
+                        {{ deletingNewsId() === draft.id ? 'Excluindo...' : 'Excluir' }}
+                      </button>
+                    }
                   </div>
                 </article>
               }

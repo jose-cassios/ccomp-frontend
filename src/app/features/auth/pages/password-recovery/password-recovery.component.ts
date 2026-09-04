@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
+import { apiErrorMessage } from '../../../../core/api/api-error';
 
 @Component({
   selector: 'app-password-recovery',
@@ -52,7 +53,7 @@ export class PasswordRecoveryComponent {
           this.message.set('Senha redefinida com sucesso. Agora você já pode entrar.');
           setTimeout(() => this.router.navigate(['/login']), 1200);
         },
-        error: (error: { error?: { message?: string } }) => this.errorMessage.set(error.error?.message || 'Não foi possível redefinir a senha. O link pode ter expirado.'),
+        error: (error: unknown) => this.errorMessage.set(apiErrorMessage(error, 'Não foi possível redefinir a senha. O link pode ter expirado.')),
       });
   }
 
@@ -63,7 +64,7 @@ export class PasswordRecoveryComponent {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => this.message.set('Se houver uma conta com este e-mail, você receberá as instruções para redefinir sua senha.'),
-        error: (error: { error?: { message?: string } }) => this.errorMessage.set(error.error?.message || 'Não foi possível solicitar a redefinição.'),
+        error: (error: unknown) => this.errorMessage.set(apiErrorMessage(error, 'Não foi possível solicitar a redefinição.')),
       });
   }
 }

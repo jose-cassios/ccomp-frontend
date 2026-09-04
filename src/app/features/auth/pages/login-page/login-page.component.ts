@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { LoginFormComponent } from './components/login-form/login-form.component';
+import { apiErrorMessage } from '../../../../core/api/api-error';
 
 @Component({
   selector: 'app-login-page',
@@ -28,6 +29,8 @@ import { LoginFormComponent } from './components/login-form/login-form.component
   styleUrls: ['./login-page.component.css']
 })
 export class LoginPageComponent {
+  readonly errorMessage = signal<string | null>(null);
+
   constructor(
     private authService: AuthService,
     private router: Router,
@@ -35,14 +38,16 @@ export class LoginPageComponent {
   ) {}
 
   onLogin(credentials: { email: string; password: string }): void {
+    this.errorMessage.set(null);
     this.authService.login(credentials).subscribe({
       next: () => {
         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
         this.router.navigateByUrl(returnUrl?.startsWith('/') ? returnUrl : '/');
       },
-      error: (error) => {
-        console.error('Login failed:', error);
-      }
+      error: (error: unknown) => this.errorMessage.set(apiErrorMessage(
+        error,
+        'Não foi possível entrar. Confira seu e-mail e sua senha.',
+      )),
     });
   }
 
