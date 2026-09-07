@@ -10,6 +10,8 @@ describe('AdminUsersService', () => {
     post: vi.fn(
       (_endpoint: string, _body: unknown, _options?: { params?: HttpParams }) => of({}),
     ),
+    put: vi.fn((_endpoint: string, _body: unknown) => of({})),
+    patch: vi.fn((_endpoint: string, _body: unknown) => of({})),
   };
   let service: AdminUsersService;
 
@@ -34,14 +36,14 @@ describe('AdminUsersService', () => {
     expect(params?.get('pageSize')).toBe('25');
   });
 
-  it('should use the administrative prefix for role and account operations', () => {
+  it('should use the administrative verbs and prefix for account operations', () => {
     service.assignRole('user-id', 'STAFF').subscribe();
     service.block('user-id', 'Violação dos termos').subscribe();
     service.unlock('user-id', 'Situação regularizada').subscribe();
 
-    expect(api.post).toHaveBeenCalledWith('/admin/users/user-id/roles/STAFF', null);
-    expect(api.post).toHaveBeenCalledWith('/admin/users/user-id/block', { reason: 'Violação dos termos' });
-    expect(api.post).toHaveBeenCalledWith('/admin/users/user-id/unlock', { reason: 'Situação regularizada' });
+    expect(api.put).toHaveBeenCalledWith('/admin/users/user-id/roles/STAFF', null);
+    expect(api.patch).toHaveBeenCalledWith('/admin/users/user-id/block', { reason: 'Violação dos termos' });
+    expect(api.patch).toHaveBeenCalledWith('/admin/users/user-id/unlock', { reason: 'Situação regularizada' });
   });
 
   it('should look up a user by id or exact email', () => {

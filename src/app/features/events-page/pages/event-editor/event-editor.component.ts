@@ -4,11 +4,13 @@ import { Component, HostListener, computed, inject, OnInit, signal } from '@angu
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { finalize, Observable, of, switchMap } from 'rxjs';
+import { catchError, finalize, map, Observable, of, switchMap } from 'rxjs';
 import { ADMINISTRATION_ROLES, CONTENT_MANAGEMENT_ROLES } from '../../../auth/config/auth.config';
 import { AuthService } from '../../../auth/services/auth.service';
+import { apiErrorMessage } from '../../../../core/api/api-error';
 import {
   ActivityPayload,
+  ApiMessage,
   CreateEventPayload,
   EVENT_CATEGORY_OPTIONS,
   EVENT_FORMAT_OPTIONS,
@@ -20,8 +22,10 @@ import {
   EventFormat,
   UpdateEventPayload,
   eventExecutionStatusLabel,
+  eventEditorStatusLabel,
   eventEnrollmentStateLabel,
   eventPublicationStatusLabel,
+  apiMessage,
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 
@@ -83,11 +87,13 @@ export class EventEditorComponent implements OnInit {
   readonly activities = signal<EventActivity[]>([]);
   readonly editingActivityId = signal<number | null>(null);
   readonly editors = signal<EventEditor[]>([]);
+  readonly editorAccessResolved = signal(false);
   readonly enrollments = signal<EventEnrollment[]>([]);
   readonly enrollmentsNextCursor = signal<string | null>(null);
   readonly enrollmentsLoading = signal(false);
   readonly enrollmentsError = signal<string | null>(null);
   readonly ownedEventIds = signal<ReadonlySet<number>>(new Set());
+  readonly editableEventIds = signal<ReadonlySet<number>>(new Set());
   readonly operation = signal<EditorOperation>('idle');
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
@@ -104,11 +110,14 @@ export class EventEditorComponent implements OnInit {
       || Boolean(currentEvent?.owner_id && currentUserId && currentEvent.owner_id === currentUserId);
   });
   readonly isAssignedEditor = computed(() => {
+    const currentEvent = this.event();
     const currentUserId = this.authService.currentUserState()?.id;
-    return Boolean(currentUserId && this.editors().some((editor) =>
-      editor.active && editor.user_id === currentUserId,
-    ));
+    return Boolean(currentEvent && this.editableEventIds().has(currentEvent.id))
+      || Boolean(currentUserId && this.editors().some((editor) =>
+        editor.active && editor.user_id === currentUserId,
+      ));
   });
+  readonly canEditEvent = computed(() => this.isAdmin() || this.isOwner() || this.isAssignedEditor());
   readonly canDelete = computed(() => this.isAdmin() || this.isOwner());
   readonly canPublish = computed(() => {
     const currentEvent = this.event();
@@ -136,6 +145,7 @@ export class EventEditorComponent implements OnInit {
   readonly enrollmentStateLabel = eventEnrollmentStateLabel;
   readonly publicationStatusLabel = eventPublicationStatusLabel;
   readonly executionStatusLabel = eventExecutionStatusLabel;
+  readonly editorStatusLabel = eventEditorStatusLabel;
   readonly operationLabel = computed(() => {
     switch (this.operation()) {
       case 'loading': return 'Carregando evento...';
@@ -205,8 +215,12 @@ export class EventEditorComponent implements OnInit {
         this.applyEvent(savedEvent, this.presentationForm.getRawValue());
 
         if (!currentEvent) {
-          this.editingExisting.set(true);
           this.ownedEventIds.update((ids) => new Set(ids).add(savedEvent.id));
+          // This event has just been created by the authenticated user. There is no
+          // editor-list request in this transition, so resolve the edit access here
+          // instead of leaving the next step in its loading state.
+          this.editorAccessResolved.set(true);
+          this.editingExisting.set(true);
           this.location.replaceState(`/eventos/${savedEvent.id}/editar`);
           this.advanceTo('presentation');
           return;
@@ -464,11 +478,26 @@ export class EventEditorComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
     this.eventsService.addEditor(currentEvent.id, email).pipe(
+      switchMap((response) => this.eventsService.getEditors(currentEvent.id).pipe(
+        map((page) => ({
+          response,
+          editors: page.content.filter((editor) => editor.status !== 'REVOKED'),
+        })),
+        // A API já confirmou a inclusão; uma falha pontual na recarga não deve
+        // transformar essa confirmação em uma falsa falha para o organizador.
+        catchError(() => of({ response, editors: null as EventEditor[] | null })),
+      )),
       finalize(() => this.operation.set('idle')),
     ).subscribe({
-      next: () => {
+      next: ({ response, editors }: { response: ApiMessage; editors: EventEditor[] | null }) => {
         this.editorForm.reset({ email: '' });
-        this.loadEditors(currentEvent.id);
+        if (editors !== null) this.editors.set(editors);
+
+        const message = apiMessage(response, 'Colaborador adicionado à equipe com sucesso.');
+        this.successMessage.set(editors === null
+          ? `${message} A lista da equipe não pôde ser atualizada agora; recarregue a página para conferi-la.`
+          : message,
+        );
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível adicionar o editor.'));
@@ -517,6 +546,7 @@ export class EventEditorComponent implements OnInit {
       next: (event) => {
         this.applyEvent(event);
         this.loadActivities(event.id);
+        this.loadEditorAccess();
         this.loadEditors(event.id);
         this.loadEnrollments(event.id);
       },
@@ -528,8 +558,23 @@ export class EventEditorComponent implements OnInit {
 
   private loadEditors(eventId: number): void {
     this.eventsService.getEditors(eventId).subscribe({
-      next: (page) => this.editors.set(page.content.filter((editor) => editor.active)),
-      error: () => this.editors.set([]),
+      next: (page) => {
+        this.editors.set(page.content.filter((editor) => editor.status !== 'REVOKED'));
+      },
+      error: () => {
+        this.editors.set([]);
+      },
+    });
+  }
+
+  private loadEditorAccess(): void {
+    this.editorAccessResolved.set(false);
+    this.eventsService.getEditableEvents(undefined, 50).subscribe({
+      next: (page) => {
+        this.editableEventIds.set(new Set(page.content.map((event) => event.id)));
+        this.editorAccessResolved.set(true);
+      },
+      error: () => this.editorAccessResolved.set(true),
     });
   }
 
@@ -702,8 +747,8 @@ export class EventEditorComponent implements OnInit {
 
   private getErrorMessage(error: unknown, fallback: string): string {
     if (error instanceof HttpErrorResponse) {
-      const message = error.error?.message ?? error.error?.response;
-      if (typeof message === 'string' && message.trim()) return message;
+      const message = apiErrorMessage(error, '');
+      if (message) return message;
       if (error.status === 403) return 'Você não tem permissão para realizar esta operação.';
       if (error.status === 404) return 'O recurso solicitado não foi encontrado.';
     }

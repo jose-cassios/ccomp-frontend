@@ -1,6 +1,6 @@
 :host {
   display: block;
-  background: #f8fbf9;
+  background: var(--surface-page);
 }
 
 .news-page-section {
@@ -26,7 +26,7 @@
   justify-content: space-between;
   gap: 24px;
   padding-bottom: 24px;
-  border-bottom: 1px solid #dce8df;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .eyebrow,
@@ -63,12 +63,11 @@
   font-size: 0.9rem;
   font-weight: 700;
   text-decoration: none;
-  transition: background 0.2s, transform 0.2s;
+  transition: background 0.2s;
 }
 
 .btn-create-news:hover {
   background: var(--brand-700);
-  transform: translateY(-1px);
 }
 
 .btn-icon {
@@ -136,7 +135,7 @@
 }
 
 .clear-search:hover {
-  background: var(--brand-100);
+  background: var(--surface-subtle);
 }
 
 .results-heading {
@@ -175,7 +174,7 @@
   padding: 24px;
   border: 1px solid var(--border-primary);
   border-radius: 14px;
-  background: #f8fbf9;
+  background: #f2f4f3;
 }
 
 .drafts-heading {
@@ -243,6 +242,25 @@
 .drafts-feedback--success {
   margin-bottom: 12px;
   color: #166534;
+}
+
+.load-more-news {
+  display: block;
+  min-height: 44px;
+  margin: 20px auto 0;
+  padding: 0 20px;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--brand-700);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.load-more-news:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .draft-actions {

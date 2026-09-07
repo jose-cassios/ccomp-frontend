@@ -1,5 +1,5 @@
 .footer {
-  background: linear-gradient(135deg, var(--brand-700) 0%, var(--brand-600) 100%);
+  background: #1d2923;
   color: var(--white);
   padding: 4rem 1rem 1.5rem;
   font-family: 'Inter', sans-serif;
@@ -36,7 +36,7 @@
   font-weight: 800;
   letter-spacing: -1px;
   margin-bottom: 1rem;
-  color: var(--brand-accent); /* verde destaque */
+  color: var(--white);
 }
 
 .footer .footer-brand .description {
@@ -60,7 +60,7 @@
   bottom: -5px;
   width: 30px;
   height: 2px;
-  background: var(--brand-accent);
+  background: var(--brand-500);
 }
 
 /* LISTAS */
@@ -77,14 +77,13 @@
   color: white;
   text-decoration: none;
   opacity: 0.7;
-  transition: all 0.25s ease;
+  transition: color 0.2s ease, opacity 0.2s ease;
   display: inline-block;
 }
 
 .footer .footer-group ul li a:hover {
   opacity: 1;
-  transform: translateX(6px);
-  color: var(--brand-accent);
+  color: #d9e2dc;
 }
 
 /* ADDRESS */
@@ -141,7 +140,7 @@
 
 .footer .footer-institutional .legal-links a:hover {
   text-decoration: underline;
-  color: var(--brand-accent);
+  color: #d9e2dc;
 }
 
 .footer .footer-institutional .legal-links .divider {

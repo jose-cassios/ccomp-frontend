@@ -17,7 +17,8 @@
   left: 50%;
   width: 74%;
   min-height: 424px;
-  background: #DDE9E1;
+  background: #f0f3f1;
+  border: 1px solid var(--border-subtle);
   border-radius: 1rem;
   display: flex;
   color: white;
@@ -30,14 +31,12 @@
 .promo-banner-card.is-active {
   z-index: 2;
   opacity: 1;
-  box-shadow: 0 18px 40px rgba(2, 44, 34, 0.22);
 }
 
 .promo-banner-card.is-prev,
 .promo-banner-card.is-next {
   z-index: 1;
   opacity: 0.45;
-  filter: blur(1px);
   cursor: pointer;
 }
 
@@ -73,8 +72,8 @@
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: bold;
-  background-color: var(--brand-100);
-  color: var(--brand-600);
+  background-color: #e4e9e6;
+  color: #4f6057;
 }
 
 .badge.status-open {
@@ -93,7 +92,7 @@
 .promo-image{
   position: relative;
   flex: 1;
-  background: radial-gradient(circle at 65% 28%, #48bd70, #063d27 68%);
+  background: #263b30;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -101,14 +100,14 @@
 
 .event-cover { width: 100%; height: 100%; object-fit: cover; }
 
-.event-visual { display: grid; place-items: center; width: 150px; height: 150px; border: 1px solid rgba(255, 255, 255, .32); border-radius: 50%; background: rgba(255, 255, 255, .1); box-shadow: 0 18px 40px rgba(0, 0, 0, .2); }
+.event-visual { display: grid; place-items: center; width: 150px; height: 150px; border: 1px solid rgba(255, 255, 255, .32); border-radius: 16px; background: rgba(255, 255, 255, .08); }
 .event-visual span { font-size: 4rem; font-weight: 900; line-height: 1; }
 .event-visual small { font-size: 1rem; font-weight: 800; text-transform: uppercase; }
 .section-header a { color: inherit; text-decoration: none; }
 .empty-events { display: grid; place-items: center; color: #567166; text-align: center; }
 
 .promo-content h2{
-  color: #022C22;
+  color: var(--text-strong);
   font-size: 2.5rem;
   font-weight: 700;
   margin: 15px 0;
@@ -116,7 +115,7 @@
 }
 
 .promo-description {
-  color: #14532D;
+  color: var(--text-secondary);
   line-height: 1.6;
   margin-bottom: 25px;
 }
@@ -130,7 +129,7 @@
 /* Aparência vem do .btn-cta-light global; aqui só posição e ajustes de link. */
 .btn-ver-evento {
   position: absolute;
-  color: #078E30;
+  color: var(--text-strong);
   right: 24px;
   bottom: 24px;
   z-index: 1;
@@ -139,7 +138,6 @@
   gap: 8px;
   text-decoration: none;
   font-size: 1rem;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
 .detail-item {
@@ -149,7 +147,7 @@
 
 .detail-item .label {
   font-size: 0.75rem;
-  color: #16A34A;
+  color: var(--text-tertiary);
   font-weight: bold;
   margin-bottom: 5px;
 }
@@ -157,7 +155,7 @@
 .detail-item .value {
   font-size: 1.1rem;
   font-weight: bold;
-  color: #022C22;
+  color: var(--text-strong);
 }
 
 .carousel-indicators {
@@ -204,18 +202,17 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--brand-600);
+  color: var(--text-secondary);
   font-size: 1.5rem;
   font-weight: bold;
   line-height: 1;
   padding-bottom: 3px;
-  box-shadow: 0 4px 14px rgba(2, 44, 34, 0.18);
   transition: background-color 0.2s, color 0.2s;
 }
 
 .carousel-arrow:hover {
-  background: var(--brand-600);
-  color: #fff;
+  background: var(--surface-subtle);
+  color: var(--brand-700);
 }
 
 .carousel-arrow--prev {
@@ -267,7 +264,6 @@
     left: 24px;
     right: 24px;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(2, 44, 34, 0.2);
   }
 
   .promo-details-grid {

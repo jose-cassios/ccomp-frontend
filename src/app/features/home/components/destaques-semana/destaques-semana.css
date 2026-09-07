@@ -7,15 +7,15 @@
 
 .card-item {
   background: white;
-  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-  transition: transform 0.3s;
+  transition: border-color 0.2s;
   display: flex;
   flex-direction: column;
 }
 
-.card-item:hover { transform: translateY(-5px); }
+.card-item:hover { border-color: #bdc8c2; }
 
 /* --- Mídia do Card --- */
 .card-media {

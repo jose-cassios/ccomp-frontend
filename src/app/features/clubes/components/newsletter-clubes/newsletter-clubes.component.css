@@ -1,5 +1,5 @@
 .newsletter-card{
-  background: linear-gradient(135deg, #16A34A 0%, #0d6e2a 100%);
+  background: var(--brand-600);
   border-radius: 12px;
   padding: 24px;
   color: white;

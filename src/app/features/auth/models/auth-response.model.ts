@@ -11,3 +11,5 @@ export interface AuthResponse {
 export interface MessageResponse {
   message: string;
 }
+
+export type AuthMessageResponse = MessageResponse;

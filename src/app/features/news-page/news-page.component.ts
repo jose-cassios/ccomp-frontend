@@ -23,14 +23,21 @@ export class NewsPageComponent implements OnInit {
   readonly noticias = signal<NewsItemType[]>([]);
   readonly drafts = signal<NewsItemType[]>([]);
   readonly editableNewsIds = signal<ReadonlySet<number>>(new Set());
+  readonly authoredNewsIds = signal<ReadonlySet<number>>(new Set());
   readonly searchQuery = signal('');
   readonly isLoading = signal(true);
+  readonly isLoadingMore = signal(false);
+  readonly nextCursor = signal<string | null>(null);
   readonly draftsLoading = signal(false);
   readonly deletingNewsId = signal<number | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly draftsError = signal<string | null>(null);
   readonly draftsSuccess = signal<string | null>(null);
   readonly canManageNews = computed(() => this.authService.hasAnyRole(NEWS_MANAGEMENT_ROLES));
+  readonly isAuthenticated = this.authService.isAuthenticatedState;
+  readonly showEditorialArea = computed(() =>
+    this.canManageNews() || this.draftsLoading() || this.editableNewsIds().size > 0,
+  );
   readonly hasSearchQuery = computed(() => Boolean(this.searchQuery().trim()));
   readonly filteredNews = computed(() => {
     const query = this.normalizeSearchText(this.searchQuery());
@@ -45,22 +52,32 @@ export class NewsPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadNews();
-    if (this.canManageNews()) {
+    if (this.isAuthenticated()) {
       this.loadDrafts();
     }
   }
 
-  loadNews(): void {
-    this.isLoading.set(true);
+  loadNews(loadMore = false): void {
+    const cursor = loadMore ? this.nextCursor() ?? undefined : undefined;
+    if (loadMore && !cursor) return;
+
+    (loadMore ? this.isLoadingMore : this.isLoading).set(true);
     this.errorMessage.set(null);
-    this.newsService.getAll({}, undefined, 100).subscribe({
+    this.newsService.getAll({}, cursor, 50).pipe(
+      finalize(() => (loadMore ? this.isLoadingMore : this.isLoading).set(false)),
+    ).subscribe({
       next: (response) => {
-        this.noticias.set(response.content);
-        this.isLoading.set(false);
+        if (loadMore) {
+          const newsById = new Map(this.noticias().map((news) => [news.id, news]));
+          response.content.forEach((news) => newsById.set(news.id, news));
+          this.noticias.set([...newsById.values()]);
+        } else {
+          this.noticias.set(response.content);
+        }
+        this.nextCursor.set(response.next_cursor);
       },
       error: () => {
         this.errorMessage.set('Não foi possível carregar as notícias. Tente novamente em instantes.');
-        this.isLoading.set(false);
       },
     });
   }
@@ -70,7 +87,13 @@ export class NewsPageComponent implements OnInit {
     this.draftsError.set(null);
     this.newsService.getMine().subscribe({
       next: (response) => {
-        this.drafts.set(response.author.filter((news) => !news.published_at));
+        const newsById = new Map(
+          [...response.author, ...response.editor]
+            .filter((news) => !news.published_at)
+            .map((news) => [news.id, news]),
+        );
+        this.drafts.set([...newsById.values()]);
+        this.authoredNewsIds.set(new Set(response.author.map((news) => news.id)));
         this.editableNewsIds.set(
           new Set([...response.author, ...response.editor].map((news) => news.id)),
         );
@@ -92,7 +115,11 @@ export class NewsPageComponent implements OnInit {
   }
 
   canEditNews(news: NewsItemType): boolean {
-    return this.canManageNews() && this.editableNewsIds().has(news.id);
+    return this.editableNewsIds().has(news.id);
+  }
+
+  canDeleteDraft(news: NewsItemType): boolean {
+    return this.authoredNewsIds().has(news.id);
   }
 
   deleteDraft(draft: NewsItemType): void {

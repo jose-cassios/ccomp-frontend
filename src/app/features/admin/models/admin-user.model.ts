@@ -13,6 +13,7 @@ export type AdminUserStatus = 'ACTIVE' | 'DEACTIVATED' | 'BLOCKED';
 
 export interface AdminUserSearchFilter {
   status_account?: AdminUserStatus;
+  role?: ApiUserRole;
 }
 
 export interface AdminUsersPage {

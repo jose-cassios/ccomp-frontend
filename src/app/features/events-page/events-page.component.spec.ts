@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
@@ -42,7 +43,14 @@ describe('EventsPageComponent', () => {
       imports: [EventsPageComponent],
       providers: [
         provideRouter([]),
-        { provide: AuthService, useValue: { hasAnyRole: () => false, currentUserState: () => null } },
+        {
+          provide: AuthService,
+          useValue: {
+            hasAnyRole: () => false,
+            currentUserState: () => null,
+            isAuthenticatedState: signal(false),
+          },
+        },
         {
           provide: EventsService,
           useValue: eventsService,

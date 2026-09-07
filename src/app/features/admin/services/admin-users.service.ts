@@ -40,18 +40,18 @@ export class AdminUsersService {
   }
 
   assignRole(userId: string, role: ApiUserRole): Observable<AdminMessageResponse> {
-    return this.api.post<AdminMessageResponse>(`/admin/users/${encodeURIComponent(userId)}/roles/${role}`, null);
+    return this.api.put<AdminMessageResponse>(`/admin/users/${encodeURIComponent(userId)}/roles/${role}`, null);
   }
 
   block(userId: string, reason: string): Observable<AdminMessageResponse> {
-    return this.api.post<AdminMessageResponse>(
+    return this.api.patch<AdminMessageResponse>(
       `/admin/users/${encodeURIComponent(userId)}/block`,
       { reason },
     );
   }
 
   unlock(userId: string, reason: string): Observable<AdminMessageResponse> {
-    return this.api.post<AdminMessageResponse>(
+    return this.api.patch<AdminMessageResponse>(
       `/admin/users/${encodeURIComponent(userId)}/unlock`,
       { reason },
     );

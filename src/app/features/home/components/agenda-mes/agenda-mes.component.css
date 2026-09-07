@@ -5,7 +5,7 @@
 }
 
 .agenda-wrapper{
-  background-color: rgba(240, 253, 244, 0.3);
+  background-color: var(--surface-page);
 }
 
 .agenda-item{
@@ -13,8 +13,8 @@
   align-items: center;
   gap: 20px;
   padding: 15px 20px;
-  border: 1px solid var(--brand-100);
-  border-radius: 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
   color: inherit;
   text-decoration: none;
 }
@@ -23,11 +23,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  background:#f4fdf6;
-  color: var(--brand-500);
+  background: var(--surface-subtle);
+  color: var(--text-strong);
   padding: 10px 15px;
   border-radius: 8px;
-  border: 2px solid var(--brand-600);
+  border: 1px solid var(--border-secondary);
   min-width: 70px;
 }
 

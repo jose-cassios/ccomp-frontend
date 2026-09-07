@@ -12,6 +12,7 @@ export type EventPublicationStatus = 'DRAFT' | 'PUBLISHED' | 'UNLISTED' | 'CANCE
 export type EventExecutionStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'FINISHED';
 export type EventEnrollmentStatus = 'UPCOMING' | 'OPEN' | 'PAUSED' | 'SOLD_OUT' | 'CLOSED';
 export type EventEnrollmentState = 'CONFIRMED' | 'CHECKED_IN' | 'CANCELED';
+export type EventEditorStatus = 'PENDING' | 'ACTIVE' | 'REVOKED';
 
 export interface EventActivity {
   id: number;
@@ -27,6 +28,7 @@ export interface EventEditor {
   user_id: string | null;
   name: string;
   email_address: string;
+  status: EventEditorStatus;
   active: boolean;
 }
 
@@ -210,4 +212,13 @@ export function eventEnrollmentStateLabel(state?: EventEnrollmentState | null): 
     CANCELED: 'Cancelada',
   };
   return state ? labels[state] : 'Não informado';
+}
+
+export function eventEditorStatusLabel(status?: EventEditorStatus | null): string {
+  const labels: Record<EventEditorStatus, string> = {
+    PENDING: 'Convite pendente',
+    ACTIVE: 'Ativo',
+    REVOKED: 'Revogado',
+  };
+  return status ? labels[status] : 'Pendente';
 }

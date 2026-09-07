@@ -14,6 +14,7 @@ describe('NewsPageComponent', () => {
 
   const authService = {
     hasAnyRole: vi.fn(),
+    isAuthenticatedState: vi.fn(),
   };
   const newsService = {
     getAll: vi.fn(() => of({ content: newsResponse, next_cursor: null, previous_cursor: null })),
@@ -44,6 +45,7 @@ describe('NewsPageComponent', () => {
     newsResponse = [];
     myNews = { author: [], editor: [] };
     authService.hasAnyRole.mockReturnValue(false);
+    authService.isAuthenticatedState.mockReturnValue(false);
 
     await TestBed.configureTestingModule({
       imports: [NewsPageComponent],
@@ -72,6 +74,7 @@ describe('NewsPageComponent', () => {
     newsResponse = [firstNews, secondNews];
     myNews = { author: [firstNews], editor: [secondNews] };
     authService.hasAnyRole.mockReturnValue(true);
+    authService.isAuthenticatedState.mockReturnValue(true);
     createComponent();
 
     expect(fixture.nativeElement.querySelectorAll('.edit-link')).toHaveLength(2);

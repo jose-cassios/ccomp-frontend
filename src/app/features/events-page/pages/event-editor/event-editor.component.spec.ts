@@ -1,8 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../auth/services/auth.service';
-import { EventDetails } from '../../models/event.model';
+import { EventDetails, EventEditor } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 import { EventEditorComponent } from './event-editor.component';
 
@@ -33,7 +33,7 @@ describe('EventEditorComponent', () => {
     publish: vi.fn(() => of({ ...createdEvent, status: 'PUBLISHED' as const })),
     getById: vi.fn(() => of(createdEvent)),
     getActivities: vi.fn(() => of({ content: [], next_cursor: null })),
-    getEditors: vi.fn(() => of({ content: [], next_cursor: null })),
+    getEditors: vi.fn(() => of({ content: [] as EventEditor[], next_cursor: null })),
     deleteEvent: vi.fn(() => of(void 0)),
     createActivity: vi.fn(() => of({ id: 21, event_id: createdEvent.id, title: 'Abertura', description: null })),
     updateActivity: vi.fn(() => of({ id: 21, event_id: createdEvent.id, title: 'Abertura atualizada', description: 'Boas-vindas' })),
@@ -49,7 +49,7 @@ describe('EventEditorComponent', () => {
       providers: [
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({}) } } },
-        { provide: AuthService, useValue: { hasAnyRole: () => false, currentUserState: () => null } },
+        { provide: AuthService, useValue: { hasAnyRole: () => false, currentUserState: () => ({ id: 'event-owner' }) } },
         { provide: EventsService, useValue: eventsService },
       ],
     }).compileComponents();
@@ -84,6 +84,8 @@ describe('EventEditorComponent', () => {
     });
     expect(component.event()?.id).toBe(createdEvent.id);
     expect(component.activeStep()).toBe('presentation');
+    expect(component.editorAccessResolved()).toBe(true);
+    expect(component.canEditEvent()).toBe(true);
     expect(component.successMessage()).toBeNull();
     expect(eventsService.addEditor).not.toHaveBeenCalled();
   });
@@ -215,6 +217,40 @@ describe('EventEditorComponent', () => {
       description: 'Boas-vindas',
     });
     expect(component.editingActivityId()).toBeNull();
+  });
+
+  it('should confirm the editor inclusion and refresh the team from the API', () => {
+    const editor = {
+      id: 31,
+      event_id: createdEvent.id,
+      user_id: 'editor-user',
+      name: 'Nova Editora',
+      email_address: 'editora@ifma.edu.br',
+      status: 'ACTIVE' as const,
+      active: true,
+    };
+    eventsService.getEditors.mockReturnValueOnce(of({ content: [editor], next_cursor: null }));
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.editorForm.setValue({ email: editor.email_address });
+
+    component.addEditor();
+
+    expect(eventsService.addEditor).toHaveBeenCalledWith(createdEvent.id, editor.email_address);
+    expect(eventsService.getEditors).toHaveBeenCalledWith(createdEvent.id);
+    expect(component.editors()).toEqual([editor]);
+    expect(component.editorForm.controls.email.value).toBe('');
+    expect(component.successMessage()).toContain('Editor adicionado');
+  });
+
+  it('should keep the email and show an error when the editor inclusion fails', () => {
+    eventsService.addEditor.mockReturnValueOnce(throwError(() => new Error('Falha de rede')));
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.editorForm.setValue({ email: 'editora@ifma.edu.br' });
+
+    component.addEditor();
+
+    expect(component.editorForm.controls.email.value).toBe('editora@ifma.edu.br');
+    expect(component.errorMessage()).toContain('Não foi possível adicionar o editor');
   });
 
   it('should publish the event and show the success confirmation in the final review step', () => {

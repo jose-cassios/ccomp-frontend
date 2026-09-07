@@ -1,8 +1,15 @@
 import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin } from 'rxjs';
+import { finalize, forkJoin, map, switchMap } from 'rxjs';
+import { apiErrorMessage } from '../../../../core/api/api-error';
 import { AuthService } from '../../../auth/services/auth.service';
+import {
+  AdminAuditAction,
+  AdminAuditLog,
+  AdminAuditSearchFilter,
+  AUDIT_ACTION_OPTIONS,
+} from '../../models/admin-audit-log.model';
 import {
   AdminUser,
   AdminUserSearchFilter,
@@ -10,6 +17,7 @@ import {
   ApiUserRole,
   USER_ROLE_OPTIONS,
 } from '../../models/admin-user.model';
+import { AdminAuditService } from '../../services/admin-audit.service';
 import { AdminUsersService } from '../../services/admin-users.service';
 
 interface RoleOperation {
@@ -24,11 +32,14 @@ interface RoleOperation {
 })
 export class AdminUsersComponent implements OnInit {
   private readonly usersService = inject(AdminUsersService);
+  private readonly auditService = inject(AdminAuditService);
   private readonly authService = inject(AuthService);
+  readonly activeSection = signal<'users' | 'audit'>('users');
   readonly users = signal<AdminUser[]>([]);
   readonly currentUser = signal<AdminUser | null>(null);
   readonly search = signal('');
   readonly statusFilter = signal<AdminUserStatus | ''>('');
+  readonly roleFilter = signal<ApiUserRole | ''>('');
   readonly loading = signal(false);
   readonly loadingMore = signal(false);
   readonly nextCursor = signal<string | null>(null);
@@ -38,6 +49,16 @@ export class AdminUsersComponent implements OnInit {
   readonly selectedRoles = signal<Record<string, ApiUserRole>>({});
   readonly recentOperations = signal<RoleOperation[]>([]);
   readonly roleOptions = USER_ROLE_OPTIONS;
+  readonly auditLogs = signal<AdminAuditLog[]>([]);
+  readonly auditLoading = signal(false);
+  readonly auditLoadingMore = signal(false);
+  readonly auditNextCursor = signal<string | null>(null);
+  readonly auditActionFilter = signal<AdminAuditAction | ''>('');
+  readonly auditActorId = signal('');
+  readonly auditTargetId = signal('');
+  readonly auditStartDate = signal('');
+  readonly auditEndDate = signal('');
+  readonly auditActionOptions = AUDIT_ACTION_OPTIONS;
   readonly filteredUsers = computed(() => {
     const term = this.search().trim().toLocaleLowerCase();
     if (!term) return this.users();
@@ -48,6 +69,23 @@ export class AdminUsersComponent implements OnInit {
   readonly canManageRoles = computed(() => this.authService.hasAnyRole(['ADM']));
 
   ngOnInit(): void { this.reload(); }
+
+  selectSection(section: 'users' | 'audit'): void {
+    this.activeSection.set(section);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    if (section === 'audit' && !this.auditLogs().length) {
+      this.reloadAudit();
+    }
+  }
+
+  refreshActiveSection(): void {
+    if (this.activeSection() === 'users') {
+      this.reload();
+      return;
+    }
+    this.reloadAudit();
+  }
 
   reload(): void {
     if (this.loading()) return;
@@ -87,6 +125,11 @@ export class AdminUsersComponent implements OnInit {
 
   filterByStatus(status: AdminUserStatus | ''): void {
     this.statusFilter.set(status);
+    this.reload();
+  }
+
+  filterByRole(role: ApiUserRole | ''): void {
+    this.roleFilter.set(role);
     this.reload();
   }
 
@@ -131,20 +174,30 @@ export class AdminUsersComponent implements OnInit {
     this.pendingUserId.set(user.id);
     this.errorMessage.set(null);
     this.successMessage.set(null);
-    this.usersService.assignRole(user.id, role).pipe(finalize(() => this.pendingUserId.set(null))).subscribe({
-      next: () => {
+    this.usersService.assignRole(user.id, role).pipe(
+      switchMap((response) => this.usersService.getById(user.id).pipe(
+        map((updatedUser) => ({ response, updatedUser })),
+      )),
+      finalize(() => this.pendingUserId.set(null)),
+    ).subscribe({
+      next: ({ updatedUser }) => {
         this.users.update((users) => users.map((item) =>
-          item.id === user.id ? { ...item, role } : item,
+          item.id === user.id ? updatedUser : item,
         ));
-        if (user.id === this.currentUser()?.id) {
-          this.currentUser.update((currentUser) => currentUser ? { ...currentUser, role } : currentUser);
+        this.selectedRoles.update((roles) => ({ ...roles, [user.id]: updatedUser.role }));
+        if (updatedUser.role !== role) {
+          this.errorMessage.set('A API respondeu à alteração, mas não confirmou o novo papel na consulta do usuário.');
+          return;
         }
         this.successMessage.set(`Atribuído o papel ${this.roleLabel(role)} para ${user.name}.`);
         this.recentOperations.update((operations) => [
           { userName: user.name, role, at: new Date() }, ...operations,
         ].slice(0, 8));
       },
-      error: () => this.errorMessage.set('Não foi possível atribuir este papel. Tente novamente.'),
+      error: (error: unknown) => this.errorMessage.set(apiErrorMessage(
+        error,
+        'Não foi possível atribuir este papel. Tente novamente.',
+      )),
     });
   }
 
@@ -191,8 +244,108 @@ export class AdminUsersComponent implements OnInit {
     return { ACTIVE: 'Ativa', DEACTIVATED: 'Desativada', BLOCKED: 'Bloqueada' }[status];
   }
 
+  reloadAudit(): void {
+    if (this.auditLoading()) return;
+    const filter = this.buildAuditFilter();
+    if (!filter) return;
+
+    this.auditLoading.set(true);
+    this.errorMessage.set(null);
+    this.auditService.search(filter).pipe(finalize(() => this.auditLoading.set(false))).subscribe({
+      next: (page) => {
+        this.auditLogs.set(page.content);
+        this.auditNextCursor.set(page.next_cursor);
+      },
+      error: () => this.errorMessage.set('Não foi possível carregar os registros de auditoria.'),
+    });
+  }
+
+  loadMoreAudit(): void {
+    const cursor = this.auditNextCursor();
+    if (!cursor || this.auditLoadingMore()) return;
+    const filter = this.buildAuditFilter();
+    if (!filter) return;
+
+    this.auditLoadingMore.set(true);
+    this.errorMessage.set(null);
+    this.auditService.search(filter, cursor).pipe(finalize(() => this.auditLoadingMore.set(false))).subscribe({
+      next: (page) => {
+        const logsById = new Map(this.auditLogs().map((log) => [log.id, log]));
+        page.content.forEach((log) => logsById.set(log.id, log));
+        this.auditLogs.set([...logsById.values()]);
+        this.auditNextCursor.set(page.next_cursor);
+      },
+      error: () => this.errorMessage.set('Não foi possível carregar mais registros de auditoria.'),
+    });
+  }
+
+  resetAuditFilters(): void {
+    this.auditActionFilter.set('');
+    this.auditActorId.set('');
+    this.auditTargetId.set('');
+    this.auditStartDate.set('');
+    this.auditEndDate.set('');
+    this.reloadAudit();
+  }
+
+  auditActionLabel(action: string): string {
+    return this.auditActionOptions.find((option) => option.value === action)?.label
+      ?? action.replaceAll('_', ' ');
+  }
+
+  auditTargetLabel(targetType: string): string {
+    return {
+      USER: 'Usuário', NEWS: 'Notícia', CLUB: 'Clube', EVENT: 'Evento', ACTIVITY: 'Atividade',
+    }[targetType] ?? targetType;
+  }
+
+  auditChangesSummary(log: AdminAuditLog): string {
+    const entries = Object.entries(log.changes ?? {});
+    if (!entries.length) return 'Nenhuma alteração detalhada foi informada.';
+    return entries.map(([field, change]) =>
+      `${this.auditFieldLabel(field)}: ${this.auditValue(change.old_value)} → ${this.auditValue(change.new_value)}`,
+    ).join(' · ');
+  }
+
   private buildFilter(): AdminUserSearchFilter {
-    return this.statusFilter() ? { status_account: this.statusFilter() as AdminUserStatus } : {};
+    const filter: AdminUserSearchFilter = {};
+    if (this.statusFilter()) filter.status_account = this.statusFilter() as AdminUserStatus;
+    if (this.roleFilter()) filter.role = this.roleFilter() as ApiUserRole;
+    return filter;
+  }
+
+  private buildAuditFilter(): AdminAuditSearchFilter | null {
+    const actorId = this.auditActorId().trim();
+    const targetId = this.auditTargetId().trim();
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if ((actorId && !uuidPattern.test(actorId)) || (targetId && !uuidPattern.test(targetId))) {
+      this.errorMessage.set('Use um UUID válido para filtrar o responsável ou o alvo da ação.');
+      return null;
+    }
+
+    const startDate = this.auditStartDate();
+    const endDate = this.auditEndDate();
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      this.errorMessage.set('A data inicial da auditoria deve ser anterior à data final.');
+      return null;
+    }
+
+    const filter: AdminAuditSearchFilter = {};
+    if (this.auditActionFilter()) filter.action = this.auditActionFilter() as AdminAuditAction;
+    if (actorId) filter.actor_id = actorId;
+    if (targetId) filter.target_id = targetId;
+    if (startDate) filter.start_date = startDate;
+    if (endDate) filter.end_date = endDate;
+    return filter;
+  }
+
+  private auditFieldLabel(field: string): string {
+    return { status_account: 'Status da conta', roles: 'Papel' }[field] ?? field;
+  }
+
+  private auditValue(value: unknown): string {
+    if (value === null || value === undefined || value === '') return '—';
+    return String(value);
   }
 
   private sortUsers(users: AdminUser[]): AdminUser[] {

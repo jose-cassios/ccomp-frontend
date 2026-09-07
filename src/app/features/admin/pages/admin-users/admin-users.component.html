@@ -2,18 +2,41 @@
   <header class="admin-header">
     <div>
       <span class="eyebrow">Área restrita</span>
-      <h1>Administração de usuários</h1>
-      <p>Consulte usuários, gerencie contas e altere permissões sem sair da plataforma.</p>
+      <h1>Administração</h1>
+      <p>Gerencie contas e acompanhe as ações administrativas da plataforma.</p>
     </div>
     <button
       type="button"
       class="refresh-button"
-      [disabled]="loading() || isBusy()"
-      (click)="reload()"
+      [disabled]="isBusy() || (activeSection() === 'users' ? loading() : auditLoading())"
+      (click)="refreshActiveSection()"
     >
-      Atualizar lista
+      Atualizar
     </button>
   </header>
+
+  <nav class="admin-tabs" aria-label="Seções administrativas" role="tablist">
+    <button
+      type="button"
+      role="tab"
+      class="admin-tab"
+      [attr.aria-selected]="activeSection() === 'users'"
+      [class.admin-tab--active]="activeSection() === 'users'"
+      (click)="selectSection('users')"
+    >
+      Usuários
+    </button>
+    <button
+      type="button"
+      role="tab"
+      class="admin-tab"
+      [attr.aria-selected]="activeSection() === 'audit'"
+      [class.admin-tab--active]="activeSection() === 'audit'"
+      (click)="selectSection('audit')"
+    >
+      Auditoria
+    </button>
+  </nav>
 
   @if (errorMessage()) {
     <p class="notice notice--error" role="alert">{{ errorMessage() }}</p>
@@ -22,159 +45,261 @@
     <p class="notice notice--success" role="status">{{ successMessage() }}</p>
   }
 
-  <div class="overview" aria-label="Resumo administrativo">
-    <article class="metric-card">
-      <span>Usuários carregados</span>
-      <strong>{{ users().length }}</strong>
-    </article>
-    <article class="metric-card">
-      <span>Seu papel atual</span>
-      <strong>{{ roleLabel(currentUser()?.role) }}</strong>
-    </article>
-    <article class="metric-card">
-      <span>Usuário conectado</span>
-      <strong>{{ currentUser()?.name || 'Carregando...' }}</strong>
-    </article>
-  </div>
-
-  <section class="users-card" aria-labelledby="users-title">
-    <div class="section-heading">
-      <div>
-        <h2 id="users-title">Usuários cadastrados</h2>
-        <p>Filtre as contas e execute a ação necessária para cada usuário.</p>
-      </div>
-      <div class="filters">
-        <label>
-          <span class="sr-only">Filtrar por status da conta</span>
-          <select
-            [ngModel]="statusFilter()"
-            [disabled]="loading() || isBusy()"
-            (ngModelChange)="filterByStatus($event)"
-          >
-            <option value="">Todos os status</option>
-            <option value="ACTIVE">Ativas</option>
-            <option value="BLOCKED">Bloqueadas</option>
-            <option value="DEACTIVATED">Desativadas</option>
-          </select>
-        </label>
-        <label class="search-field">
-          <span class="sr-only">Buscar usuário</span>
-          <input
-            [ngModel]="search()"
-            (ngModelChange)="search.set($event)"
-            (keyup.enter)="searchExact()"
-            placeholder="Buscar por nome, e-mail ou ID"
-          />
-        </label>
-        <button type="button" class="exact-search-button" [disabled]="loading() || isBusy()" (click)="searchExact()">
-          Buscar na API
-        </button>
-      </div>
+  @if (activeSection() === 'users') {
+    <div class="overview" aria-label="Resumo administrativo">
+      <article class="metric-card">
+        <span>Usuários carregados</span>
+        <strong>{{ users().length }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>Seu papel atual</span>
+        <strong>{{ roleLabel(currentUser()?.role) }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>Usuário conectado</span>
+        <strong>{{ currentUser()?.name || 'Carregando...' }}</strong>
+      </article>
     </div>
 
-    <p class="api-note">
-      O painel exibe o status e o papel atual de cada usuário, conforme informado pela API.
-      A gestão de papéis é exclusiva de administradores.
-    </p>
-
-    @if (loading()) {
-      <p class="empty-state" role="status">Carregando usuários...</p>
-    } @else if (!filteredUsers().length) {
-      <p class="empty-state">Nenhum usuário encontrado para a busca.</p>
-    } @else {
-      <div class="users-table" role="table">
-        @for (user of filteredUsers(); track user.id) {
-          <article class="user-row" role="row">
-            <div class="user-details" role="cell">
-              <div class="user-name-row">
-                <strong>{{ user.name }}</strong>
-                <span class="status-badge" [class.status-badge--blocked]="user.status_account === 'BLOCKED'">
-                  {{ statusLabel(user.status_account) }}
-                </span>
-                <span class="role-badge">{{ roleLabel(user.role) }}</span>
-              </div>
-              <span>{{ user.email_address }}</span>
-              <small>ID: {{ user.id }}</small>
-            </div>
-
-            <div class="management-actions" role="cell">
-              <div class="account-actions">
-                @if (user.status_account === 'BLOCKED') {
-                  <button
-                    type="button"
-                    class="unlock-button"
-                    [disabled]="isBusy()"
-                    (click)="changeAccountStatus(user, 'unlock')"
-                  >
-                    {{ pendingUserId() === user.id ? 'Processando...' : 'Desbloquear' }}
-                  </button>
-                } @else {
-                  <button
-                    type="button"
-                    class="block-button"
-                    [disabled]="isBusy() || user.id === currentUser()?.id"
-                    (click)="changeAccountStatus(user, 'block')"
-                  >
-                    {{ pendingUserId() === user.id ? 'Processando...' : 'Bloquear' }}
-                  </button>
-                }
-              </div>
-
-              @if (canManageRoles()) {
-                <div class="role-actions">
-                  <label>
-                    <span class="sr-only">Papel para {{ user.name }}</span>
-                    <select
-                      [ngModel]="selectedRole(user)"
-                      (ngModelChange)="selectRole(user.id, $event)"
-                    >
-                      @for (role of roleOptions; track role.value) {
-                        <option [value]="role.value">{{ role.label }}</option>
-                      }
-                    </select>
-                  </label>
-                  <button
-                    type="button"
-                    class="assign-button"
-                    [disabled]="isBusy()"
-                    (click)="changeRole(user)"
-                  >
-                    {{ pendingUserId() === user.id ? 'Processando...' : 'Atribuir' }}
-                  </button>
-                </div>
+    <section class="users-card" aria-labelledby="users-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="users-title">Usuários cadastrados</h2>
+          <p>Filtre por status ou papel e gerencie permissões com segurança.</p>
+        </div>
+        <div class="filters">
+          <label>
+            <span class="sr-only">Filtrar por status da conta</span>
+            <select
+              [ngModel]="statusFilter()"
+              [disabled]="loading() || isBusy()"
+              (ngModelChange)="filterByStatus($event)"
+            >
+              <option value="">Todos os status</option>
+              <option value="ACTIVE">Ativas</option>
+              <option value="BLOCKED">Bloqueadas</option>
+              <option value="DEACTIVATED">Desativadas</option>
+            </select>
+          </label>
+          <label>
+            <span class="sr-only">Filtrar por papel</span>
+            <select
+              [ngModel]="roleFilter()"
+              [disabled]="loading() || isBusy()"
+              (ngModelChange)="filterByRole($event)"
+            >
+              <option value="">Todos os papéis</option>
+              @for (role of roleOptions; track role.value) {
+                <option [value]="role.value">{{ role.label }}</option>
               }
-            </div>
-          </article>
-        }
+            </select>
+          </label>
+          <label class="search-field">
+            <span class="sr-only">Buscar usuário</span>
+            <input
+              [ngModel]="search()"
+              (ngModelChange)="search.set($event)"
+              (keyup.enter)="searchExact()"
+              placeholder="Nome, e-mail ou ID"
+            />
+          </label>
+          <button type="button" class="exact-search-button" [disabled]="loading() || isBusy()" (click)="searchExact()">
+            Buscar
+          </button>
+        </div>
       </div>
 
-      @if (nextCursor()) {
-        <button
-          type="button"
-          class="load-more-button"
-          [disabled]="loadingMore() || isBusy()"
-          (click)="loadMore()"
-        >
-          {{ loadingMore() ? 'Carregando...' : 'Carregar mais usuários' }}
-        </button>
-      }
-    }
-  </section>
+      <p class="api-note">
+        A API permite filtrar a listagem por status e papel. A busca direta localiza um usuário por e-mail ou ID.
+      </p>
 
-  @if (canManageRoles()) {
-    <section class="operations-card" aria-labelledby="operations-title">
-      <h2 id="operations-title">Ações nesta sessão</h2>
-      @if (!recentOperations().length) {
-        <p>Nenhuma alteração de papel foi realizada nesta sessão.</p>
+      @if (loading()) {
+        <p class="empty-state" role="status">Carregando usuários...</p>
+      } @else if (!filteredUsers().length) {
+        <p class="empty-state">Nenhum usuário encontrado para a busca.</p>
       } @else {
-        <ul>
-          @for (operation of recentOperations(); track operation.at) {
-            <li>
-              Papel <strong>{{ roleLabel(operation.role) }}</strong> atribuído para
-              {{ operation.userName }} às {{ operation.at | date: 'HH:mm' }}.
-            </li>
+        <div class="users-table" role="table">
+          @for (user of filteredUsers(); track user.id) {
+            <article class="user-row" role="row">
+              <div class="user-details" role="cell">
+                <div class="user-name-row">
+                  <strong>{{ user.name }}</strong>
+                  <span
+                    class="status-badge"
+                    [class.status-badge--blocked]="user.status_account === 'BLOCKED'"
+                    [class.status-badge--inactive]="user.status_account === 'DEACTIVATED'"
+                  >
+                    {{ statusLabel(user.status_account) }}
+                  </span>
+                  <span class="role-badge">{{ roleLabel(user.role) }}</span>
+                </div>
+                <span>{{ user.email_address }}</span>
+                <small>ID: {{ user.id }}</small>
+              </div>
+
+              <div class="management-actions" role="cell">
+                <div class="account-actions">
+                  @if (user.status_account === 'BLOCKED') {
+                    <button
+                      type="button"
+                      class="unlock-button"
+                      [disabled]="isBusy()"
+                      (click)="changeAccountStatus(user, 'unlock')"
+                    >
+                      {{ pendingUserId() === user.id ? 'Processando...' : 'Desbloquear' }}
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="block-button"
+                      [disabled]="isBusy() || user.id === currentUser()?.id"
+                      (click)="changeAccountStatus(user, 'block')"
+                    >
+                      {{ pendingUserId() === user.id ? 'Processando...' : 'Bloquear' }}
+                    </button>
+                  }
+                </div>
+
+                @if (canManageRoles()) {
+                  <div class="role-actions">
+                    <label>
+                      <span class="sr-only">Papel para {{ user.name }}</span>
+                      <select
+                        [ngModel]="selectedRole(user)"
+                        [disabled]="isBusy() || user.id === currentUser()?.id"
+                        (ngModelChange)="selectRole(user.id, $event)"
+                      >
+                        @for (role of roleOptions; track role.value) {
+                          <option [value]="role.value">{{ role.label }}</option>
+                        }
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      class="assign-button"
+                      [disabled]="isBusy() || user.id === currentUser()?.id || selectedRole(user) === user.role"
+                      (click)="changeRole(user)"
+                    >
+                      {{ pendingUserId() === user.id ? 'Processando...' : 'Salvar papel' }}
+                    </button>
+                  </div>
+                }
+              </div>
+            </article>
           }
-        </ul>
+        </div>
+
+        @if (nextCursor()) {
+          <button
+            type="button"
+            class="load-more-button"
+            [disabled]="loadingMore() || isBusy()"
+            (click)="loadMore()"
+          >
+            {{ loadingMore() ? 'Carregando...' : 'Carregar mais usuários' }}
+          </button>
+        }
+      }
+    </section>
+
+    @if (canManageRoles()) {
+      <section class="operations-card" aria-labelledby="operations-title">
+        <h2 id="operations-title">Ações nesta sessão</h2>
+        @if (!recentOperations().length) {
+          <p>Nenhuma alteração de papel foi realizada nesta sessão.</p>
+        } @else {
+          <ul>
+            @for (operation of recentOperations(); track operation.at) {
+              <li>
+                Papel <strong>{{ roleLabel(operation.role) }}</strong> atribuído para
+                {{ operation.userName }} às {{ operation.at | date: 'HH:mm' }}.
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    }
+  } @else {
+    <section class="audit-card" aria-labelledby="audit-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="audit-title">Trilha de auditoria</h2>
+          <p>Consulte bloqueios, desbloqueios e alterações de papel registrados pela API.</p>
+        </div>
+      </div>
+
+      <form class="audit-filters" (ngSubmit)="reloadAudit()">
+        <label>
+          <span>Ação</span>
+          <select [ngModel]="auditActionFilter()" (ngModelChange)="auditActionFilter.set($event)" name="auditAction">
+            <option value="">Todas as ações</option>
+            @for (action of auditActionOptions; track action.value) {
+              <option [value]="action.value">{{ action.label }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          <span>ID do responsável</span>
+          <input [ngModel]="auditActorId()" (ngModelChange)="auditActorId.set($event)" name="auditActorId" placeholder="UUID" />
+        </label>
+        <label>
+          <span>ID do alvo</span>
+          <input [ngModel]="auditTargetId()" (ngModelChange)="auditTargetId.set($event)" name="auditTargetId" placeholder="UUID" />
+        </label>
+        <label>
+          <span>De</span>
+          <input type="datetime-local" [ngModel]="auditStartDate()" (ngModelChange)="auditStartDate.set($event)" name="auditStartDate" />
+        </label>
+        <label>
+          <span>Até</span>
+          <input type="datetime-local" [ngModel]="auditEndDate()" (ngModelChange)="auditEndDate.set($event)" name="auditEndDate" />
+        </label>
+        <div class="audit-filter-actions">
+          <button type="submit" class="assign-button" [disabled]="auditLoading()">Aplicar filtros</button>
+          <button type="button" class="exact-search-button" [disabled]="auditLoading()" (click)="resetAuditFilters()">Limpar</button>
+        </div>
+      </form>
+
+      @if (auditLoading()) {
+        <p class="empty-state" role="status">Carregando registros de auditoria...</p>
+      } @else if (!auditLogs().length) {
+        <p class="empty-state">Nenhum registro encontrado para estes filtros.</p>
+      } @else {
+        <div class="audit-list">
+          @for (log of auditLogs(); track log.id) {
+            <article class="audit-entry">
+              <div class="audit-entry__heading">
+                <div>
+                  <span
+                    class="audit-action"
+                    [class.audit-action--danger]="log.action === 'USER_BLOCKED'"
+                    [class.audit-action--info]="log.action === 'USER_CHANGE_ROLE'"
+                  >
+                    {{ auditActionLabel(log.action) }}
+                  </span>
+                  <strong>{{ auditTargetLabel(log.target_type) }}: {{ log.target_id }}</strong>
+                </div>
+                <time [attr.datetime]="log.timestamp">{{ log.timestamp | date: 'dd/MM/yyyy, HH:mm' }}</time>
+              </div>
+              <p>{{ auditChangesSummary(log) }}</p>
+              @if (log.reason) {
+                <p class="audit-reason"><strong>Motivo:</strong> {{ log.reason }}</p>
+              }
+              <small>Responsável: {{ log.actor_id || 'Sistema' }} · Origem: {{ log.actor_type }}</small>
+            </article>
+          }
+        </div>
+
+        @if (auditNextCursor()) {
+          <button
+            type="button"
+            class="load-more-button"
+            [disabled]="auditLoadingMore()"
+            (click)="loadMoreAudit()"
+          >
+            {{ auditLoadingMore() ? 'Carregando...' : 'Carregar mais registros' }}
+          </button>
+        }
       }
     </section>
   }

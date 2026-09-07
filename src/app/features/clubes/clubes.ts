@@ -5,6 +5,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { finalize, of, switchMap } from 'rxjs';
 import { StorageService } from '../../core/storage/storage.service';
+import { apiErrorMessage } from '../../core/api/api-error';
 import { CONTENT_MANAGEMENT_ROLES } from '../auth/config/auth.config';
 import { AuthService } from '../auth/services/auth.service';
 import { ClubeDestaquesComponent } from './components/clube-destaques/clube-destaques.component';
@@ -128,7 +129,7 @@ export class Clubes implements OnInit {
 
     this.managedLoading.set(true);
     this.managementError.set(null);
-    this.clubsService.getMine(cursor).pipe(
+    this.clubsService.getMine(cursor, 10, 'INSTRUCTOR').pipe(
       finalize(() => this.managedLoading.set(false)),
     ).subscribe({
       next: (page) => {
@@ -315,10 +316,12 @@ export class Clubes implements OnInit {
   }
 
   changeMemberStatus(member: ClubMemberListItem): void {
+    const club = this.selectedClub();
+    if (!club) return;
     const status: ClubMemberStatus = member.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
     this.changingMemberId.set(member.id);
     this.modalError.set(null);
-    this.clubsService.changeMemberStatus(member.id, status).pipe(
+    this.clubsService.changeMemberStatus(club.id, member.id, status).pipe(
       finalize(() => this.changingMemberId.set(null)),
     ).subscribe({
       next: () => this.members.update((members) => members.map((item) => item.id === member.id ? { ...item, status } : item)),
@@ -394,8 +397,8 @@ export class Clubes implements OnInit {
 
   private errorMessage(error: unknown, fallback: string): string {
     if (error instanceof HttpErrorResponse) {
-      const apiMessage = error.error?.message ?? error.error?.detail ?? error.error?.response;
-      if (typeof apiMessage === 'string' && apiMessage.trim()) return apiMessage;
+      const message = apiErrorMessage(error, '');
+      if (message) return message;
       if (error.status === 401) return 'Entre na sua conta para realizar esta ação.';
       if (error.status === 403) return 'Você não tem permissão para realizar esta ação.';
       if (error.status === 404) return 'O clube solicitado não foi encontrado.';

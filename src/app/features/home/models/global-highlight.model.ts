@@ -7,7 +7,7 @@ export type HighlightSourceType = 'NEWS' | 'EVENT' | 'CLUB';
 /** Resposta retornada por GET /highlights. */
 export interface HighlightsResponse {
   news: NewsItemType[];
-  events: EventListItem[];
+  events: Array<EventListItem & { summary?: string | null }>;
   clubs: Club[];
 }
 

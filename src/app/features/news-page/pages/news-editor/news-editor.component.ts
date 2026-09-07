@@ -1,5 +1,6 @@
 import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import { apiErrorMessage } from '../../../../core/api/api-error';
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -56,6 +57,7 @@ export class NewsEditorComponent implements OnInit {
   });
 
   readonly news = signal<NewsItemType | null>(null);
+  readonly isAuthor = signal(false);
   readonly operation = signal<EditorOperation>('idle');
   readonly activeView = signal<EditorView>('edit');
   readonly errorMessage = signal<string | null>(null);
@@ -80,6 +82,7 @@ export class NewsEditorComponent implements OnInit {
   readonly canPublish = computed(
     () =>
       Boolean(this.news()?.id) &&
+      this.isAuthor() &&
       this.formIsValid() &&
       !this.hasUnsavedChanges() &&
       !this.isPublished() &&
@@ -97,6 +100,7 @@ export class NewsEditorComponent implements OnInit {
   });
   readonly publishDisabledReason = computed(() => {
     if (this.isPublished()) return 'Esta notícia já foi publicada.';
+    if (this.news() && !this.isAuthor()) return 'A publicação é responsabilidade da pessoa autora.';
     if (!this.news()) return 'Salve a notícia antes de publicar.';
     if (this.hasUnsavedChanges()) return 'Salve as alterações antes de publicar.';
     if (!this.formIsValid()) return 'Preencha todos os campos obrigatórios.';
@@ -315,6 +319,7 @@ export class NewsEditorComponent implements OnInit {
       next: (news) => {
         this.applyNews(news);
         this.loadEditors(news.id);
+        this.resolveOwnership(news.id);
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível carregar a notícia para edição.'));
@@ -327,6 +332,7 @@ export class NewsEditorComponent implements OnInit {
     this.newsService.create().pipe(
       tap((createdNews) => {
         this.news.set(createdNews);
+        this.isAuthor.set(true);
         this.location.replaceState(`/noticias/${createdNews.id}/editar`);
       }),
       switchMap((createdNews) => this.newsService.update(createdNews.id, payload)),
@@ -391,12 +397,17 @@ export class NewsEditorComponent implements OnInit {
     });
   }
 
+  private resolveOwnership(newsId: number): void {
+    this.newsService.getMine().subscribe({
+      next: (response) => this.isAuthor.set(response.author.some((news) => news.id === newsId)),
+      error: () => this.isAuthor.set(false),
+    });
+  }
+
   private getErrorMessage(error: unknown, fallback: string): string {
     if (error instanceof HttpErrorResponse) {
-      const apiMessage = error.error?.message ?? error.error?.detail ?? error.error?.response;
-      if (typeof apiMessage === 'string' && apiMessage.trim()) {
-        return apiMessage;
-      }
+      const message = apiErrorMessage(error, '');
+      if (message) return message;
       if (error.status === 403) {
         return 'Você não tem permissão para alterar esta notícia.';
       }

@@ -10,6 +10,7 @@ import {
   EventActivitiesPage,
   EventDetails,
   EventEditor,
+  EventEditorStatus,
   EventEditorsPage,
   EventEnrollment,
   EventEnrollmentsPage,
@@ -84,7 +85,8 @@ interface ApiEventEditorsPage {
       emailAddress?: string | { value?: string; address?: string };
       email_address?: string;
     };
-    active: boolean;
+    status?: EventEditorStatus;
+    active?: boolean;
   }>;
   nextCursor?: string | null;
   next_cursor?: string | null;
@@ -149,11 +151,15 @@ export class EventsService {
   }
 
   getCreatedEvents(nextCursor?: string, pageSize = 12): Observable<EventsPageResponse> {
-    return this.getUserEventsPage('/users/me/created-events', nextCursor, pageSize);
+    return this.getUserEventsPage('/events/me/created', nextCursor, pageSize);
   }
 
   getMySubscriptions(nextCursor?: string, pageSize = 50): Observable<EventsPageResponse> {
-    return this.getUserEventsPage('/users/me/events-subscriptions', nextCursor, pageSize);
+    return this.getUserEventsPage('/events/me/subscriptions', nextCursor, pageSize);
+  }
+
+  getEditableEvents(nextCursor?: string, pageSize = 50): Observable<EventsPageResponse> {
+    return this.getUserEventsPage('/events/me/editors', nextCursor, pageSize);
   }
 
   create(payload: CreateEventPayload): Observable<EventDetails> {
@@ -200,6 +206,11 @@ export class EventsService {
     return this.api.delete<ApiMessage>(
       `/events/${encodeURIComponent(eventId)}/editors/${encodeURIComponent(email)}`,
     );
+  }
+
+  acceptEditorInvitation(code: string): Observable<ApiMessage> {
+    const params = new HttpParams().set('code', code);
+    return this.api.get<ApiMessage>('/events/editors/accept', { params });
   }
 
   getEditors(eventId: number | string, cursor?: string, size = 50): Observable<EventEditorsPage> {
@@ -325,13 +336,16 @@ export class EventsService {
       ? emailAddress
       : emailAddress?.value ?? emailAddress?.address ?? editor.user?.email_address ?? '';
 
+    const status = editor.status ?? (editor.active ? 'ACTIVE' : 'PENDING');
+
     return {
       id: editor.id,
       event_id: editor.eventId ?? editor.event_id ?? 0,
       user_id: editor.user?.id ?? null,
       name: editor.user?.name ?? 'Editor',
       email_address: email,
-      active: editor.active,
+      status,
+      active: status === 'ACTIVE',
     };
   }
 

@@ -2,22 +2,22 @@
 .all-clubs-section { width: min(1200px, 100%); margin: 0 auto; padding: 58px 20px 24px; }
 .list-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
 .eyebrow { color: var(--brand-600); font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.list-header h2 { margin: 4px 0 0; color: #022c22; font-size: 1.5rem; }
+.list-header h2 { margin: 4px 0 0; color: var(--text-strong); font-size: 1.5rem; }
 .sort-wrapper { position: relative; }
 .sort-button { display: flex; align-items: center; gap: 8px; border: 1px solid #d1d5db; border-radius: 8px; padding: 9px 15px; background: #fff; color: #374151; cursor: pointer; font-weight: 600; }
 .sort-menu { position: absolute; z-index: 20; top: calc(100% + 6px); right: 0; min-width: 160px; margin: 0; padding: 6px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.12); list-style: none; }
 .sort-menu button { width: 100%; border: 0; border-radius: 6px; padding: 8px 12px; background: transparent; color: #374151; cursor: pointer; text-align: left; }
 .sort-menu button:hover, .sort-menu button.active { background: #eaf8ee; color: #166534; }
 .club-list { display: grid; gap: 18px; }
-.club-card { display: flex; gap: 20px; border: 1px solid #e1e8e4; border-radius: 13px; padding: 18px; background: #fff; transition: .2s ease; }
-.club-card:hover { transform: translateY(-2px); box-shadow: 0 7px 22px rgba(25,60,36,.08); }
+.club-card { display: flex; gap: 20px; border: 1px solid #e1e8e4; border-radius: 12px; padding: 18px; background: #fff; transition: border-color .2s ease; }
+.club-card:hover { border-color: #bdc8c2; }
 .card-image { width: 190px; min-height: 145px; overflow: hidden; flex: 0 0 auto; border-radius: 9px; }
 .card-image img { width: 100%; height: 100%; object-fit: cover; }
-.image-placeholder { display: grid; width: 100%; height: 100%; place-items: center; background: #e8f5ec; color: #176d38; font-size: 3rem; font-weight: 800; }
+.image-placeholder { display: grid; width: 100%; height: 100%; place-items: center; background: #edf1ef; color: #526159; font-size: 3rem; font-weight: 800; }
 .card-info { display: flex; min-width: 0; flex: 1; flex-direction: column; }
 .card-meta { display: flex; align-items: center; gap: 10px; color: #64748b; font-size: .78rem; }
 .card-meta span { color: var(--brand-600); font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.card-info h3 { margin: 8px 0 5px; color: #022c22; font-size: 1.15rem; }
+.card-info h3 { margin: 8px 0 5px; color: var(--text-strong); font-size: 1.15rem; }
 .card-info p { display: -webkit-box; overflow: hidden; margin: 0 0 16px; color: #64748b; font-size: .88rem; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .card-actions { display: flex; gap: 9px; margin-top: auto; }
 .card-actions button, .load-more { border-radius: 8px; padding: 9px 13px; cursor: pointer; font-weight: 700; }

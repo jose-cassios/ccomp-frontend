@@ -14,6 +14,7 @@ import {
   eventPublicationStatusLabel,
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
+import { apiErrorMessage } from '../../../../core/api/api-error';
 
 @Component({
   selector: 'app-event-details',
@@ -34,10 +35,13 @@ export class EventDetailsComponent implements OnInit {
   readonly subscribed = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
+  readonly editableEventIds = signal<ReadonlySet<number>>(new Set());
   readonly isAuthenticated = this.authService.isAuthenticatedState;
-  readonly canEdit = computed(() =>
-    this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
-  );
+  readonly canEdit = computed(() => {
+    const eventId = this.event()?.id;
+    return this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES)
+      || Boolean(eventId && this.editableEventIds().has(eventId));
+  });
   readonly categoryLabel = eventCategoryLabel;
   readonly formatLabel = eventFormatLabel;
   readonly publicationStatusLabel = eventPublicationStatusLabel;
@@ -63,6 +67,7 @@ export class EventDetailsComponent implements OnInit {
         this.event.set({ ...event, activities: event.activities ?? [] });
         this.loadActivities(event.id);
         this.loadSubscriptionState(event.id);
+        this.loadEditorAccess();
       },
       error: (error: unknown) => this.errorMessage.set(this.getErrorMessage(error)),
     });
@@ -123,10 +128,21 @@ export class EventDetailsComponent implements OnInit {
     });
   }
 
+  private loadEditorAccess(): void {
+    if (!this.isAuthenticated()) return;
+
+    this.eventsService.getEditableEvents(undefined, 50).pipe(
+      catchError(() => of(null)),
+    ).subscribe((page) => {
+      if (!page) return;
+      this.editableEventIds.set(new Set(page.content.map((event) => event.id)));
+    });
+  }
+
   private getErrorMessage(error: unknown, fallback = 'Não foi possível carregar este evento.'): string {
     if (error instanceof HttpErrorResponse) {
-      const message = error.error?.message ?? error.error?.response;
-      if (typeof message === 'string' && message.trim()) return message;
+      const message = apiErrorMessage(error, '');
+      if (message) return message;
       if (error.status === 403) return 'Você não tem permissão para visualizar este evento.';
       if (error.status === 404) return 'O evento solicitado não foi encontrado.';
     }
