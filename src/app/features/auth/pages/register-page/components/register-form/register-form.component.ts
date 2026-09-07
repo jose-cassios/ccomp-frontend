@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -23,12 +23,12 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
   styleUrls: ['./register-form.component.css']
 })
 export class RegisterFormComponent {
+  @Input() isSubmitting = false;
   @Output() register = new EventEmitter<{ name: string; email: string; password: string; confirmPassword?: string }>();
 
   registerForm: FormGroup;
   hidePassword = true;
   hideConfirmPassword = true;
-  isLoading = false;
 
   constructor(private fb: FormBuilder) {
     this.registerForm = this.fb.group({
@@ -51,11 +51,9 @@ export class RegisterFormComponent {
   }
 
   onSubmit(): void {
-    if (this.registerForm.valid && !this.isLoading) {
-      this.isLoading = true;
+    if (this.registerForm.valid && !this.isSubmitting) {
       const data = this.registerForm.value;
       this.register.emit(data);
-      this.isLoading = false;
     }
   }
 

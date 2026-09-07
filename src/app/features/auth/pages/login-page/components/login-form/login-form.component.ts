@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -23,11 +23,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
   styleUrls: ['./login-form.component.css']
 })
 export class LoginFormComponent {
+  @Input() isSubmitting = false;
   @Output() login = new EventEmitter<{ email: string; password: string }>();
 
   loginForm: FormGroup;
   hidePassword = true;
-  isLoading = false;
 
   constructor(private fb: FormBuilder) {
     this.loginForm = this.fb.group({
@@ -37,11 +37,9 @@ export class LoginFormComponent {
   }
 
   onSubmit(): void {
-    if (this.loginForm.valid && !this.isLoading) {
-      this.isLoading = true;
+    if (this.loginForm.valid && !this.isSubmitting) {
       const credentials = this.loginForm.value;
       this.login.emit(credentials);
-      this.isLoading = false;
     }
   }
 
