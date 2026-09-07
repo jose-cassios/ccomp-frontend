@@ -7,7 +7,7 @@ import { EventsService } from './events.service';
 describe('EventsService', () => {
   const api = {
     get: vi.fn((endpoint: string) => {
-      if (endpoint.startsWith('/users/me/')) {
+      if (endpoint.startsWith('/events/me/')) {
         return of({ content: [], nextCursor: null, previousCursor: null });
       }
       if (endpoint.endsWith('/editors')) return of({ content: [], nextCursor: null });
@@ -87,22 +87,27 @@ describe('EventsService', () => {
   it('should load the authenticated user event collections with cursor pagination', () => {
     service.getCreatedEvents('created-cursor', 20).subscribe();
     service.getMySubscriptions('subscription-cursor', 30).subscribe();
+    service.getEditableEvents('editor-cursor', 40).subscribe();
 
-    expect(api.get).toHaveBeenCalledWith('/users/me/created-events', { params: expect.any(HttpParams) });
-    expect(api.get).toHaveBeenCalledWith('/users/me/events-subscriptions', { params: expect.any(HttpParams) });
+    expect(api.get).toHaveBeenCalledWith('/events/me/created', { params: expect.any(HttpParams) });
+    expect(api.get).toHaveBeenCalledWith('/events/me/subscriptions', { params: expect.any(HttpParams) });
+    expect(api.get).toHaveBeenCalledWith('/events/me/editors', { params: expect.any(HttpParams) });
 
     const getCalls = api.get.mock.calls as unknown as Array<[
       string,
       { params?: HttpParams } | undefined,
     ]>;
-    const createdParams = getCalls.find(([endpoint]) => endpoint === '/users/me/created-events')?.[1]?.params;
+    const createdParams = getCalls.find(([endpoint]) => endpoint === '/events/me/created')?.[1]?.params;
     const subscriptionParams = getCalls.find(
-      ([endpoint]) => endpoint === '/users/me/events-subscriptions',
+      ([endpoint]) => endpoint === '/events/me/subscriptions',
     )?.[1]?.params;
+    const editorParams = getCalls.find(([endpoint]) => endpoint === '/events/me/editors')?.[1]?.params;
     expect(createdParams?.get('nextCursor')).toBe('created-cursor');
     expect(createdParams?.get('pageSize')).toBe('20');
     expect(subscriptionParams?.get('nextCursor')).toBe('subscription-cursor');
     expect(subscriptionParams?.get('pageSize')).toBe('30');
+    expect(editorParams?.get('nextCursor')).toBe('editor-cursor');
+    expect(editorParams?.get('pageSize')).toBe('40');
   });
 
   it('should create and update events with the current API contracts', () => {
@@ -190,6 +195,7 @@ describe('EventsService', () => {
     service.deleteEvent(12).subscribe();
     service.addEditor(12, 'moderator@ifma.edu.br').subscribe();
     service.removeEditor(12, 'moderator@ifma.edu.br').subscribe();
+    service.acceptEditorInvitation('1f1a6231-3270-41c7-8105-84704b5a16fe').subscribe();
     service.createActivity(12, { title: 'Palestra' }).subscribe();
     service.getActivities(12).subscribe();
     service.updateActivity(7, { title: 'Palestra atualizada', display_order: 2 }).subscribe();
@@ -199,10 +205,31 @@ describe('EventsService', () => {
     expect(api.delete).toHaveBeenCalledWith('/events/12');
     expect(api.post).toHaveBeenCalledWith('/events/12/editors/moderator%40ifma.edu.br', null);
     expect(api.delete).toHaveBeenCalledWith('/events/12/editors/moderator%40ifma.edu.br');
+    expect(api.get).toHaveBeenCalledWith('/events/editors/accept', { params: expect.any(HttpParams) });
     expect(api.post).toHaveBeenCalledWith('/events/12/activities', { title: 'Palestra' });
     expect(api.get).toHaveBeenCalledWith('/events/12/activities', { params: expect.any(HttpParams) });
     expect(api.patch).toHaveBeenCalledWith('/events/activities/7', { title: 'Palestra atualizada', display_order: 2 });
     expect(api.delete).toHaveBeenCalledWith('/events/activities/7');
     expect(api.get).toHaveBeenCalledWith('/events/12/enrollments', { params: expect.any(HttpParams) });
+  });
+
+  it('should normalize the editor invitation status returned by the API', () => {
+    api.get.mockReturnValueOnce(of({
+      content: [{
+        id: 3,
+        eventId: 12,
+        user: { id: 'user-id', name: 'Pessoa Editora', emailAddress: 'editor@example.com' },
+        status: 'PENDING',
+      }],
+      nextCursor: null,
+    }) as never);
+
+    service.getEditors(12).subscribe((page) => {
+      expect(page.content[0]).toMatchObject({
+        status: 'PENDING',
+        active: false,
+        email_address: 'editor@example.com',
+      });
+    });
   });
 });

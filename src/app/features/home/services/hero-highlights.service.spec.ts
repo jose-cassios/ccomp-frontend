@@ -77,7 +77,8 @@ describe('HeroHighlightsService', () => {
         id: 8,
         title: 'Semana da Computação',
         slug: 'semana-da-computacao',
-        description: 'Palestras e oficinas.',
+        description: null,
+        summary: 'Palestras e oficinas.',
         cover_image_url: 'https://example.com/semana.jpg',
         category: 'ACADEMIC_EDUCATIONAL',
         format: 'IN_PERSON',
@@ -91,6 +92,7 @@ describe('HeroHighlightsService', () => {
       expect(highlights[0]).toEqual(expect.objectContaining({
         source_type: 'EVENT',
         title: 'Semana da Computação',
+        summary: 'Palestras e oficinas.',
         image_url: 'https://example.com/semana.jpg',
       }));
     });

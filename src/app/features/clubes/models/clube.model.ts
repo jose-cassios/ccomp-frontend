@@ -29,7 +29,7 @@ export interface UpdateClubPayload {
 }
 
 export type ClubMemberRole = 'INSTRUCTOR' | 'MEMBER';
-export type ClubMemberStatus = 'ACTIVE' | 'INACTIVE';
+export type ClubMemberStatus = 'ACTIVE' | 'INACTIVE' | 'CANCELLED';
 
 export interface ClubMemberFilter {
   role?: ClubMemberRole;

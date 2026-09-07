@@ -38,6 +38,12 @@ export class EventsPageComponent implements OnInit {
   readonly myEventsLoading = signal(false);
   readonly myEventsLoadingMore = signal(false);
   readonly myEventsError = signal<string | null>(null);
+  readonly editorEvents = signal<EventListItem[]>([]);
+  readonly editorEventsNextCursor = signal<string | null>(null);
+  readonly editorEventsLoading = signal(false);
+  readonly editorEventsLoadingMore = signal(false);
+  readonly editorEventsError = signal<string | null>(null);
+  readonly isAuthenticated = this.authService.isAuthenticatedState;
   readonly errorMessage = signal<string | null>(null);
   readonly calendarOpen = signal(false);
   readonly calendarEvents = signal<EventListItem[]>([]);
@@ -52,6 +58,7 @@ export class EventsPageComponent implements OnInit {
   ngOnInit(): void {
     this.reload();
     this.loadMyEvents();
+    this.loadEditorEvents();
   }
 
   reload(): void {
@@ -143,6 +150,24 @@ export class EventsPageComponent implements OnInit {
     });
   }
 
+  loadMoreEditorEvents(): void {
+    const cursor = this.editorEventsNextCursor();
+    if (!cursor || this.editorEventsLoadingMore()) return;
+
+    this.editorEventsLoadingMore.set(true);
+    this.eventsService.getEditableEvents(cursor).pipe(
+      finalize(() => this.editorEventsLoadingMore.set(false)),
+    ).subscribe({
+      next: (page) => {
+        const byId = new Map(this.editorEvents().map((event) => [event.id, event]));
+        page.content.forEach((event) => byId.set(event.id, event));
+        this.editorEvents.set([...byId.values()]);
+        this.editorEventsNextCursor.set(page.next_cursor);
+      },
+      error: () => this.editorEventsError.set('Não foi possível carregar mais eventos disponíveis para edição.'),
+    });
+  }
+
   private loadMyEvents(): void {
     if (!this.canManageEvents()) return;
 
@@ -156,6 +181,22 @@ export class EventsPageComponent implements OnInit {
         this.myEventsNextCursor.set(page.next_cursor);
       },
       error: () => this.myEventsError.set('Não foi possível carregar os eventos criados por você.'),
+    });
+  }
+
+  private loadEditorEvents(): void {
+    if (!this.isAuthenticated()) return;
+
+    this.editorEventsLoading.set(true);
+    this.editorEventsError.set(null);
+    this.eventsService.getEditableEvents().pipe(
+      finalize(() => this.editorEventsLoading.set(false)),
+    ).subscribe({
+      next: (page) => {
+        this.editorEvents.set(page.content);
+        this.editorEventsNextCursor.set(page.next_cursor);
+      },
+      error: () => this.editorEventsError.set('Não foi possível carregar seus eventos como editor.'),
     });
   }
 

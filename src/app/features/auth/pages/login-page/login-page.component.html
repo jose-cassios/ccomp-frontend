@@ -9,6 +9,9 @@
     </div>
 
     <mat-card-content>
+      @if (errorMessage()) {
+        <p class="auth-error" role="alert">{{ errorMessage() }}</p>
+      }
       <app-login-form (login)="onLogin($event)"></app-login-form>
     </mat-card-content>
     

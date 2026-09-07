@@ -1,10 +1,14 @@
 <main class="events-page">
   <header class="page-header">
-    <h1>Eventos</h1>
+    <div class="page-intro">
+      <span class="page-kicker">Agenda da comunidade</span>
+      <h1>Agenda da Computação</h1>
+      <p>Encontros, oficinas e experiências para aprender, criar e participar.</p>
+    </div>
     <div class="page-actions">
-      <button type="button" (click)="openCalendar()">Ver calendário</button>
+      <button class="page-action page-action--secondary" type="button" (click)="openCalendar()">Ver calendário</button>
       @if (canManageEvents()) {
-        <a routerLink="/eventos/novo">+ Novo evento</a>
+        <a class="page-action page-action--primary" routerLink="/eventos/novo">+ Novo evento</a>
       }
     </div>
   </header>
@@ -24,7 +28,7 @@
       } @else {
         <app-proximos-eventos
           [eventos]="myEvents()"
-          heading="Seus eventos"
+          heading="Eventos sob sua gestão"
           [showFilters]="false"
           [manageMode]="true"
           [compactMode]="true"
@@ -36,9 +40,31 @@
       }
     }
 
+    @if (isAuthenticated()) {
+      @if (editorEventsLoading()) {
+        <p class="empty-state" role="status">Carregando sua área de edição...</p>
+      } @else if (editorEventsError()) {
+        <p class="notice notice--error" role="alert">{{ editorEventsError() }}</p>
+      } @else if (editorEvents().length) {
+        <app-proximos-eventos
+          id="area-editor"
+          [eventos]="editorEvents()"
+          heading="Eventos em que você é editor"
+          [showFilters]="false"
+          [manageMode]="true"
+          [compactMode]="true"
+          [hasMore]="editorEventsNextCursor() !== null"
+          [loadingMore]="editorEventsLoadingMore()"
+          (selected)="openDraft($event)"
+          (loadMore)="loadMoreEditorEvents()"
+        />
+      }
+    }
+
     @if (!errorMessage()) {
       <app-proximos-eventos
         [eventos]="events()"
+        heading="Programação disponível"
         [selectedCategory]="selectedCategory()"
         [selectedFormat]="selectedFormat()"
         [hasMore]="nextCursor() !== null"

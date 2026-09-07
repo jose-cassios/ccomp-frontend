@@ -3,7 +3,7 @@
   border-radius: 16px;
   overflow: hidden;
   background: var(--white);
-  box-shadow: 0 8px 32px var(--shadow-lg);
+  border: 1px solid var(--border-primary);
   display: grid;
   grid-template-columns: 1.2fr 1fr;
   min-height: 400px;
@@ -23,7 +23,7 @@
 .hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.3), transparent);
+  background: rgba(20, 29, 24, 0.18);
 }
 
 .hero-content {
@@ -86,11 +86,7 @@
   font-weight: 600;
   text-decoration: none;
   font-size: 0.95rem;
-  transition: gap 0.2s;
-}
-
-.hero-link:hover {
-  gap: 12px;
+  transition: color 0.2s;
 }
 
 .arrow {

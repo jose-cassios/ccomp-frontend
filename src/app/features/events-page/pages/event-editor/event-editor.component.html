@@ -40,7 +40,7 @@
     }
   </nav>
 
-  @if (operation() !== 'loading') {
+  @if (operation() !== 'loading' && (!editingExisting() || (editorAccessResolved() && canEditEvent()))) {
     @switch (activeStep()) {
       @case ('details') {
         <form class="editor-card event-form" [formGroup]="form" (ngSubmit)="save()">
@@ -269,7 +269,7 @@
                 <span class="member-avatar">{{ editor.name.charAt(0) }}</span>
                 <span>
                   <strong>{{ editor.name }}</strong>
-                  <small>{{ editor.email_address }}</small>
+                  <small>{{ editor.email_address }} · {{ editorStatusLabel(editor.status) }}</small>
                 </span>
                 @if (canManageTeam()) {
                   <button class="text-button text-button--danger" type="button" [disabled]="isBusy()" (click)="removeEditor(editor)">Remover</button>
@@ -356,8 +356,19 @@
         </section>
       }
     }
-  } @else {
+  } @else if (operation() === 'loading' || (editingExisting() && !editorAccessResolved())) {
     <div class="editor-card loading-card" role="status">Carregando informações do evento...</div>
+  } @else {
+    <section class="editor-card" role="alert">
+      <div class="card-heading">
+        <div>
+          <span>Acesso restrito</span>
+          <h2>Você não pode editar este evento</h2>
+        </div>
+      </div>
+      <p class="card-copy">A edição está disponível apenas para a pessoa responsável, os colaboradores incluídos na equipe e administradores.</p>
+      <a routerLink="/eventos" class="button button--outline">Voltar para eventos</a>
+    </section>
   }
 
   @if (showOperationFeedback() || errorMessage() || successMessage()) {

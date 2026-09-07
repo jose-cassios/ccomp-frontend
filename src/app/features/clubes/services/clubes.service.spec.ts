@@ -23,7 +23,7 @@ describe('ClubesService', () => {
 
   it('should use cursor pagination for public and managed clubs', () => {
     service.search('public-cursor', 20).subscribe();
-    service.getMine('mine-cursor', 15).subscribe();
+    service.getMine('mine-cursor', 15, 'INSTRUCTOR').subscribe();
 
     expect(api.post.mock.calls[0]?.[0]).toBe('/clubs/search');
     expect(api.post.mock.calls[0]?.[1]).toBeNull();
@@ -32,6 +32,7 @@ describe('ClubesService', () => {
     expect(api.post.mock.calls[1]?.[0]).toBe('/clubs/me');
     expect(api.post.mock.calls[1]?.[2]?.params?.get('nextCursor')).toBe('mine-cursor');
     expect(api.post.mock.calls[1]?.[2]?.params?.get('pageSize')).toBe('15');
+    expect(api.post.mock.calls[1]?.[2]?.params?.get('role')).toBe('INSTRUCTOR');
   });
 
   it('should map club CRUD and highlights to the documented routes', () => {
@@ -53,18 +54,20 @@ describe('ClubesService', () => {
 
   it('should map enrollment and member management routes', () => {
     service.enroll(4).subscribe();
+    service.unenroll(4).subscribe();
     service.searchMembers(4, { role: 'MEMBER', status: 'ACTIVE' }, 'member-cursor', 25).subscribe();
     service.addMember(4, 'pessoa+clube@example.com', 'INSTRUCTOR').subscribe();
-    service.changeMemberStatus(8, 'INACTIVE').subscribe();
+    service.changeMemberStatus(4, 8, 'INACTIVE').subscribe();
 
     expect(api.post).toHaveBeenCalledWith('/clubs/4/members/enroll', null);
+    expect(api.delete).toHaveBeenCalledWith('/clubs/4/members/unenroll');
     expect(api.post.mock.calls[1]?.[0]).toBe('/clubs/4/members/search');
     expect(api.post.mock.calls[1]?.[1]).toEqual({ role: 'MEMBER', status: 'ACTIVE' });
     expect(api.post.mock.calls[1]?.[2]?.params?.get('cursor')).toBe('member-cursor');
     expect(api.post.mock.calls[1]?.[2]?.params?.get('size')).toBe('25');
     expect(api.post.mock.calls[2]?.[0]).toBe('/clubs/4/members/staff/pessoa%2Bclube%40example.com');
     expect(api.post.mock.calls[2]?.[2]?.params?.get('role')).toBe('INSTRUCTOR');
-    expect(api.patch.mock.calls[0]?.[0]).toBe('/clubs/members/8/status');
+    expect(api.patch.mock.calls[0]?.[0]).toBe('/clubs/4/members/8/status');
     expect(api.patch.mock.calls[0]?.[2]?.params?.get('status')).toBe('INACTIVE');
   });
 });

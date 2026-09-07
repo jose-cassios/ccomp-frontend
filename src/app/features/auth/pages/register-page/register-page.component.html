@@ -8,6 +8,9 @@
     </div>
     
     <mat-card-content>
+      @if (errorMessage()) {
+        <p class="auth-error" role="alert">{{ errorMessage() }}</p>
+      }
       <app-register-form (register)="onRegister($event)"></app-register-form>
       
       <div class="divider-container">

@@ -34,7 +34,7 @@
   padding: 18px;
   border: 1px solid var(--border-primary);
   border-radius: 12px;
-  background: #f8fbf9;
+  background: var(--surface-subtle);
 }
 
 .newsletter-card p {

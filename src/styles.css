@@ -4,22 +4,47 @@
 
 :root {
   /* Marca */
-  --brand-100: #dcfce7;
-  --brand-500: #32a041;
-  --brand-600: #15803d;
-  --brand-700: #166534;
+  --brand-50: #f0f6f2;
+  --brand-100: #dcece1;
+  --brand-500: #2d864a;
+  --brand-600: #257a43;
+  --brand-700: #1d6336;
   /* Verde claro, para uso sobre fundo escuro */
-  --brand-accent: #6ef585;
+  --brand-accent: #8ec89f;
 
   /* Texto */
-  --text-strong: #2c3e50;
-  --text-muted: #666;
+  --text-strong: #1d2923;
+  --text-muted: #6f7e76;
+
+  /* Superfícies e estados reutilizáveis */
+  --surface-page: #f5f7f6;
+  --surface-card: #ffffff;
+  --surface-subtle: #eef1ef;
+  --border-subtle: #dfe5e1;
+  --focus-ring: rgba(45, 134, 74, 0.16);
+  --danger-bg: #fff0f2;
+  --danger-text: #942c3a;
+  --warning-bg: #fff5e6;
+  --warning-text: #8f5010;
+  --info-bg: #edf6fb;
+  --info-text: #275f87;
 }
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+}
+
+html,
+body {
+  background: var(--surface-page);
+  color: var(--text-strong);
+}
+
+::selection {
+  background: var(--brand-100);
+  color: var(--text-strong);
 }
 
 /* ===== Cabeçalho de seção ===== */
@@ -31,13 +56,13 @@
 }
 
 .section-header h3 {
-  color: var(--brand-600);
+  color: var(--text-strong);
   font-size: 20px;
 }
 
 .linha-verde {
-  width: 40px;
-  height: 4px;
+  width: 32px;
+  height: 3px;
   background-color: var(--brand-500);
   display: inline-block;
 }
@@ -52,29 +77,28 @@
   font-weight: bold;
   cursor: pointer;
   width: fit-content;
-  transition: transform 0.2s, background-color 0.2s;
+  transition: background-color 0.2s;
 }
 
 .btn-cta:hover {
   background-color: var(--brand-700);
-  transform: translateY(-2px);
 }
 
 /* Variante clara, para uso sobre fundo escuro (foto ou seção escura). */
 .btn-cta-light {
-  background-color: #e0e3e2;
-  color: #055023;
-  border: none;
+  background-color: var(--surface-card);
+  color: var(--text-strong);
+  border: 1px solid var(--border-subtle);
   padding: 12px 25px;
   border-radius: 8px;
   font-weight: bold;
   cursor: pointer;
-  transition: transform 0.2s, background-color 0.2s;
+  transition: background-color 0.2s, border-color 0.2s;
 }
 
 .btn-cta-light:hover {
-  background-color: #d7dbda;
-  transform: translateY(-2px);
+  background-color: var(--surface-subtle);
+  border-color: #c7d0cb;
 }
 
 .btn-text {

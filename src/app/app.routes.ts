@@ -10,6 +10,7 @@ import { Clubes } from './features/clubes/clubes';
 import { NewsComponent } from './features/news-page/news/news.component';
 import { NewsPageComponent } from './features/news-page/news-page.component';
 import { authGuard } from './features/auth/guards/auth.guard';
+import { publicGuard } from './features/auth/guards/public.guard';
 import { roleGuard } from './features/auth/guards/role.guard';
 import {
   ADMINISTRATION_ROLES,
@@ -22,7 +23,7 @@ import { ApresentacaoComponent } from './features/apresentacao/apresentacao.comp
 
 export const routes: Routes = [
     // Rotas fora do layout principal (sem header/footer)
-    { path: 'login', component: LoginPageComponent },
+    { path: 'login', component: LoginPageComponent, canActivate: [publicGuard] },
     { path: 'register', component: RegisterPageComponent },
     { path: 'recuperar-senha', component: PasswordRecoveryComponent },
     { path: 'reset-password', component: PasswordRecoveryComponent },
@@ -42,14 +43,30 @@ export const routes: Routes = [
           data: { roles: CONTENT_MANAGEMENT_ROLES },
         },
         {
+          path: 'accept-editor-invite',
+          loadComponent: () =>
+            import('./features/events-page/pages/event-editor-invitation/event-editor-invitation.component').then(
+              (module) => module.EventEditorInvitationComponent,
+            ),
+        },
+        // Keeps invitation links issued by the previous frontend route working.
+        {
+          path: 'eventos/convite-editor',
+          loadComponent: () =>
+            import('./features/events-page/pages/event-editor-invitation/event-editor-invitation.component').then(
+              (module) => module.EventEditorInvitationComponent,
+            ),
+        },
+        {
           path: 'eventos/:id/editar',
           loadComponent: () =>
             import('./features/events-page/pages/event-editor/event-editor.component').then(
               (module) => module.EventEditorComponent,
             ),
-          canActivate: [authGuard, roleGuard],
+          // A autorização do evento é conferida pela API para dono ou editor atribuído.
+          // Exigir apenas cargo aqui impediria um colaborador válido de abrir o evento.
+          canActivate: [authGuard],
           canDeactivate: [pendingEventChangesGuard],
-          data: { roles: CONTENT_MANAGEMENT_ROLES },
         },
         {
           path: 'eventos/:id',
@@ -86,9 +103,9 @@ export const routes: Routes = [
             import('./features/news-page/pages/news-editor/news-editor.component').then(
               (module) => module.NewsEditorComponent,
             ),
-          canActivate: [authGuard, roleGuard],
+          // A API valida se a pessoa é autora ou editora desta notícia.
+          canActivate: [authGuard],
           canDeactivate: [pendingNewsChangesGuard],
-          data: { roles: NEWS_MANAGEMENT_ROLES },
         },
         { path: 'sobre/apresentacao', component: ApresentacaoComponent },
         { path: 'noticias', component: NewsPageComponent },

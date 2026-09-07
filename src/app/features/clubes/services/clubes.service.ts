@@ -30,9 +30,11 @@ export class ClubesService {
     return this.api.get<Club[]>('/highlights/clubs');
   }
 
-  getMine(nextCursor?: string, pageSize = 10): Observable<ClubPage> {
+  getMine(nextCursor?: string, pageSize = 10, role?: ClubMemberRole): Observable<ClubPage> {
+    let params = this.cursorParams('nextCursor', nextCursor, 'pageSize', pageSize);
+    if (role) params = params.set('role', role);
     return this.api.post<ClubPage>('/clubs/me', null, {
-      params: this.cursorParams('nextCursor', nextCursor, 'pageSize', pageSize),
+      params,
     });
   }
 
@@ -56,6 +58,10 @@ export class ClubesService {
     return this.api.post<ClubMembership>(`/clubs/${clubId}/members/enroll`, null);
   }
 
+  unenroll(clubId: number): Observable<void> {
+    return this.api.delete<void>(`/clubs/${clubId}/members/unenroll`);
+  }
+
   searchMembers(
     clubId: number,
     filter: ClubMemberFilter = {},
@@ -76,9 +82,9 @@ export class ClubesService {
     );
   }
 
-  changeMemberStatus(memberId: number, status: ClubMemberStatus): Observable<void> {
+  changeMemberStatus(clubId: number, memberId: number, status: ClubMemberStatus): Observable<void> {
     const params = new HttpParams().set('status', status);
-    return this.api.patch<void>(`/clubs/members/${memberId}/status`, null, { params });
+    return this.api.patch<void>(`/clubs/${clubId}/members/${memberId}/status`, null, { params });
   }
 
   private cursorParams(
