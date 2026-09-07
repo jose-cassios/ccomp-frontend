@@ -20,6 +20,7 @@ import {
 import { pendingNewsChangesGuard } from './features/news-page/guards/pending-news-changes.guard';
 import { pendingEventChangesGuard } from './features/events-page/guards/pending-event-changes.guard';
 import { ApresentacaoComponent } from './features/apresentacao/apresentacao.component';
+import { CorpoDocenteComponent } from './features/corpo-docente/corpo-docente.component';
 
 export const routes: Routes = [
     // Rotas fora do layout principal (sem header/footer)
@@ -108,6 +109,7 @@ export const routes: Routes = [
           canDeactivate: [pendingNewsChangesGuard],
         },
         { path: 'sobre/apresentacao', component: ApresentacaoComponent },
+        { path: 'sobre/docentes', component: CorpoDocenteComponent },
         { path: 'noticias', component: NewsPageComponent },
         { path: 'news/:slug', component: NewsComponent },
         { path: '**', component: EmConstrucao }
