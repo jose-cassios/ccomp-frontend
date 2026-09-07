@@ -10,6 +10,7 @@ import { Clubes } from './features/clubes/clubes';
 import { NewsComponent } from './features/news-page/news/news.component';
 import { NewsPageComponent } from './features/news-page/news-page.component';
 import { authGuard } from './features/auth/guards/auth.guard';
+import { publicGuard } from './features/auth/guards/public.guard';
 import { roleGuard } from './features/auth/guards/role.guard';
 import {
   ADMINISTRATION_ROLES,
@@ -22,7 +23,7 @@ import { ApresentacaoComponent } from './features/apresentacao/apresentacao.comp
 
 export const routes: Routes = [
     // Rotas fora do layout principal (sem header/footer)
-    { path: 'login', component: LoginPageComponent },
+    { path: 'login', component: LoginPageComponent, canActivate: [publicGuard] },
     { path: 'register', component: RegisterPageComponent },
     { path: 'recuperar-senha', component: PasswordRecoveryComponent },
     { path: 'reset-password', component: PasswordRecoveryComponent },

@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { Observable, catchError, finalize, map, of, switchMap, tap, throwError } from 'rxjs';
+import { Observable, catchError, finalize, map, of, shareReplay, switchMap, tap, throwError } from 'rxjs';
 import { ForgotPasswordRequest, LoginRequest, RegisterRequest, ResetPasswordRequest } from '../models/auth-requests.model';
 import { AuthResponse, AuthMessageResponse } from '../models/auth-response.model';
 import { User } from '../models/user.model';
@@ -25,6 +25,7 @@ interface CurrentUserResponse {
 export class AuthService {
   private readonly currentUser = signal<User | null>(null);
   private readonly isAuthenticated = signal(false);
+  private sessionRestore$: Observable<boolean> | null = null;
   readonly currentUserState = this.currentUser.asReadonly();
   readonly isAuthenticatedState = this.isAuthenticated.asReadonly();
 
@@ -41,25 +42,48 @@ export class AuthService {
   }
 
   private loadFromStorage(): void {
+    this.restoreSession().subscribe();
+  }
+
+  /**
+   * Restores the locally persisted session before a route decides whether to
+   * display the login screen. An expired (or malformed) access token may be
+   * renewed once with the stored refresh token. Concurrent callers share the
+   * same refresh request, which avoids rotating a refresh token twice.
+   */
+  restoreSession(): Observable<boolean> {
     const token = this.getToken();
     if (token && !this.isExpired(token)) {
-      this.currentUser.set(this.getUserFromStorage() ?? this.getUserFromToken(token));
-      this.isAuthenticated.set(true);
-      // Besides profile data, /users/me reflects role changes already persisted in
-      // the database even while the current access token still contains an old role.
-      this.loadCurrentUser().subscribe({ error: () => undefined });
-      return;
+      if (!this.isAuthenticated()) {
+        this.currentUser.set(this.getUserFromStorage() ?? this.getUserFromToken(token));
+        this.isAuthenticated.set(true);
+        // Besides profile data, /users/me reflects role changes already persisted in
+        // the database even while the current access token still contains an old role.
+        this.loadCurrentUser().subscribe({ error: () => undefined });
+      }
+      return of(true);
     }
 
-    if (token && this.getRefreshToken()) {
-      this.refreshToken().pipe(
-        switchMap(() => this.loadCurrentUser()),
-        catchError(() => of(null)),
-      ).subscribe();
-      return;
+    if (!this.getRefreshToken()) {
+      this.clearSession();
+      return of(false);
     }
 
-    this.clearSession();
+    if (!this.sessionRestore$) {
+      this.sessionRestore$ = this.refreshToken().pipe(
+        switchMap(() => this.loadCurrentUser().pipe(
+          map(() => true),
+          // The refreshed token remains usable even if the optional profile
+          // request is temporarily unavailable.
+          catchError(() => of(true)),
+        )),
+        catchError(() => of(false)),
+        finalize(() => this.sessionRestore$ = null),
+        shareReplay({ bufferSize: 1, refCount: false }),
+      );
+    }
+
+    return this.sessionRestore$;
   }
 
   // /api/auth/sign-up
@@ -276,7 +300,7 @@ export class AuthService {
 
   private isExpired(token: string): boolean {
     const expiration = this.decodeToken(token)?.exp;
-    return typeof expiration === 'number' && expiration * 1000 <= Date.now();
+    return typeof expiration !== 'number' || expiration * 1000 <= Date.now();
   }
 
   private normalizeRole(role: string): string {

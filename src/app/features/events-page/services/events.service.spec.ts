@@ -7,7 +7,7 @@ import { EventsService } from './events.service';
 describe('EventsService', () => {
   const api = {
     get: vi.fn((endpoint: string) => {
-      if (endpoint.startsWith('/users/me/')) {
+      if (endpoint.startsWith('/events/me/')) {
         return of({ content: [], nextCursor: null, previousCursor: null });
       }
       if (endpoint.endsWith('/editors')) return of({ content: [], nextCursor: null });
@@ -87,22 +87,27 @@ describe('EventsService', () => {
   it('should load the authenticated user event collections with cursor pagination', () => {
     service.getCreatedEvents('created-cursor', 20).subscribe();
     service.getMySubscriptions('subscription-cursor', 30).subscribe();
+    service.getEditableEvents('editor-cursor', 40).subscribe();
 
-    expect(api.get).toHaveBeenCalledWith('/users/me/created-events', { params: expect.any(HttpParams) });
-    expect(api.get).toHaveBeenCalledWith('/users/me/events-subscriptions', { params: expect.any(HttpParams) });
+    expect(api.get).toHaveBeenCalledWith('/events/me/created', { params: expect.any(HttpParams) });
+    expect(api.get).toHaveBeenCalledWith('/events/me/subscriptions', { params: expect.any(HttpParams) });
+    expect(api.get).toHaveBeenCalledWith('/events/me/editors', { params: expect.any(HttpParams) });
 
     const getCalls = api.get.mock.calls as unknown as Array<[
       string,
       { params?: HttpParams } | undefined,
     ]>;
-    const createdParams = getCalls.find(([endpoint]) => endpoint === '/users/me/created-events')?.[1]?.params;
+    const createdParams = getCalls.find(([endpoint]) => endpoint === '/events/me/created')?.[1]?.params;
     const subscriptionParams = getCalls.find(
-      ([endpoint]) => endpoint === '/users/me/events-subscriptions',
+      ([endpoint]) => endpoint === '/events/me/subscriptions',
     )?.[1]?.params;
+    const editorParams = getCalls.find(([endpoint]) => endpoint === '/events/me/editors')?.[1]?.params;
     expect(createdParams?.get('nextCursor')).toBe('created-cursor');
     expect(createdParams?.get('pageSize')).toBe('20');
     expect(subscriptionParams?.get('nextCursor')).toBe('subscription-cursor');
     expect(subscriptionParams?.get('pageSize')).toBe('30');
+    expect(editorParams?.get('nextCursor')).toBe('editor-cursor');
+    expect(editorParams?.get('pageSize')).toBe('40');
   });
 
   it('should create and update events with the current API contracts', () => {

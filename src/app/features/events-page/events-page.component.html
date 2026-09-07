@@ -40,6 +40,27 @@
       }
     }
 
+    @if (isAuthenticated()) {
+      @if (editorEventsLoading()) {
+        <p class="empty-state" role="status">Carregando sua área de edição...</p>
+      } @else if (editorEventsError()) {
+        <p class="notice notice--error" role="alert">{{ editorEventsError() }}</p>
+      } @else if (editorEvents().length) {
+        <app-proximos-eventos
+          id="area-editor"
+          [eventos]="editorEvents()"
+          heading="Eventos em que você é editor"
+          [showFilters]="false"
+          [manageMode]="true"
+          [compactMode]="true"
+          [hasMore]="editorEventsNextCursor() !== null"
+          [loadingMore]="editorEventsLoadingMore()"
+          (selected)="openDraft($event)"
+          (loadMore)="loadMoreEditorEvents()"
+        />
+      }
+    }
+
     @if (!errorMessage()) {
       <app-proximos-eventos
         [eventos]="events()"

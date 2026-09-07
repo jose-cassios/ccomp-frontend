@@ -93,6 +93,7 @@ export class EventEditorComponent implements OnInit {
   readonly enrollmentsLoading = signal(false);
   readonly enrollmentsError = signal<string | null>(null);
   readonly ownedEventIds = signal<ReadonlySet<number>>(new Set());
+  readonly editableEventIds = signal<ReadonlySet<number>>(new Set());
   readonly operation = signal<EditorOperation>('idle');
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
@@ -109,10 +110,12 @@ export class EventEditorComponent implements OnInit {
       || Boolean(currentEvent?.owner_id && currentUserId && currentEvent.owner_id === currentUserId);
   });
   readonly isAssignedEditor = computed(() => {
+    const currentEvent = this.event();
     const currentUserId = this.authService.currentUserState()?.id;
-    return Boolean(currentUserId && this.editors().some((editor) =>
-      editor.active && editor.user_id === currentUserId,
-    ));
+    return Boolean(currentEvent && this.editableEventIds().has(currentEvent.id))
+      || Boolean(currentUserId && this.editors().some((editor) =>
+        editor.active && editor.user_id === currentUserId,
+      ));
   });
   readonly canEditEvent = computed(() => this.isAdmin() || this.isOwner() || this.isAssignedEditor());
   readonly canDelete = computed(() => this.isAdmin() || this.isOwner());
@@ -543,6 +546,7 @@ export class EventEditorComponent implements OnInit {
       next: (event) => {
         this.applyEvent(event);
         this.loadActivities(event.id);
+        this.loadEditorAccess();
         this.loadEditors(event.id);
         this.loadEnrollments(event.id);
       },
@@ -553,16 +557,24 @@ export class EventEditorComponent implements OnInit {
   }
 
   private loadEditors(eventId: number): void {
-    this.editorAccessResolved.set(false);
     this.eventsService.getEditors(eventId).subscribe({
       next: (page) => {
         this.editors.set(page.content.filter((editor) => editor.status !== 'REVOKED'));
-        this.editorAccessResolved.set(true);
       },
       error: () => {
         this.editors.set([]);
+      },
+    });
+  }
+
+  private loadEditorAccess(): void {
+    this.editorAccessResolved.set(false);
+    this.eventsService.getEditableEvents(undefined, 50).subscribe({
+      next: (page) => {
+        this.editableEventIds.set(new Set(page.content.map((event) => event.id)));
         this.editorAccessResolved.set(true);
       },
+      error: () => this.editorAccessResolved.set(true),
     });
   }
 

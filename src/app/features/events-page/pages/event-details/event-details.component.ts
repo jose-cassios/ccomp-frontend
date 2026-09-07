@@ -35,10 +35,13 @@ export class EventDetailsComponent implements OnInit {
   readonly subscribed = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
+  readonly editableEventIds = signal<ReadonlySet<number>>(new Set());
   readonly isAuthenticated = this.authService.isAuthenticatedState;
-  readonly canEdit = computed(() =>
-    this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
-  );
+  readonly canEdit = computed(() => {
+    const eventId = this.event()?.id;
+    return this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES)
+      || Boolean(eventId && this.editableEventIds().has(eventId));
+  });
   readonly categoryLabel = eventCategoryLabel;
   readonly formatLabel = eventFormatLabel;
   readonly publicationStatusLabel = eventPublicationStatusLabel;
@@ -64,6 +67,7 @@ export class EventDetailsComponent implements OnInit {
         this.event.set({ ...event, activities: event.activities ?? [] });
         this.loadActivities(event.id);
         this.loadSubscriptionState(event.id);
+        this.loadEditorAccess();
       },
       error: (error: unknown) => this.errorMessage.set(this.getErrorMessage(error)),
     });
@@ -121,6 +125,17 @@ export class EventDetailsComponent implements OnInit {
       catchError(() => of(null)),
     ).subscribe((page) => {
       this.subscribed.set(Boolean(page?.content.some((event) => event.id === eventId)));
+    });
+  }
+
+  private loadEditorAccess(): void {
+    if (!this.isAuthenticated()) return;
+
+    this.eventsService.getEditableEvents(undefined, 50).pipe(
+      catchError(() => of(null)),
+    ).subscribe((page) => {
+      if (!page) return;
+      this.editableEventIds.set(new Set(page.content.map((event) => event.id)));
     });
   }
 
