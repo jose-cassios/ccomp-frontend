@@ -1,0 +1,81 @@
+<section class="docentes-page">
+  <div class="hero-shell">
+    <div class="container hero">
+      <div class="hero-copy">
+        <span class="titulo">Corpo docente</span>
+        <h1>Nosso <em>Corpo Docente</em></h1>
+        <p>Conheça os pesquisadores e professores que lideram a excelência acadêmica no CCOMP.</p>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="hero-halo"></div>
+        <div class="grid-dots"></div>
+        <div class="hero-people"></div>
+        <span class="accent accent-plus">+</span>
+        <span class="accent accent-spark">✦</span>
+        <span class="accent accent-diamond"></span>
+        <span class="accent accent-ring"></span>
+      </div>
+    </div>
+
+    <main class="container content">
+      <div class="section-intro">
+        <div>
+          <span class="section-kicker">Nossa equipe</span>
+          <h2>Corpo docente do curso</h2>
+        </div>
+        <p>Uma equipe formada por profissionais comprometidos com ensino, pesquisa e extensão.</p>
+      </div>
+      <div class="team-meta">
+        <div class="meta-item">
+          <strong>{{ professorCount }}</strong
+          ><span>professores</span>
+        </div>
+        <div class="meta-divider"></div>
+        <div class="meta-item"><strong>CCOMP</strong><span>IFMA · Campus Caxias</span></div>
+        <div class="meta-note">Conheça cada perfil</div>
+      </div>
+
+      <section class="docentes-grid" aria-label="Professores do curso">
+        @for (professor of professors; track professor.name) {
+          <article class="docente-card">
+            <div class="portrait" [class]="professor.tone">
+              <div class="portrait-ring"></div>
+              <div class="avatar-head">{{ professor.initials }}</div>
+              <div class="avatar-body"></div>
+              <div class="portrait-label">CCOMP - IFMA</div>
+            </div>
+            <div class="card-body">
+              <span class="area-tag">{{ professor.area }}</span>
+              <h3>{{ professor.title }} {{ professor.name }}</h3>
+              <p>{{ professor.degree }}</p>
+              @if (professor.lattesUrl) {
+                <a
+                  [href]="professor.lattesUrl"
+                  class="curriculo-link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  [attr.aria-label]="'Consultar currículo Lattes de ' + professor.name"
+                  >Consultar currículo Lattes</a
+                >
+              } @else {
+                <span class="curriculo-unavailable">Currículo Lattes em atualização</span>
+              }
+            </div>
+          </article>
+        }
+      </section>
+      <section class="docente-cta">
+        <div class="cta-icon" aria-hidden="true">✦</div>
+        <div>
+          <span>Ensino, pesquisa e extensão</span>
+          <h2>Conheça quem constrói o curso com a gente.</h2>
+          <p>
+            Professores que conectam conhecimento, tecnologia e formação para transformar ideias em
+            soluções.
+          </p>
+        </div>
+        <a routerLink="/sobre/apresentacao" class="cta-link">Conheça o curso</a>
+      </section>
+    </main>
+  </div>
+</section>
