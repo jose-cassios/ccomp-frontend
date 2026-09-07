@@ -52,6 +52,9 @@ export class LoginPageComponent {
   }
 
   navigateToRegister(): void {
-    this.router.navigate(['/register']);
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    this.router.navigate(['/register'], {
+      queryParams: returnUrl?.startsWith('/') ? { returnUrl } : {},
+    });
   }
 }

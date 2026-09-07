@@ -1,10 +1,11 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { finalize, tap } from 'rxjs';
 import { apiMessage } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
+import { AuthService } from '../../../auth/services/auth.service';
 
 @Component({
   selector: 'app-event-editor-invitation',
@@ -48,7 +49,9 @@ import { apiErrorMessage } from '../../../../core/api/api-error';
 })
 export class EventEditorInvitationComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly eventsService = inject(EventsService);
+  private readonly authService = inject(AuthService);
 
   readonly loading = signal(true);
   readonly successMessage = signal<string | null>(null);
@@ -62,7 +65,20 @@ export class EventEditorInvitationComponent implements OnInit {
       return;
     }
 
+    if (!this.authService.isAuthenticatedValue) {
+      this.loading.set(false);
+      void this.router.navigate(['/login'], {
+        queryParams: { returnUrl: `/accept-editor-invite?code=${code}` },
+      });
+      return;
+    }
+
     this.eventsService.acceptEditorInvitation(code).pipe(
+      tap(() => {
+        void this.router.navigate(['/eventos'], {
+          queryParams: { conviteEditor: 'aceito' },
+        });
+      }),
       finalize(() => this.loading.set(false)),
     ).subscribe({
       next: (response) => this.successMessage.set(apiMessage(

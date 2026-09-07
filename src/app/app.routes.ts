@@ -42,12 +42,19 @@ export const routes: Routes = [
           data: { roles: CONTENT_MANAGEMENT_ROLES },
         },
         {
+          path: 'accept-editor-invite',
+          loadComponent: () =>
+            import('./features/events-page/pages/event-editor-invitation/event-editor-invitation.component').then(
+              (module) => module.EventEditorInvitationComponent,
+            ),
+        },
+        // Keeps invitation links issued by the previous frontend route working.
+        {
           path: 'eventos/convite-editor',
           loadComponent: () =>
             import('./features/events-page/pages/event-editor-invitation/event-editor-invitation.component').then(
               (module) => module.EventEditorInvitationComponent,
             ),
-          canActivate: [authGuard],
         },
         {
           path: 'eventos/:id/editar',
