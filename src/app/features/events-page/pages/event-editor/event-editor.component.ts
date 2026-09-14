@@ -1,6 +1,6 @@
 import { DatePipe, Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, HostListener, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, ViewChild, computed, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -33,7 +33,7 @@ import {
   eventEnrollmentStateLabel,
   eventPublicationStatusLabel,
   apiMessage,
-  groupEventActivities,
+  buildEventActivityDays,
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 
@@ -53,9 +53,12 @@ const EDITOR_STEPS: ReadonlyArray<{ value: EventEditorStep; label: string }> = [
   standalone: true,
   imports: [DatePipe, ReactiveFormsModule, RouterLink],
   templateUrl: './event-editor.component.html',
-  styleUrl: './event-editor.component.css',
+  styleUrls: ['./event-editor.component.css', './event-activity-dialog.css'],
 })
 export class EventEditorComponent implements OnInit {
+  @ViewChild('activityDialog') private activityDialog?: ElementRef<HTMLDialogElement>;
+  readonly activityDialogDay = signal<string | null>(null);
+  readonly activityDialogEndDay = signal<string | null>(null);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -147,7 +150,9 @@ export class EventEditorComponent implements OnInit {
     );
   });
   readonly canManageActivities = computed(() => this.isOwner() || this.isAssignedEditor());
-  readonly activitySchedule = computed(() => groupEventActivities(this.activities()));
+  readonly activitySchedule = computed(() => buildEventActivityDays(
+    this.event()?.start_date, this.event()?.end_date, this.activities(),
+  ).map((day) => ({ ...day, count: day.slots.reduce((total, slot) => total + slot.activities.length, 0) })));
   readonly visibleActivityDay = computed(() => {
     const schedule = this.activitySchedule();
     return schedule.find((day) => day.key === this.activeActivityDay()) ?? schedule[0] ?? null;
@@ -434,7 +439,7 @@ export class EventEditorComponent implements OnInit {
     }
     if (this.activityForm.invalid || this.activityDatesError()) {
       this.activityForm.markAllAsTouched();
-      this.errorMessage.set('Revise os dados obrigatórios e os horários da atividade.');
+      this.errorMessage.set(this.activityDatesError() ?? 'Revise os dados obrigatórios e os horários da atividade.');
       return;
     }
 
@@ -484,6 +489,9 @@ export class EventEditorComponent implements OnInit {
         }
         this.resetActivityForm();
         this.editingActivityId.set(null);
+        this.activityDialog?.nativeElement.close();
+        this.activityDialogDay.set(null);
+        this.activityDialogEndDay.set(null);
         this.loadActivities(currentEvent.id);
       },
       error: (error: unknown) => {
@@ -516,6 +524,18 @@ export class EventEditorComponent implements OnInit {
 
   editActivity(activity: EventActivity): void {
     if (this.isBusy() || !this.canManageActivities()) return;
+    const startDay = this.toLocalInput(activity.start_date ?? null).slice(0, 10);
+    const fallbackDay = this.activitySchedule().find((day) => this.canAddActivityOnDay(day.key))?.key;
+    const day = this.canAddActivityOnDay(startDay) ? startDay : fallbackDay;
+    if (!day) {
+      this.errorMessage.set('Defina o período do evento antes de editar a programação.');
+      return;
+    }
+    this.activeActivityDay.set(day);
+    this.activityDialogDay.set(day);
+    // Do not silently shorten an existing activity spanning multiple days.
+    const endDay = this.toLocalInput(activity.end_date ?? null).slice(0, 10);
+    this.activityDialogEndDay.set(this.canAddActivityOnDay(endDay) && endDay >= day ? endDay : day);
     this.editingActivityId.set(activity.id);
     this.activityForm.reset({
       title: activity.title,
@@ -527,21 +547,90 @@ export class EventEditorComponent implements OnInit {
       registration_policy: activity.registration_policy ?? 'EVENT_REGISTRANTS_ONLY',
     });
     this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.activityDialog?.nativeElement.showModal();
   }
 
   cancelActivityEdit(): void {
+    if (this.isBusy()) return;
+    if (this.activityForm.dirty && typeof window !== 'undefined'
+      && !window.confirm('Descartar as alterações desta atividade?')) return;
+    this.activityDialog?.nativeElement.close();
+    this.activityDialogDay.set(null);
+    this.activityDialogEndDay.set(null);
     this.editingActivityId.set(null);
     this.resetActivityForm();
+  }
+
+  onActivityDialogCancel(event: Event): void {
+    event.preventDefault();
+    this.cancelActivityEdit();
+  }
+
+  openActivityDialog(): void {
+    const day = this.visibleActivityDay()?.key;
+    if (!day || this.isBusy() || !this.canManageActivities() || !this.canAddActivityOnDay(day)) return;
+    this.resetActivityForm();
+    this.editingActivityId.set(null);
+    this.activityDialogDay.set(day);
+    this.activityDialogEndDay.set(day);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.activityDialog?.nativeElement.showModal();
+  }
+
+  canAddActivityOnDay(day: string): boolean {
+    const start = this.toLocalInput(this.event()?.start_date ?? null);
+    const end = this.toLocalInput(this.event()?.end_date ?? null);
+    return /^\d{4}-\d{2}-\d{2}$/.test(day) && !!start && !!end
+      && start.slice(0, 10) <= day && day <= end.slice(0, 10);
+  }
+
+  activityTimeBounds(day: string | null): { min: string; max: string } {
+    const start = this.toLocalInput(this.event()?.start_date ?? null);
+    const end = this.toLocalInput(this.event()?.end_date ?? null);
+    return {
+      min: start.slice(0, 10) === day ? start.slice(11) : '00:00',
+      max: end.slice(0, 10) === day ? end.slice(11) : '23:59',
+    };
+  }
+
+  setActivityTime(field: 'start_date' | 'end_date', event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    const day = field === 'start_date' ? this.activityDialogDay() : this.activityDialogEndDay();
+    this.activityForm.controls[field].setValue(day && value ? `${day}T${value}` : '');
+    this.activityForm.controls[field].markAsDirty();
   }
 
   selectActivityDay(dayKey: string): void {
     this.activeActivityDay.set(dayKey);
   }
 
+  navigateActivityDays(event: KeyboardEvent, dayKey: string): void {
+    const days = this.activitySchedule();
+    const index = days.findIndex((day) => day.key === dayKey);
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight': next = (index + 1) % days.length; break;
+      case 'ArrowLeft': next = (index - 1 + days.length) % days.length; break;
+      case 'Home': next = 0; break;
+      case 'End': next = days.length - 1; break;
+      default: return;
+    }
+    event.preventDefault();
+    this.selectActivityDay(days[next].key);
+    (event.currentTarget as HTMLElement).parentElement
+      ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+  }
+
   activityDatesError(): string | null {
     const start = this.activityForm.controls.start_date.value;
     const end = this.activityForm.controls.end_date.value;
     if (!start || !end) return null;
+    if (this.activityDialogDay() && (start.slice(0, 10) !== this.activityDialogDay()
+      || end.slice(0, 10) !== this.activityDialogEndDay())) {
+      return 'Selecione novamente os horários para o dia indicado no formulário.';
+    }
 
     const startTimestamp = new Date(start).getTime();
     const endTimestamp = new Date(end).getTime();
@@ -634,13 +723,13 @@ export class EventEditorComponent implements OnInit {
   }
 
   canDeactivate(): boolean {
-    if (!this.hasUnsavedChanges() || typeof window === 'undefined') return true;
+    if ((!this.hasUnsavedChanges() && !(this.activityDialogDay() && this.activityForm.dirty)) || typeof window === 'undefined') return true;
     return window.confirm('Há alterações não salvas. Deseja sair mesmo assim?');
   }
 
   @HostListener('window:beforeunload', ['$event'])
   preventUnsavedUnload(event: BeforeUnloadEvent): void {
-    if (this.hasUnsavedChanges()) event.preventDefault();
+    if (this.hasUnsavedChanges() || (this.activityDialogDay() && this.activityForm.dirty)) event.preventDefault();
   }
 
   private loadEvent(id: string): void {

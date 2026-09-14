@@ -170,7 +170,7 @@
                                 <button type="button" [disabled]="activitySubscriptionBusyId() !== null" (click)="toggleActivitySubscription(activity, true)">Cancelar inscrição existente</button>
                               }
                               @if (activityRegistrationHint(activity); as hint) {
-                                <small>{{ hint }}</small>
+                                <small [class.activity-conflict]="activityConflict(activity)">{{ hint }}</small>
                               }
                             } @else {
                               <span class="free-access">

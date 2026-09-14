@@ -332,6 +332,51 @@ export function groupEventActivities(activities: readonly EventActivity[]): Even
   return [...days.values()];
 }
 
+/** Editor calendar: includes empty days and preserves legacy/out-of-range activities. */
+export function buildEventActivityDays(
+  start: string | null | undefined,
+  end: string | null | undefined,
+  activities: readonly EventActivity[],
+): EventActivityDayGroup[] {
+  const groups = groupEventActivities(activities);
+  const first = new Date(start ?? '');
+  const last = new Date(end ?? '');
+  if (!Number.isFinite(first.getTime()) || !Number.isFinite(last.getTime()) || first > last) return groups;
+
+  const byDay = new Map(groups.map((group) => [group.key, group]));
+  const days: EventActivityDayGroup[] = [];
+  const finalKey = localDateKey(last);
+  // Calendar arithmetic, not increments of 24h (which break across daylight-saving changes).
+  first.setHours(12, 0, 0, 0);
+  while (localDateKey(first) <= finalKey) {
+    const key = localDateKey(first);
+    days.push(byDay.get(key) ?? { key, date: `${key}T12:00:00`, slots: [] });
+    byDay.delete(key);
+    first.setDate(first.getDate() + 1);
+  }
+  return [...days, ...byDay.values()];
+}
+
+/**
+ * Activities collide when their occupied intervals intersect. Adjacent slots
+ * (one ends exactly when the other starts) are intentionally allowed.
+ */
+export function activitiesOverlap(
+  first: Pick<EventActivity, 'start_date' | 'end_date'>,
+  second: Pick<EventActivity, 'start_date' | 'end_date'>,
+): boolean {
+  const firstStart = activityTimestamp(first.start_date);
+  const firstEnd = activityTimestamp(first.end_date);
+  const secondStart = activityTimestamp(second.start_date);
+  const secondEnd = activityTimestamp(second.end_date);
+  if (!Number.isFinite(firstStart) || !Number.isFinite(firstEnd)
+    || !Number.isFinite(secondStart) || !Number.isFinite(secondEnd)
+    || firstStart >= firstEnd || secondStart >= secondEnd) {
+    return false;
+  }
+  return firstStart < secondEnd && secondStart < firstEnd;
+}
+
 function activityTimestamp(value?: string | null): number {
   if (!value) return Number.POSITIVE_INFINITY;
   const timestamp = new Date(value).getTime();

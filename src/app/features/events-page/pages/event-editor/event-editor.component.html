@@ -188,104 +188,7 @@
           </div>
           <p class="card-copy">Organize a agenda por dia e horário. Atividades simultâneas serão apresentadas juntas aos participantes.</p>
 
-          @if (canManageActivities()) {
-            <form class="activity-editor-form" [formGroup]="activityForm" (ngSubmit)="saveActivity()">
-              <div class="activity-form-heading">
-                <div>
-                  <span>{{ editingActivityId() ? 'Editando atividade' : 'Nova atividade' }}</span>
-                  <strong>{{ editingActivityId() ? 'Atualize os dados da programação' : 'Adicione um item à programação' }}</strong>
-                </div>
-                @if (editingActivityId()) {
-                  <button class="text-button" type="button" [disabled]="isBusy()" (click)="cancelActivityEdit()">Cancelar edição</button>
-                }
-              </div>
-
-              <div class="activity-form-grid">
-                <label class="field field--wide">
-                  <span>Nome da atividade *</span>
-                  <input type="text" formControlName="title" maxlength="255" placeholder="Ex.: Oficina de prototipação" />
-                  @if (activityForm.controls.title.touched && activityForm.controls.title.invalid) {
-                    <strong>Informe o nome da atividade.</strong>
-                  }
-                </label>
-
-                <label class="field">
-                  <span>Tipo *</span>
-                  <select formControlName="type">
-                    @for (type of activityTypes; track type.value) {
-                      <option [value]="type.value">{{ type.label }}</option>
-                    }
-                  </select>
-                </label>
-
-                <label class="field">
-                  <span>Local *</span>
-                  <input type="text" formControlName="location" maxlength="255" placeholder="Ex.: Laboratório 04" />
-                  @if (activityForm.controls.location.touched && activityForm.controls.location.invalid) {
-                    <strong>Informe onde a atividade acontecerá.</strong>
-                  }
-                </label>
-
-                <label class="field">
-                  <span>Início *</span>
-                  <input type="datetime-local" formControlName="start_date" />
-                </label>
-
-                <label class="field">
-                  <span>Término *</span>
-                  <input type="datetime-local" formControlName="end_date" />
-                </label>
-
-                @if (activityDatesError(); as error) {
-                  <strong class="field-error field--wide">{{ error }}</strong>
-                }
-
-                <label class="field field--wide">
-                  <span>Descrição</span>
-                  <textarea formControlName="description" rows="3" maxlength="1000" placeholder="Conte brevemente o que será apresentado."></textarea>
-                </label>
-
-                <fieldset class="activity-settings field--wide">
-                  <legend>Participação</legend>
-                  <div class="activity-form-grid">
-                    <label class="field">
-                      <span>Como participar *</span>
-                      <select formControlName="registration_policy">
-                        @for (mode of activityRegistrationPolicies; track mode.value) {
-                          <option [value]="mode.value">{{ mode.label }}</option>
-                        }
-                      </select>
-                    </label>
-                  </div>
-                  <p>Atividades públicas dispensam inscrição. Nas demais opções, a API atualmente exige inscrição no evento antes da inscrição individual na atividade.</p>
-                </fieldset>
-
-                <fieldset class="activity-settings field--wide" disabled>
-                  <legend>Convidado externo <small>Opcional</small></legend>
-                  <p>O cadastro de nome e foto de convidados ainda não está disponível na API.</p>
-                  <div class="activity-form-grid">
-                    <label class="field">
-                      <span>Nome</span>
-                      <input type="text" placeholder="Nome do palestrante" />
-                    </label>
-                    <label class="field">
-                      <span>URL da foto</span>
-                      <input type="url" placeholder="https://exemplo.com/foto.jpg" />
-                    </label>
-                  </div>
-                </fieldset>
-              </div>
-
-              <div class="activity-form-actions">
-                @if (editingActivityId()) {
-                  <button class="button button--secondary" type="button" [disabled]="isBusy()" (click)="cancelActivityEdit()">Cancelar</button>
-                }
-                <button class="button button--primary" type="submit" [disabled]="isBusy()">
-                  {{ editingActivityId() ? 'Salvar atividade' : 'Adicionar à programação' }}
-                </button>
-              </div>
-            </form>
-          } @else {
+          @if (!canManageActivities()) {
             <p class="access-note">A programação pode ser alterada apenas pelo responsável ou por um editor do evento.</p>
           }
 
@@ -295,7 +198,8 @@
 
           @if (activitiesLoading() && !activities().length) {
             <p class="schedule-notice" role="status"><span class="spinner"></span> Carregando programação...</p>
-          } @else if (activitySchedule().length) {
+          }
+          @if (activitySchedule().length) {
             <div class="schedule-days" role="tablist" aria-label="Dias da programação">
               @for (day of activitySchedule(); track day.key) {
                 <button
@@ -303,20 +207,41 @@
                   role="tab"
                   [class.active]="visibleActivityDay().key === day.key"
                   [attr.aria-selected]="visibleActivityDay().key === day.key"
+                  [tabIndex]="visibleActivityDay().key === day.key ? 0 : -1"
+                  [id]="'schedule-day-' + day.key"
+                  aria-controls="schedule-day-panel"
                   (click)="selectActivityDay(day.key)"
+                  (keydown)="navigateActivityDays($event, day.key)"
                 >
                   @if (day.date) {
                     {{ activityWeekdayLabel(day.date) }}, {{ day.date | date: 'dd/MM' }}
                   } @else {
                     Horário a definir
                   }
-                  <span>{{ day.slots.length }}</span>
+                  <span>{{ day.count }}</span>
                 </button>
               }
             </div>
 
             @if (visibleActivityDay(); as selectedDay) {
-              <div class="compact-schedule" role="tabpanel">
+              <div class="compact-schedule" id="schedule-day-panel" role="tabpanel" [attr.aria-labelledby]="'schedule-day-' + selectedDay.key">
+                <div class="schedule-day-toolbar">
+                  <div>
+                    <strong>{{ selectedDay.date ? (selectedDay.date | date: 'dd/MM/yyyy') : 'Horário a definir' }}</strong>
+                    <span>{{ selectedDay.count }} {{ selectedDay.count === 1 ? 'atividade' : 'atividades' }}</span>
+                  </div>
+                  @if (canManageActivities() && canAddActivityOnDay(selectedDay.key)) {
+                    <button type="button" class="button button--primary" [disabled]="isBusy() || activitiesLoading()" (click)="openActivityDialog()">
+                      <span aria-hidden="true">+</span> Adicionar atividade
+                    </button>
+                  }
+                </div>
+                @if (!selectedDay.slots.length) {
+                  <div class="schedule-day-empty">
+                    <strong>Este dia ainda está livre</strong>
+                    <p>Adicione atividades para montar a programação de {{ selectedDay.date | date: 'dd/MM' }}.</p>
+                  </div>
+                }
                 @for (slot of selectedDay.slots; track slot.key) {
                   <section class="schedule-slot">
                     <time>{{ slot.start_date ? (slot.start_date | date: 'HH:mm') : 'A definir' }}</time>
@@ -359,7 +284,7 @@
               </div>
             }
           } @else {
-            <p class="empty-inline">Ainda não há atividades cadastradas.</p>
+            <p class="empty-inline">Defina o início e o término do evento na etapa Informações para montar os dias da programação.</p>
           }
 
           <footer class="form-footer">
@@ -522,4 +447,115 @@
       }
     </aside>
   }
+  <dialog #activityDialog class="activity-modal" aria-labelledby="activity-dialog-title" (cancel)="onActivityDialogCancel($event)">
+            <form class="activity-editor-form" [formGroup]="activityForm" (ngSubmit)="saveActivity()">
+              <header class="activity-modal-header">
+                <div>
+                  <span class="eyebrow">{{ activityDialogDay() ? (activityDialogDay() + 'T12:00:00' | date: 'dd/MM/yyyy') : '' }}</span>
+                  <h2 id="activity-dialog-title">{{ editingActivityId() ? 'Editar atividade' : 'Nova atividade' }}</h2>
+                  <p>Preencha os dados e escolha os horários para este dia.</p>
+                </div>
+                <button type="button" class="activity-modal-close" aria-label="Fechar atividade" [disabled]="isBusy()" (click)="cancelActivityEdit()">×</button>
+              </header>
+              @if (errorMessage()) {
+                <p class="schedule-notice schedule-notice--error" role="alert">{{ errorMessage() }}</p>
+              }
+
+              <div class="activity-form-grid">
+                <label class="field field--wide">
+                  <span>Nome da atividade *</span>
+                  <input autofocus type="text" formControlName="title" maxlength="255" placeholder="Ex.: Oficina de prototipação" />
+                  @if (activityForm.controls.title.touched && activityForm.controls.title.invalid) {
+                    <strong>Informe o nome da atividade.</strong>
+                  }
+                </label>
+
+                <label class="field">
+                  <span>Tipo *</span>
+                  <select formControlName="type">
+                    @for (type of activityTypes; track type.value) {
+                      <option [value]="type.value">{{ type.label }}</option>
+                    }
+                  </select>
+                </label>
+
+                <label class="field">
+                  <span>Local *</span>
+                  <input type="text" formControlName="location" maxlength="255" placeholder="Ex.: Laboratório 04" />
+                  @if (activityForm.controls.location.touched && activityForm.controls.location.invalid) {
+                    <strong>Informe onde a atividade acontecerá.</strong>
+                  }
+                </label>
+
+                <label class="field">
+                  <span>Início *</span>
+                  <input type="time" required [value]="activityForm.controls.start_date.value.slice(11)"
+                    [min]="activityTimeBounds(activityDialogDay()).min" [max]="activityTimeBounds(activityDialogDay()).max"
+                    (input)="setActivityTime('start_date', $event)" />
+                  <small>Entre {{ activityTimeBounds(activityDialogDay()).min }} e {{ activityTimeBounds(activityDialogDay()).max }}</small>
+                </label>
+
+                <label class="field">
+                  <span>Término *</span>
+                  <input type="time" required [value]="activityForm.controls.end_date.value.slice(11)"
+                    [min]="activityTimeBounds(activityDialogEndDay()).min" [max]="activityTimeBounds(activityDialogEndDay()).max"
+                    (input)="setActivityTime('end_date', $event)" />
+                  @if (activityDialogEndDay() !== activityDialogDay()) {
+                    <small>Término em {{ activityDialogEndDay() + 'T12:00:00' | date: 'dd/MM/yyyy' }}</small>
+                  }
+                  <small>Entre {{ activityTimeBounds(activityDialogEndDay()).min }} e {{ activityTimeBounds(activityDialogEndDay()).max }}</small>
+                </label>
+
+                @if (activityDatesError(); as error) {
+                  <strong class="field-error field--wide">{{ error }}</strong>
+                }
+
+                <label class="field field--wide">
+                  <span>Descrição</span>
+                  <textarea formControlName="description" rows="3" maxlength="1000" placeholder="Conte brevemente o que será apresentado."></textarea>
+                </label>
+
+                <fieldset class="activity-settings field--wide">
+                  <legend>Participação</legend>
+                  <div class="activity-form-grid">
+                    <label class="field">
+                      <span>Como participar *</span>
+                      <select formControlName="registration_policy">
+                        @for (mode of activityRegistrationPolicies; track mode.value) {
+                          <option [value]="mode.value">{{ mode.label }}</option>
+                        }
+                      </select>
+                    </label>
+                  </div>
+                  <p>Atividades públicas dispensam inscrição. Nas demais opções, a API atualmente exige inscrição no evento antes da inscrição individual na atividade.</p>
+                </fieldset>
+
+                <fieldset class="activity-settings field--wide" disabled>
+                  <legend>Convidado externo <small>Opcional</small></legend>
+                  <p>O cadastro de nome e foto de convidados ainda não está disponível na API.</p>
+                  <div class="activity-form-grid">
+                    <label class="field">
+                      <span>Nome</span>
+                      <input type="text" placeholder="Nome do palestrante" />
+                    </label>
+                    <label class="field">
+                      <span>URL da foto</span>
+                      <input type="url" placeholder="https://exemplo.com/foto.jpg" />
+                    </label>
+                  </div>
+                </fieldset>
+              </div>
+
+              <div class="activity-form-actions">
+                <button class="button button--secondary" type="button" [disabled]="isBusy()" (click)="cancelActivityEdit()">Cancelar</button>
+                <button class="button button--primary" type="submit" [disabled]="isBusy()">
+                  @if (operation() === 'activity') {
+                    <span class="spinner" aria-hidden="true"></span> Salvando…
+                  } @else {
+                    {{ editingActivityId() ? 'Salvar atividade' : 'Adicionar à programação' }}
+                  }
+                </button>
+              </div>
+            </form>
+  </dialog>
 </main>

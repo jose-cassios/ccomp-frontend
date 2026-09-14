@@ -1,6 +1,23 @@
-import { EventActivity, eventActivityWeekdayLabel, groupEventActivities } from './event.model';
+import { EventActivity, activitiesOverlap, buildEventActivityDays, eventActivityWeekdayLabel, groupEventActivities } from './event.model';
 
 describe('groupEventActivities', () => {
+  it('detects intersecting activity intervals but allows adjacent activities', () => {
+    const first = activity({ start_date: '2026-09-12T14:00:00', end_date: '2026-09-12T15:00:00' });
+    expect(activitiesOverlap(first, activity({ start_date: '2026-09-12T14:30:00', end_date: '2026-09-12T15:30:00' }))).toBe(true);
+    expect(activitiesOverlap(first, activity({ start_date: '2026-09-12T15:00:00', end_date: '2026-09-12T16:00:00' }))).toBe(false);
+    expect(activitiesOverlap(first, activity({ start_date: null, end_date: null }))).toBe(false);
+  });
+  it('builds an inclusive calendar across month boundaries even with no activities', () => {
+    const days = buildEventActivityDays('2028-02-28T08:00', '2028-03-01T17:00', []);
+    expect(days.map((day) => day.key)).toEqual(['2028-02-28', '2028-02-29', '2028-03-01']);
+    expect(days.every((day) => day.slots.length === 0)).toBe(true);
+  });
+
+  it('keeps a single-day event as one day and ignores invalid date ranges', () => {
+    expect(buildEventActivityDays('2026-09-10T08:00', '2026-09-10T18:00', [])).toHaveLength(1);
+    expect(buildEventActivityDays('invalid', null, [])).toEqual([]);
+    expect(buildEventActivityDays('2026-09-12', '2026-09-10', [])).toEqual([]);
+  });
   const activity = (overrides: Partial<EventActivity>): EventActivity => ({
     id: overrides.id ?? 1,
     event_id: 7,

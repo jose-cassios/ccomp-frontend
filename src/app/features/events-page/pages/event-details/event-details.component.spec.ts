@@ -104,6 +104,57 @@ describe('EventDetailsComponent', () => {
     expect(component.successMessage()).toContain('Inscrição confirmada');
   });
 
+  it('blocks a second overlapping activity and identifies the conflicting reservation', () => {
+    const reserved: EventActivity = {
+      ...scheduleActivity,
+      id: 30,
+      title: 'Palestra de abertura',
+      registration_policy: 'EVENT_REGISTRANTS_ONLY',
+      subscribed: true,
+    };
+    const conflicting: EventActivity = {
+      ...scheduleActivity,
+      id: 31,
+      title: 'Oficina simultânea',
+      registration_policy: 'EVENT_REGISTRANTS_ONLY',
+      start_date: '2026-09-12T14:30:00',
+      end_date: '2026-09-12T16:00:00',
+      subscribed: false,
+    };
+    authenticated.set(true);
+    component.event.set({ ...event, activities: [reserved, conflicting] });
+    component.subscribed.set(true);
+
+    expect(component.activityConflict(conflicting)).toEqual(reserved);
+    expect(component.activityRegistrationBlocked(conflicting)).toBe(true);
+    expect(component.activityRegistrationHint(conflicting)).toContain('Palestra de abertura');
+    component.toggleActivitySubscription(conflicting);
+    expect(eventsService.subscribeActivity).not.toHaveBeenCalled();
+    expect(component.errorMessage()).toContain('Conflito de horário');
+  });
+
+  it('allows enrollment in an activity that begins when the existing one ends', () => {
+    const reserved: EventActivity = {
+      ...scheduleActivity,
+      id: 30,
+      registration_policy: 'EVENT_REGISTRANTS_ONLY',
+      subscribed: true,
+    };
+    const next: EventActivity = {
+      ...scheduleActivity,
+      id: 31,
+      registration_policy: 'EVENT_REGISTRANTS_ONLY',
+      start_date: '2026-09-12T15:00:00',
+      end_date: '2026-09-12T16:00:00',
+      subscribed: false,
+    };
+    authenticated.set(true);
+    component.event.set({ ...event, activities: [reserved, next] });
+    component.subscribed.set(true);
+    component.toggleActivitySubscription(next);
+    expect(eventsService.subscribeActivity).toHaveBeenCalledWith(next.id);
+  });
+
   it('does not send an enrollment request for PUBLIC activities', () => {
     const activity = { ...scheduleActivity, registration_policy: 'PUBLIC' as const, registration_mode: 'REQUIRED' as const };
     authenticated.set(true);

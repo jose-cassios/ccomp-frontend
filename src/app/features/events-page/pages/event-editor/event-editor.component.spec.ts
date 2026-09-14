@@ -78,6 +78,10 @@ describe('EventEditorComponent', () => {
     router = TestBed.inject(Router);
     vi.spyOn(router, 'navigate').mockResolvedValue(true);
     fixture.detectChanges();
+    // jsdom does not implement the native dialog top layer; emulate only its open state.
+    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+    dialog.showModal = vi.fn(() => dialog.setAttribute('open', ''));
+    dialog.close = vi.fn(() => dialog.removeAttribute('open'));
   });
 
   it('should create the event with only the required API fields and advance to the presentation step', () => {
@@ -368,6 +372,80 @@ describe('EventEditorComponent', () => {
 
     expect(component.activeStep()).toBe('details');
     expect(component.errorMessage()).toContain('Avance pelas etapas');
+  });
+
+  it('shows every event day, including empty days, and opens a time-only modal on the selected day', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner', end_date: '2026-09-12T18:00:00' });
+    component.activeStep.set('schedule');
+    component.selectActivityDay('2026-09-11');
+    fixture.detectChanges();
+    expect(component.activitySchedule().map((day) => day.key)).toEqual(['2026-09-10', '2026-09-11', '2026-09-12']);
+    expect(fixture.nativeElement.querySelector('.editor-card .activity-editor-form')).toBeNull();
+    const button = fixture.nativeElement.querySelector('.schedule-day-toolbar button') as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+    expect(dialog.open).toBe(true);
+    expect(component.activityDialogDay()).toBe('2026-09-11');
+    expect(dialog.querySelectorAll('input[type="time"]')).toHaveLength(2);
+    expect(dialog.querySelector('input[type="datetime-local"]')).toBeNull();
+    expect(component.activityTimeBounds('2026-09-10')).toEqual({ min: '08:00', max: '23:59' });
+    expect(component.activityTimeBounds('2026-09-11')).toEqual({ min: '00:00', max: '23:59' });
+    expect(component.activityTimeBounds('2026-09-12')).toEqual({ min: '00:00', max: '18:00' });
+  });
+
+  it('combines the chosen day with time inputs and closes only after successful persistence', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.openActivityDialog();
+    component.activityForm.patchValue({ title: 'Oficina', location: 'Lab 1' });
+    const setTime = (field: 'start_date' | 'end_date', value: string) => {
+      const input = document.createElement('input');
+      input.value = value;
+      component.setActivityTime(field, { target: input } as unknown as Event);
+    };
+    setTime('start_date', '07:00');
+    setTime('end_date', '09:00');
+    component.saveActivity();
+    expect(eventsService.createActivity).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('dialog').open).toBe(true);
+    setTime('start_date', '08:00');
+    component.saveActivity();
+    expect(eventsService.updateActivity).toHaveBeenCalledWith(21, expect.objectContaining({
+      start_date: '2026-09-10T08:00', end_date: '2026-09-10T09:00',
+    }));
+    expect(fixture.nativeElement.querySelector('dialog').open).toBe(false);
+  });
+
+  it('keeps the modal open and displays errors when saving fails', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.openActivityDialog();
+    component.activityForm.setValue(activityPayload);
+    eventsService.updateActivity.mockReturnValueOnce(throwError(() => new Error('Network error')));
+    component.saveActivity();
+    fixture.detectChanges();
+    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+    expect(dialog.open).toBe(true);
+    expect(dialog.querySelector('[role="alert"]')?.textContent).toContain('Não foi possível');
+    expect(component.activityForm.getRawValue()).toEqual(activityPayload);
+  });
+
+  it('counts simultaneous activities individually and preserves multi-day activities when editing', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner', end_date: '2026-09-12T18:00:00' });
+    const first = { id: 1, event_id: 14, ...activityPayload, end_date: '2026-09-11T09:00' };
+    component.activities.set([first, { ...first, id: 2 }]);
+    expect(component.activitySchedule()[0].count).toBe(2);
+    component.editActivity(first);
+    expect(component.activityDialogDay()).toBe('2026-09-10');
+    expect(component.activityDialogEndDay()).toBe('2026-09-11');
+    expect(component.activityForm.controls.end_date.value).toBe('2026-09-11T09:00');
+  });
+
+  it('does not open the activity modal for viewers or days outside the event', () => {
+    component.event.set(createdEvent);
+    component.openActivityDialog();
+    expect(fixture.nativeElement.querySelector('dialog').open).toBe(false);
+    expect(component.canAddActivityOnDay('2026-09-09')).toBe(false);
+    expect(component.canAddActivityOnDay('2026-09-11')).toBe(false);
   });
 
   it('ends the loading screen when loading an existing event fails', () => {

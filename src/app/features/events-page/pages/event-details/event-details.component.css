@@ -54,3 +54,4 @@
   .tags span { font-size: .58rem; }
   .event-date strong { font-size: 1.7rem; }
 }
+.activity-card__action small.activity-conflict { color: #a33d18; font-weight: 700; }

@@ -50,5 +50,6 @@ As opções antigas `registration_mode` / `access_requirement` foram substituíd
 4. **Aplicar cada política:** diferenciar acesso público, inscrição individual, acesso dos inscritos no evento e herança. Validar inscrição ativa no evento; a consulta atual apenas encontra o vínculo, sem verificar status. Cobrir cancelamento, evento encerrado e mudanças de política com testes.
 5. **Persistir convidados:** adicionar nome e URL da imagem aos DTOs, entidade e respostas; permitir remoção explícita e validar URLs.
 6. **Uniformizar validações:** alinhar limite de descrição em POST/PATCH e validar período da atividade em relação ao evento também no servidor.
+7. **Impedir conflitos de inscrição:** antes de salvar, buscar as atividades já inscritas pelo usuário no evento e rejeitar intervalos sobrepostos (permitir somente horários adjacentes). Retornar `409` com a atividade conflitante para o frontend atualizar o aviso.
 
 Priorizar autorização e consulta da própria inscrição. As políticas foram integradas conforme o comportamento atual, não conforme uma semântica presumida a partir do nome dos enums.

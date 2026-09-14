@@ -17,6 +17,7 @@ import {
   eventExecutionStatusLabel,
   eventFormatLabel,
   eventPublicationStatusLabel,
+  activitiesOverlap,
   groupEventActivities,
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
@@ -145,6 +146,7 @@ export class EventDetailsComponent implements OnInit {
   activityRegistrationBlocked(activity: EventActivity): boolean {
     if (activity.subscribed) return false;
     if (!this.isAuthenticated()) return false;
+    if (this.activityConflict(activity)) return true;
     if (activity.can_subscribe !== null && activity.can_subscribe !== undefined) {
       return !activity.can_subscribe;
     }
@@ -157,6 +159,8 @@ export class EventDetailsComponent implements OnInit {
   activityRegistrationHint(activity: EventActivity): string | null {
     if (activity.subscribed || !this.activityRequiresRegistration(activity)) return null;
     if (!this.isAuthenticated()) return null;
+    const conflict = this.activityConflict(activity);
+    if (conflict) return this.activityConflictMessage(conflict);
     if (activity.subscription_unavailable_reason) return activity.subscription_unavailable_reason;
     if (activity.can_subscribe === false) return 'Inscrições indisponíveis para esta atividade.';
     if (
@@ -216,6 +220,21 @@ export class EventDetailsComponent implements OnInit {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível alterar a inscrição nesta atividade.'));
       },
     });
+  }
+
+  /** A known local enrollment is enough to prevent overlapping reservations. */
+  activityConflict(activity: EventActivity): EventActivity | null {
+    if (activity.subscribed || !this.activityRequiresRegistration(activity)) return null;
+    return this.event()?.activities?.find((candidate) => candidate.id !== activity.id
+      && candidate.subscribed === true
+      && activitiesOverlap(candidate, activity)) ?? null;
+  }
+
+  activityConflictMessage(conflict: EventActivity): string {
+    const start = this.activityTime(conflict.start_date);
+    const end = this.activityTime(conflict.end_date);
+    const period = start && end ? ' (' + start + '–' + end + ')' : '';
+    return 'Conflito de horário: você já está inscrito em “' + conflict.title + '”' + period + '.';
   }
 
   dismissFeedback(): void {
@@ -297,6 +316,13 @@ export class EventDetailsComponent implements OnInit {
     return code === 'ACTIVITY_ALREADY_SUBSCRIBED'
       || code === 'ALREADY_SUBSCRIBED'
       || /j[aá]\s+.*inscrit[oa]/i.test(message);
+  }
+
+  private activityTime(value: string | null | undefined): string | null {
+    if (!value) return null;
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return null;
+    return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(date);
   }
 
   private getErrorMessage(error: unknown, fallback = 'Não foi possível carregar este evento.'): string {
