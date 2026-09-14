@@ -192,24 +192,43 @@ describe('EventsService', () => {
   });
 
   it('should use the current editor, activity and enrollment routes', () => {
+    const activityPayload = {
+      title: 'Palestra',
+      description: 'Abertura do evento',
+      type: 'LECTURE' as const,
+      location: 'Auditório',
+      start_date: '2026-09-10T08:00:00',
+      end_date: '2026-09-10T09:00:00',
+      registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const,
+    };
     service.deleteEvent(12).subscribe();
     service.addEditor(12, 'moderator@ifma.edu.br').subscribe();
     service.removeEditor(12, 'moderator@ifma.edu.br').subscribe();
     service.acceptEditorInvitation('1f1a6231-3270-41c7-8105-84704b5a16fe').subscribe();
-    service.createActivity(12, { title: 'Palestra' }).subscribe();
+    service.createActivity(12, activityPayload).subscribe();
     service.getActivities(12).subscribe();
-    service.updateActivity(7, { title: 'Palestra atualizada', display_order: 2 }).subscribe();
+    service.updateActivity(7, { ...activityPayload, title: 'Palestra atualizada', display_order: 2 }).subscribe();
     service.deleteActivity(7).subscribe();
+    service.subscribeActivity(7).subscribe();
+    service.unsubscribeActivity(7).subscribe();
     service.getEnrollments(12, 'enrollment-cursor', 20).subscribe();
 
     expect(api.delete).toHaveBeenCalledWith('/events/12');
     expect(api.post).toHaveBeenCalledWith('/events/12/editors/moderator%40ifma.edu.br', null);
     expect(api.delete).toHaveBeenCalledWith('/events/12/editors/moderator%40ifma.edu.br');
     expect(api.get).toHaveBeenCalledWith('/events/editors/accept', { params: expect.any(HttpParams) });
-    expect(api.post).toHaveBeenCalledWith('/events/12/activities', { title: 'Palestra' });
+    expect(api.post).toHaveBeenCalledWith('/events/12/activities', {
+      title: activityPayload.title, description: activityPayload.description,
+    });
     expect(api.get).toHaveBeenCalledWith('/events/12/activities', { params: expect.any(HttpParams) });
-    expect(api.patch).toHaveBeenCalledWith('/events/activities/7', { title: 'Palestra atualizada', display_order: 2 });
+    expect(api.patch).toHaveBeenCalledWith('/events/activities/7', {
+      ...activityPayload,
+      title: 'Palestra atualizada',
+      display_order: 2,
+    });
     expect(api.delete).toHaveBeenCalledWith('/events/activities/7');
+    expect(api.post).toHaveBeenCalledWith('/events/activities/7/subscribe', null);
+    expect(api.delete).toHaveBeenCalledWith('/events/activities/7/subscribe');
     expect(api.get).toHaveBeenCalledWith('/events/12/enrollments', { params: expect.any(HttpParams) });
   });
 
@@ -232,4 +251,85 @@ describe('EventsService', () => {
       });
     });
   });
+
+  it('should normalize the complete activity contract returned by the API', () => {
+    api.get.mockReturnValueOnce(of({
+      content: [{
+        id: 8,
+        eventId: 12,
+        title: 'Oficina de Angular',
+        description: 'Prática guiada',
+        type: 'MINI_COURSE',
+        location: 'Laboratório 04',
+        startDate: '2026-09-10T10:00:00',
+        endDate: '2026-09-10T12:00:00',
+        registrationPolicy: 'ACTIVITY_REGISTRANTS_ONLY',
+      }],
+      nextCursor: null,
+    }) as never);
+
+    service.getActivities(12).subscribe((page) => {
+      expect(page.content[0]).toMatchObject({
+        type: 'MINI_COURSE',
+        location: 'Laboratório 04',
+        start_date: '2026-09-10T10:00:00',
+        end_date: '2026-09-10T12:00:00',
+        registration_mode: 'REQUIRED',
+        access_requirement: 'EVENT_REGISTRATION',
+        registration_policy: 'ACTIVITY_REGISTRANTS_ONLY',
+        subscribed: undefined,
+      });
+    });
+  });
+
+  it('should load every cursor page of the activity schedule', () => {
+    api.get
+      .mockReturnValueOnce(of({
+        content: [{ id: 1, eventId: 12, title: 'Abertura' }],
+        nextCursor: 'activities-page-2',
+      }) as never)
+      .mockReturnValueOnce(of({
+        content: [{ id: 2, eventId: 12, title: 'Encerramento' }],
+        nextCursor: null,
+      }) as never);
+
+    service.getAllActivities(12).subscribe((activities) => {
+      expect(activities.map((activity) => activity.id)).toEqual([1, 2]);
+    });
+
+    const getCalls = api.get.mock.calls as unknown as Array<[
+      string,
+      { params?: HttpParams } | undefined,
+    ]>;
+    const secondRequestParams = getCalls[1]?.[1]?.params;
+    expect(secondRequestParams?.get('cursor')).toBe('activities-page-2');
+  });
+
+  it('stops a repeated activity cursor instead of loading forever', () => {
+    api.get.mockReturnValue(of({ content: [], next_cursor: 'repeated' }) as never);
+    const error = vi.fn();
+    service.getAllActivities(12).subscribe({ error });
+    expect(api.get).toHaveBeenCalledTimes(2);
+    expect(error).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('cursor') }));
+  });
+
+  it('checks event registration beyond the first page before blocking activity registration', () => {
+    api.get.mockReturnValueOnce(of({ content: [], next_cursor: 'page-2' }) as never)
+      .mockReturnValueOnce(of({ content: [{ id: 12 }], next_cursor: 'unused' }) as never);
+    const result = vi.fn();
+    service.isSubscribedToEvent(12).subscribe(result);
+    expect(result).toHaveBeenCalledWith(true);
+    expect(api.get).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['PUBLIC', 'ACTIVITY_REGISTRANTS_ONLY', 'EVENT_REGISTRANTS_ONLY', 'INHERITED_FROM_EVENT'])(
+    'normalizes the snake_case policy %s without inventing enrollment status', (policy) => {
+      api.get.mockReturnValueOnce(of({ content: [{ id: 1, registration_policy: policy }], next_cursor: null }) as never);
+      service.getActivities(12).subscribe(({ content: [activity] }) => {
+        expect(activity.registration_policy).toBe(policy);
+        expect(activity.registration_mode).toBe(policy === 'PUBLIC' ? 'NONE' : 'REQUIRED');
+        expect(activity.subscribed).toBeUndefined();
+      });
+    },
+  );
 });

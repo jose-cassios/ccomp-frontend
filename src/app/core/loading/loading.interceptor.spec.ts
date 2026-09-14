@@ -5,6 +5,16 @@ import { loadingInterceptor } from './loading.interceptor';
 import { LoadingService } from './loading.service';
 
 describe('loadingInterceptor', () => {
+  it('clears loading when a downstream interceptor throws synchronously', () => {
+    TestBed.configureTestingModule({ providers: [LoadingService] });
+    const loading = TestBed.inject(LoadingService);
+    expect(() => TestBed.runInInjectionContext(() => loadingInterceptor(
+      new HttpRequest('GET', '/test'),
+      () => { throw new Error('downstream failure'); },
+    ))).toThrow('downstream failure');
+    expect(loading.isLoading()).toBe(false);
+  });
+
   it('exposes loading while a request is pending and clears it on completion', () => {
     TestBed.configureTestingModule({ providers: [LoadingService] });
     const loadingService = TestBed.inject(LoadingService);

@@ -11,5 +11,14 @@ export const loadingInterceptor: HttpInterceptorFn = (
   const loadingService = inject(LoadingService);
   loadingService.begin();
 
-  return next(request).pipe(finalize(() => loadingService.end()));
+  // A synchronous failure (including DI errors) must also release the indicator.
+  // Bound stalled network requests so SSR and browser navigation can settle.
+  try {
+    return next(request.clone({ timeout: request.timeout ?? 30000 })).pipe(
+      finalize(() => loadingService.end()),
+    );
+  } catch (error) {
+    loadingService.end();
+    throw error;
+  }
 };

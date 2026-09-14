@@ -6,12 +6,18 @@ import { catchError, finalize, of } from 'rxjs';
 import { CONTENT_MANAGEMENT_ROLES } from '../../../auth/config/auth.config';
 import { AuthService } from '../../../auth/services/auth.service';
 import {
+  ApiMessage,
+  EventActivity,
   EventDetails,
+  apiMessage,
+  eventActivityTypeLabel,
+  eventActivityWeekdayLabel,
   eventCategoryLabel,
   eventEnrollmentStatusLabel,
   eventExecutionStatusLabel,
   eventFormatLabel,
   eventPublicationStatusLabel,
+  groupEventActivities,
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
@@ -33,6 +39,12 @@ export class EventDetailsComponent implements OnInit {
   readonly loading = signal(true);
   readonly subscriptionBusy = signal(false);
   readonly subscribed = signal(false);
+  readonly subscriptionStateLoading = signal(false);
+  readonly subscriptionStateResolved = signal(false);
+  readonly activitiesLoading = signal(false);
+  readonly activitiesError = signal<string | null>(null);
+  readonly activitySubscriptionBusyId = signal<number | null>(null);
+  readonly activeActivityDay = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly editableEventIds = signal<ReadonlySet<number>>(new Set());
@@ -48,6 +60,13 @@ export class EventDetailsComponent implements OnInit {
   readonly executionStatusLabel = eventExecutionStatusLabel;
   readonly enrollmentStatusLabel = eventEnrollmentStatusLabel;
   readonly canSubscribe = computed(() => this.event()?.enrollment_status === 'OPEN');
+  readonly activitySchedule = computed(() => groupEventActivities(this.event()?.activities ?? []));
+  readonly visibleActivityDay = computed(() => {
+    const schedule = this.activitySchedule();
+    return schedule.find((day) => day.key === this.activeActivityDay()) ?? schedule[0] ?? null;
+  });
+  readonly activityTypeLabel = eventActivityTypeLabel;
+  readonly activityWeekdayLabel = eventActivityWeekdayLabel;
 
   ngOnInit(): void {
     const feedback = this.router.getCurrentNavigation()?.extras.state?.['eventFeedback'];
@@ -65,6 +84,7 @@ export class EventDetailsComponent implements OnInit {
     this.eventsService.getById(id).pipe(finalize(() => this.loading.set(false))).subscribe({
       next: (event) => {
         this.event.set({ ...event, activities: event.activities ?? [] });
+        this.ensureActiveActivityDay();
         this.loadActivities(event.id);
         this.loadSubscriptionState(event.id);
         this.loadEditorAccess();
@@ -97,11 +117,13 @@ export class EventDetailsComponent implements OnInit {
     request.pipe(finalize(() => this.subscriptionBusy.set(false))).subscribe({
       next: (response) => {
         this.subscribed.update((value) => !value);
+        this.subscriptionStateResolved.set(true);
         this.successMessage.set(response.response ?? response.message ?? 'Inscrição atualizada com sucesso.');
       },
       error: (error: unknown) => {
-        if (!this.subscribed() && error instanceof HttpErrorResponse && error.status === 409) {
+        if (!this.subscribed() && error instanceof HttpErrorResponse && error.status === 409 && this.isAlreadySubscribedConflict(error)) {
           this.subscribed.set(true);
+          this.subscriptionStateResolved.set(true);
           this.successMessage.set('Você já possui uma inscrição ativa neste evento.');
           return;
         }
@@ -110,21 +132,130 @@ export class EventDetailsComponent implements OnInit {
     });
   }
 
+  selectActivityDay(dayKey: string): void {
+    this.activeActivityDay.set(dayKey);
+  }
+
+  activityRequiresRegistration(activity: EventActivity): boolean {
+    return activity.registration_policy
+      ? activity.registration_policy !== 'PUBLIC'
+      : activity.registration_mode === 'REQUIRED';
+  }
+
+  activityRegistrationBlocked(activity: EventActivity): boolean {
+    if (activity.subscribed) return false;
+    if (!this.isAuthenticated()) return false;
+    if (activity.can_subscribe !== null && activity.can_subscribe !== undefined) {
+      return !activity.can_subscribe;
+    }
+    return (activity.registration_policy ? activity.registration_policy !== 'PUBLIC'
+      : activity.access_requirement === 'EVENT_REGISTRATION')
+      && this.subscriptionStateResolved()
+      && !this.subscribed();
+  }
+
+  activityRegistrationHint(activity: EventActivity): string | null {
+    if (activity.subscribed || !this.activityRequiresRegistration(activity)) return null;
+    if (!this.isAuthenticated()) return null;
+    if (activity.subscription_unavailable_reason) return activity.subscription_unavailable_reason;
+    if (activity.can_subscribe === false) return 'Inscrições indisponíveis para esta atividade.';
+    if (
+      (activity.registration_policy ? activity.registration_policy !== 'PUBLIC'
+        : activity.access_requirement === 'EVENT_REGISTRATION')
+      && this.subscriptionStateResolved()
+      && !this.subscribed()
+    ) {
+      return 'Inscreva-se primeiro no evento para reservar esta atividade.';
+    }
+    return null;
+  }
+
+  toggleActivitySubscription(activity: EventActivity, cancel = activity.subscribed === true): void {
+    const currentEvent = this.event();
+    if (!currentEvent || !this.activityRequiresRegistration(activity) || this.activitySubscriptionBusyId()) return;
+
+    if (!this.isAuthenticated()) {
+      void this.router.navigate(['/login'], {
+        queryParams: { returnUrl: `/eventos/${currentEvent.id}` },
+      });
+      return;
+    }
+
+    if (!cancel && this.activityRegistrationBlocked(activity)) {
+      this.errorMessage.set(this.activityRegistrationHint(activity) ?? 'Esta atividade não está aceitando inscrições.');
+      return;
+    }
+
+    this.activitySubscriptionBusyId.set(activity.id);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    const request = cancel
+      ? this.eventsService.unsubscribeActivity(activity.id)
+      : this.eventsService.subscribeActivity(activity.id);
+
+    request.pipe(finalize(() => this.activitySubscriptionBusyId.set(null))).subscribe({
+      next: (response: ApiMessage) => {
+        const subscribed = !cancel;
+        this.updateActivitySubscription(activity.id, subscribed);
+        this.successMessage.set(apiMessage(
+          response,
+          subscribed ? 'Inscrição na atividade confirmada.' : 'Inscrição na atividade cancelada.',
+        ));
+      },
+      error: (error: unknown) => {
+        if (
+          !cancel
+          && error instanceof HttpErrorResponse
+          && error.status === 409
+          && this.isAlreadySubscribedConflict(error)
+        ) {
+          this.updateActivitySubscription(activity.id, true);
+          this.successMessage.set('Você já está inscrito nesta atividade.');
+          return;
+        }
+        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível alterar a inscrição nesta atividade.'));
+      },
+    });
+  }
+
+  dismissFeedback(): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+  }
+
   private loadActivities(eventId: number): void {
-    this.eventsService.getActivities(eventId).pipe(
-      catchError(() => of({ content: [], next_cursor: null })),
-    ).subscribe((page) => {
-      this.event.update((event) => event ? { ...event, activities: page.content } : event);
+    this.activitiesLoading.set(true);
+    this.activitiesError.set(null);
+    this.eventsService.getAllActivities(eventId).pipe(
+      finalize(() => this.activitiesLoading.set(false)),
+    ).subscribe({
+      next: (activities) => {
+        this.event.update((event) => event ? { ...event, activities } : event);
+        this.ensureActiveActivityDay();
+      },
+      // Mantém as atividades incluídas nos detalhes quando a consulta complementar falha.
+      error: (error: unknown) => {
+        this.activitiesError.set(
+          error instanceof HttpErrorResponse && (error.status === 401 || error.status === 403) && !this.isAuthenticated()
+            ? 'Entre na sua conta para consultar a programação. A API está exigindo autenticação para esta consulta.'
+            : this.getErrorMessage(error, 'Não foi possível atualizar a programação.'),
+        );
+      },
     });
   }
 
   private loadSubscriptionState(eventId: number): void {
     if (!this.isAuthenticated()) return;
 
-    this.eventsService.getMySubscriptions().pipe(
-      catchError(() => of(null)),
-    ).subscribe((page) => {
-      this.subscribed.set(Boolean(page?.content.some((event) => event.id === eventId)));
+    this.subscriptionStateLoading.set(true);
+    this.eventsService.isSubscribedToEvent(eventId).pipe(
+      finalize(() => this.subscriptionStateLoading.set(false)),
+    ).subscribe({
+      next: (subscribed) => {
+        this.subscribed.set(subscribed);
+        this.subscriptionStateResolved.set(true);
+      },
+      error: () => this.subscriptionStateResolved.set(false),
     });
   }
 
@@ -137,6 +268,35 @@ export class EventDetailsComponent implements OnInit {
       if (!page) return;
       this.editableEventIds.set(new Set(page.content.map((event) => event.id)));
     });
+  }
+
+  private updateActivitySubscription(activityId: number, subscribed: boolean): void {
+    this.event.update((event) => event
+      ? {
+          ...event,
+          activities: (event.activities ?? []).map((activity) => activity.id === activityId
+            ? { ...activity, subscribed }
+            : activity),
+        }
+      : event);
+  }
+
+  private ensureActiveActivityDay(): void {
+    const schedule = this.activitySchedule();
+    if (!schedule.some((day) => day.key === this.activeActivityDay())) {
+      this.activeActivityDay.set(schedule[0]?.key ?? null);
+    }
+  }
+
+  private isAlreadySubscribedConflict(error: HttpErrorResponse): boolean {
+    const body = error.error && typeof error.error === 'object'
+      ? error.error as Record<string, unknown>
+      : null;
+    const code = String(body?.['code'] ?? body?.['error_code'] ?? '').toUpperCase();
+    const message = apiErrorMessage(error, '');
+    return code === 'ACTIVITY_ALREADY_SUBSCRIBED'
+      || code === 'ALREADY_SUBSCRIBED'
+      || /j[aá]\s+.*inscrit[oa]/i.test(message);
   }
 
   private getErrorMessage(error: unknown, fallback = 'Não foi possível carregar este evento.'): string {

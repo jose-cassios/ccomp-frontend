@@ -1,8 +1,13 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
 import { AUTH_CONFIG } from '../config/auth.config';
 import { AuthService } from './auth.service';
+import { authInterceptor } from '../interceptors/auth.interceptor';
+import { loadingInterceptor } from '../../../core/loading/loading.interceptor';
+import { LoadingService } from '../../../core/loading/loading.service';
 
 describe('AuthService roles', () => {
   const api = { post: vi.fn(), get: vi.fn() };
@@ -113,8 +118,66 @@ describe('AuthService roles', () => {
 
     const service = TestBed.inject(AuthService);
 
+    expect(api.post).not.toHaveBeenCalled();
+    service.restoreSession().subscribe();
     expect(service.isAuthenticatedValue).toBe(true);
     expect(api.post).toHaveBeenCalledWith('/auth/refresh', { refresh_token: 'valid-refresh-token' });
     expect(localStorage.getItem(AUTH_CONFIG.TOKEN_KEY)).toBe(refreshedToken);
+  });
+});
+
+describe('AuthService session restoration with the real interceptor chain', () => {
+  const token = (expiresIn: number) => `header.${btoa(JSON.stringify({
+    sub: 'user-1', exp: Math.floor(Date.now() / 1000) + expiresIn, roles: ['ROLE_USER'],
+  }))}.signature`;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({ providers: [
+      provideHttpClient(withInterceptors([loadingInterceptor, authInterceptor])),
+      provideHttpClientTesting(),
+    ] });
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    http.verify();
+    localStorage.clear();
+  });
+
+  it('restores a saved session without circular DI or leaving loading stuck on reload', () => {
+    const accessToken = token(3600);
+    localStorage.setItem(AUTH_CONFIG.TOKEN_KEY, accessToken);
+    const auth = TestBed.inject(AuthService);
+    const loading = TestBed.inject(LoadingService);
+    http.expectNone((req) => req.url.endsWith('/users/me'));
+    expect(loading.isLoading()).toBe(false);
+
+    auth.restoreSession().subscribe();
+    const profile = http.expectOne((req) => req.url.endsWith('/users/me'));
+    expect(profile.request.headers.get('Authorization')).toBe(`Bearer ${accessToken}`);
+    expect(profile.request.timeout).toBe(30000);
+    expect(loading.isLoading()).toBe(true);
+    profile.flush({ id: 'user-1', name: 'Pessoa', email_address: 'pessoa@example.com' });
+    expect(auth.isAuthenticatedValue).toBe(true);
+    expect(loading.isLoading()).toBe(false);
+  });
+
+  it('shares refresh calls while restoring an expired session', () => {
+    localStorage.setItem(AUTH_CONFIG.TOKEN_KEY, token(-60));
+    localStorage.setItem(AUTH_CONFIG.REFRESH_TOKEN_KEY, 'refresh');
+    const auth = TestBed.inject(AuthService);
+    auth.restoreSession().subscribe();
+    auth.restoreSession().subscribe();
+    auth.refreshToken().subscribe();
+    const refresh = http.expectOne((req) => req.url.endsWith('/auth/refresh'));
+    expect(refresh.request.headers.has('Authorization')).toBe(false);
+    refresh.flush({ access_token: token(3600) });
+    http.expectOne((req) => req.url.endsWith('/users/me')).flush({
+      id: 'user-1', name: 'Pessoa', email_address: 'pessoa@example.com',
+    });
+    expect(TestBed.inject(LoadingService).isLoading()).toBe(false);
+    expect(auth.isAuthenticatedValue).toBe(true);
   });
 });

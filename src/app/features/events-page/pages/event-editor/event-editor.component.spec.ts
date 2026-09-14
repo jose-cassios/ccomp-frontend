@@ -22,6 +22,15 @@ describe('EventEditorComponent', () => {
     end_date: '2026-09-10T18:00:00',
     activities: [],
   };
+  const activityPayload = {
+    title: 'Abertura',
+    description: '',
+    type: 'LECTURE' as const,
+    location: 'Auditório principal',
+    start_date: '2026-09-10T08:00',
+    end_date: '2026-09-10T09:00',
+    registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const,
+  };
   const eventsService = {
     create: vi.fn(() => of(createdEvent)),
     update: vi.fn((_eventId: number, payload: { enrollment_start_date?: string; enrollment_end_date?: string; enrollment_paused?: boolean }) => of({
@@ -32,11 +41,21 @@ describe('EventEditorComponent', () => {
     })),
     publish: vi.fn(() => of({ ...createdEvent, status: 'PUBLISHED' as const })),
     getById: vi.fn(() => of(createdEvent)),
-    getActivities: vi.fn(() => of({ content: [], next_cursor: null })),
+    getAllActivities: vi.fn(() => of([])),
     getEditors: vi.fn(() => of({ content: [] as EventEditor[], next_cursor: null })),
     deleteEvent: vi.fn(() => of(void 0)),
-    createActivity: vi.fn(() => of({ id: 21, event_id: createdEvent.id, title: 'Abertura', description: null })),
-    updateActivity: vi.fn(() => of({ id: 21, event_id: createdEvent.id, title: 'Abertura atualizada', description: 'Boas-vindas' })),
+    createActivity: vi.fn(() => of({ id: 21, event_id: createdEvent.id, ...activityPayload })),
+    updateActivity: vi.fn((_id: number, payload: object) => of({
+      id: 21,
+      event_id: createdEvent.id,
+      title: 'Abertura atualizada',
+      description: 'Boas-vindas',
+      type: 'WORKSHOP' as const,
+      location: 'Laboratório 04',
+      start_date: '2026-09-10T10:00',
+      end_date: '2026-09-10T11:30',
+      ...payload,
+    })),
     deleteActivity: vi.fn(),
     addEditor: vi.fn(() => of({ message: 'Editor adicionado.' })),
     removeEditor: vi.fn(),
@@ -182,12 +201,55 @@ describe('EventEditorComponent', () => {
       enrollment_paused: false,
     });
     component.save();
-    component.activityForm.setValue({ title: 'Abertura', description: '' });
+    component.activityForm.setValue({
+      title: activityPayload.title,
+      description: activityPayload.description,
+      type: activityPayload.type,
+      location: activityPayload.location,
+      start_date: activityPayload.start_date,
+      end_date: activityPayload.end_date,
+      registration_policy: activityPayload.registration_policy,
+    });
 
     component.saveActivity();
 
-    expect(eventsService.createActivity).toHaveBeenCalledWith(createdEvent.id, { title: 'Abertura', description: '' });
-    expect(eventsService.getActivities).toHaveBeenCalledWith(createdEvent.id);
+    expect(eventsService.createActivity).toHaveBeenCalledWith(createdEvent.id, {
+      title: activityPayload.title, description: activityPayload.description,
+    });
+    expect(eventsService.updateActivity).toHaveBeenCalledWith(21, activityPayload);
+    expect(eventsService.getAllActivities).toHaveBeenCalledWith(createdEvent.id);
+    expect(component.successMessage()).toContain('adicionada');
+  });
+
+  it('should retain the created ID and form when PATCH fails, without creating duplicates on retry', () => {
+    eventsService.updateActivity.mockReturnValueOnce(throwError(() => new Error('Network error')));
+    eventsService.createActivity.mockReturnValueOnce(of({
+      id: 22,
+      event_id: createdEvent.id,
+      title: activityPayload.title,
+      description: activityPayload.description,
+    }) as never);
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.ownedEventIds.set(new Set([createdEvent.id]));
+    component.activityForm.setValue({
+      title: activityPayload.title,
+      description: activityPayload.description,
+      type: activityPayload.type,
+      location: activityPayload.location,
+      start_date: activityPayload.start_date,
+      end_date: activityPayload.end_date,
+      registration_policy: activityPayload.registration_policy,
+    });
+
+    component.saveActivity();
+
+    expect(component.successMessage()).toBeNull();
+    expect(component.errorMessage()).toBeTruthy();
+    expect(component.editingActivityId()).toBe(22);
+    expect(component.activityForm.getRawValue()).toEqual(activityPayload);
+    component.saveActivity();
+    expect(eventsService.createActivity).toHaveBeenCalledTimes(1);
+    expect(eventsService.updateActivity).toHaveBeenLastCalledWith(22, activityPayload);
   });
 
   it('should update an existing activity through the activity PATCH route', () => {
@@ -208,13 +270,26 @@ describe('EventEditorComponent', () => {
       title: 'Abertura',
       description: null,
     });
-    component.activityForm.setValue({ title: 'Abertura atualizada', description: 'Boas-vindas' });
+    component.activityForm.setValue({
+      title: 'Abertura atualizada',
+      description: 'Boas-vindas',
+      type: 'WORKSHOP',
+      location: 'Laboratório 04',
+      start_date: '2026-09-10T10:00',
+      end_date: '2026-09-10T11:30',
+      registration_policy: 'EVENT_REGISTRANTS_ONLY',
+    });
 
     component.saveActivity();
 
     expect(eventsService.updateActivity).toHaveBeenCalledWith(21, {
       title: 'Abertura atualizada',
       description: 'Boas-vindas',
+      type: 'WORKSHOP',
+      location: 'Laboratório 04',
+      start_date: '2026-09-10T10:00',
+      end_date: '2026-09-10T11:30',
+      registration_policy: 'EVENT_REGISTRANTS_ONLY',
     });
     expect(component.editingActivityId()).toBeNull();
   });
@@ -293,5 +368,16 @@ describe('EventEditorComponent', () => {
 
     expect(component.activeStep()).toBe('details');
     expect(component.errorMessage()).toContain('Avance pelas etapas');
+  });
+
+  it('ends the loading screen when loading an existing event fails', () => {
+    Object.assign(TestBed.inject(ActivatedRoute).snapshot, { paramMap: convertToParamMap({ id: 14 }) });
+    eventsService.getById.mockReturnValueOnce(throwError(() => new Error('Network failure')));
+    component.ngOnInit();
+    fixture.detectChanges();
+    expect(component.operation()).toBe('idle');
+    expect(component.editorAccessResolved()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Tentar novamente');
+    expect(fixture.nativeElement.textContent).not.toContain('Carregando informações do evento');
   });
 });
