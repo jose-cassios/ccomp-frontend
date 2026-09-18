@@ -281,7 +281,7 @@ describe('EventEditorComponent', () => {
       location: 'Laboratório 04',
       start_date: '2026-09-10T10:00',
       end_date: '2026-09-10T11:30',
-      registration_policy: 'EVENT_REGISTRANTS_ONLY',
+      registration_policy: 'ACTIVITY_REGISTRANTS_ONLY',
     });
 
     component.saveActivity();
@@ -293,7 +293,7 @@ describe('EventEditorComponent', () => {
       location: 'Laboratório 04',
       start_date: '2026-09-10T10:00',
       end_date: '2026-09-10T11:30',
-      registration_policy: 'EVENT_REGISTRANTS_ONLY',
+      registration_policy: 'ACTIVITY_REGISTRANTS_ONLY',
     });
     expect(component.editingActivityId()).toBeNull();
   });
@@ -372,6 +372,23 @@ describe('EventEditorComponent', () => {
 
     expect(component.activeStep()).toBe('details');
     expect(component.errorMessage()).toContain('Avance pelas etapas');
+  });
+
+  it('uses the private event-and-activity flow by default and exposes clear participation choices', () => {
+    expect(component.activityForm.controls.registration_policy.value).toBe('ACTIVITY_REGISTRANTS_ONLY');
+    component.openActivityDialog();
+    component.toggleActivityPolicyMenu();
+    fixture.detectChanges();
+    const options = Array.from(fixture.nativeElement.querySelectorAll('[role="option"]')) as HTMLElement[];
+    expect(options.map((option) => option.textContent)).toEqual(expect.arrayContaining([
+      expect.stringContaining('Participação livre'),
+      expect.stringContaining('Inscrição no evento e na atividade'),
+      expect.stringContaining('Programação incluída no evento'),
+    ]));
+    expect(fixture.nativeElement.querySelector('select[formControlName="registration_policy"]')).toBeNull();
+    options[2].click();
+    expect(component.activityForm.controls.registration_policy.value).toBe('INHERITED_FROM_EVENT');
+    expect(component.activityPolicyMenuOpen()).toBe(false);
   });
 
   it('shows every event day, including empty days, and opens a time-only modal on the selected day', () => {

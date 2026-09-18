@@ -36,7 +36,6 @@ export type ActivityAccessRequirement = 'EVENT_REGISTRATION' | 'PUBLIC';
 export type ActivityRegistrationPolicy =
   | 'PUBLIC'
   | 'ACTIVITY_REGISTRANTS_ONLY'
-  | 'EVENT_REGISTRANTS_ONLY'
   | 'INHERITED_FROM_EVENT';
 
 export interface ActivityGuest {
@@ -252,19 +251,46 @@ export const EVENT_ACTIVITY_TYPE_OPTIONS: ReadonlyArray<{
   { value: 'OTHER', label: 'Outra atividade' },
 ];
 
-export const ACTIVITY_REGISTRATION_POLICY_OPTIONS: ReadonlyArray<{
+export interface ActivityRegistrationPolicyOption {
   value: ActivityRegistrationPolicy;
   label: string;
-}> = [
-  { value: 'PUBLIC', label: 'Pública · sem inscrição individual' },
-  { value: 'ACTIVITY_REGISTRANTS_ONLY', label: 'Inscrição individual na atividade' },
-  { value: 'EVENT_REGISTRANTS_ONLY', label: 'Restrita aos inscritos no evento' },
-  { value: 'INHERITED_FROM_EVENT', label: 'Seguir as regras do evento' },
+  description: string;
+}
+
+export const ACTIVITY_REGISTRATION_POLICY_OPTIONS: ReadonlyArray<ActivityRegistrationPolicyOption> = [
+  {
+    value: 'PUBLIC',
+    label: 'Participação livre',
+    description: 'A atividade é apenas divulgada: não há inscrição no evento nem nesta atividade.',
+  },
+  {
+    value: 'ACTIVITY_REGISTRANTS_ONLY',
+    label: 'Inscrição no evento e na atividade',
+    description: 'A pessoa se inscreve no evento e reserva presença nesta atividade. É a opção padrão.',
+  },
+  {
+    value: 'INHERITED_FROM_EVENT',
+    label: 'Programação incluída no evento',
+    description: 'Ao se inscrever no evento, a pessoa já participa desta atividade sem outra reserva.',
+  },
 ];
 
 export function activityRegistrationPolicyLabel(policy?: ActivityRegistrationPolicy | null): string {
   return ACTIVITY_REGISTRATION_POLICY_OPTIONS.find((option) => option.value === policy)?.label
     ?? 'Regra de participação não informada';
+}
+
+export function activityRegistrationPolicyDescription(policy?: ActivityRegistrationPolicy | null): string {
+  return ACTIVITY_REGISTRATION_POLICY_OPTIONS.find((option) => option.value === policy)?.description
+    ?? 'Defina como as pessoas participarão desta atividade.';
+}
+
+/** Maps the retired API value to the current default participation flow. */
+export function normalizeActivityRegistrationPolicy(
+  policy?: ActivityRegistrationPolicy | 'EVENT_REGISTRANTS_ONLY' | null,
+): ActivityRegistrationPolicy | null {
+  if (policy === 'EVENT_REGISTRANTS_ONLY') return 'ACTIVITY_REGISTRANTS_ONLY';
+  return policy ?? null;
 }
 
 export const ACTIVITY_REGISTRATION_MODE_OPTIONS: ReadonlyArray<{

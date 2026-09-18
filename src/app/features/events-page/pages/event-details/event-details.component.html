@@ -174,7 +174,7 @@
                               }
                             } @else {
                               <span class="free-access">
-                                {{ activity.access_requirement === 'PUBLIC' ? 'Participação livre' : 'Sem inscrição extra para inscritos' }}
+                                {{ activityParticipationMessage(activity) }}
                               </span>
                             }
                           </div>

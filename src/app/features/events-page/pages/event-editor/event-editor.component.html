@@ -518,16 +518,44 @@
                 <fieldset class="activity-settings field--wide">
                   <legend>Participação</legend>
                   <div class="activity-form-grid">
-                    <label class="field">
-                      <span>Como participar *</span>
-                      <select formControlName="registration_policy">
-                        @for (mode of activityRegistrationPolicies; track mode.value) {
-                          <option [value]="mode.value">{{ mode.label }}</option>
-                        }
-                      </select>
-                    </label>
+                    <div class="field participation-picker">
+                      <span id="activity-policy-label">Como participar *</span>
+                      <button
+                        class="participation-picker__trigger"
+                        type="button"
+                        aria-haspopup="listbox"
+                        aria-labelledby="activity-policy-label"
+                        [attr.aria-expanded]="activityPolicyMenuOpen()"
+                        (click)="toggleActivityPolicyMenu()"
+                      >
+                        <span>
+                          <strong>{{ selectedActivityPolicy().label }}</strong>
+                          <small>{{ selectedActivityPolicy().description }}</small>
+                        </span>
+                        <span class="participation-picker__chevron" aria-hidden="true">⌄</span>
+                      </button>
+                      @if (activityPolicyMenuOpen()) {
+                        <div class="participation-picker__menu" role="listbox" aria-labelledby="activity-policy-label" (keydown.escape)="closeActivityPolicyMenu()">
+                          @for (policy of activityRegistrationPolicies; track policy.value) {
+                            <button
+                              type="button"
+                              role="option"
+                              [attr.aria-selected]="policy.value === activityForm.controls.registration_policy.value"
+                              [class.selected]="policy.value === activityForm.controls.registration_policy.value"
+                              (click)="selectActivityPolicy(policy)"
+                            >
+                              <span class="participation-picker__radio" aria-hidden="true"></span>
+                              <span>
+                                <strong>{{ policy.label }}</strong>
+                                <small>{{ policy.description }}</small>
+                              </span>
+                            </button>
+                          }
+                        </div>
+                      }
+                    </div>
                   </div>
-                  <p>Atividades públicas dispensam inscrição. Nas demais opções, a API atualmente exige inscrição no evento antes da inscrição individual na atividade.</p>
+                  <p>Escolha o fluxo de participação adequado. Passe o mouse ou use o teclado nas opções para consultar a explicação antes de selecionar.</p>
                 </fieldset>
 
                 <fieldset class="activity-settings field--wide" disabled>

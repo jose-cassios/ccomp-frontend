@@ -16,6 +16,20 @@
 .activity-modal-close { flex: 0 0 40px; width: 40px; height: 40px; border: 1px solid var(--border-color, #d9e3dc); border-radius: 50%; color: inherit; background: transparent; font-size: 1.5rem; cursor: pointer; }
 .activity-modal .field { min-width: 0; }
 .activity-modal .field small { color: var(--text-secondary); font-size: .76rem; }
+.participation-picker { position: relative; z-index: 2; }
+.participation-picker__trigger { display: grid; grid-template-columns: minmax(0, 1fr) auto; width: 100%; gap: 12px; padding: 12px 13px; border: 1px solid #bbd2c1; border-radius: 11px; color: #173426; background: #fff; text-align: left; cursor: pointer; transition: border-color .16s ease, box-shadow .16s ease, background .16s ease; }
+.participation-picker__trigger:hover, .participation-picker__trigger[aria-expanded="true"] { border-color: var(--brand-600, #278548); background: #f6fbf7; box-shadow: 0 0 0 3px #2785481a; }
+.participation-picker__trigger > span:first-child, .participation-picker__menu button > span:last-child { display: grid; gap: 4px; }
+.participation-picker strong { color: #183728; font-size: .85rem; line-height: 1.25; }
+.participation-picker small { color: #607068; font-size: .75rem; line-height: 1.4; }
+.participation-picker__chevron { align-self: center; color: var(--brand-700, #176b35); font-size: 1.35rem; line-height: 1; transition: transform .16s ease; }
+.participation-picker__trigger[aria-expanded="true"] .participation-picker__chevron { transform: rotate(180deg); }
+.participation-picker__menu { position: absolute; top: calc(100% + 7px); left: 0; right: 0; display: grid; gap: 4px; padding: 7px; border: 1px solid #b9d3c0; border-radius: 12px; background: #fff; box-shadow: 0 14px 30px #1232212e; }
+.participation-picker__menu button { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: start; gap: 10px; width: 100%; padding: 10px; border: 0; border-radius: 8px; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+.participation-picker__menu button:hover, .participation-picker__menu button:focus-visible { background: #edf8ef; outline: 0; }
+.participation-picker__menu button.selected { background: #e2f3e6; }
+.participation-picker__radio { display: block; width: 15px; height: 15px; margin-top: 2px; border: 1.5px solid #8ca496; border-radius: 50%; }
+.participation-picker__menu button.selected .participation-picker__radio { border: 4px solid var(--brand-600, #278548); }
 .activity-modal .activity-form-actions { position: sticky; bottom: -24px; margin: 16px -24px -24px; padding: 16px 24px; background: var(--surface-primary, #fff); border-top: 1px solid var(--border-color, #d9e3dc); }
 .activity-modal button:disabled { opacity: .6; cursor: wait; }
 .activity-modal :focus-visible, .schedule-day-toolbar button:focus-visible { outline: 3px solid var(--brand-600, #278548); outline-offset: 3px; }

@@ -117,13 +117,18 @@ export class EventDetailsComponent implements OnInit {
 
     request.pipe(finalize(() => this.subscriptionBusy.set(false))).subscribe({
       next: (response) => {
-        this.subscribed.update((value) => !value);
+        this.subscribed.update((value) => {
+          const next = !value;
+          this.updateIncludedActivityAccess(next);
+          return next;
+        });
         this.subscriptionStateResolved.set(true);
         this.successMessage.set(response.response ?? response.message ?? 'Inscrição atualizada com sucesso.');
       },
       error: (error: unknown) => {
         if (!this.subscribed() && error instanceof HttpErrorResponse && error.status === 409 && this.isAlreadySubscribedConflict(error)) {
           this.subscribed.set(true);
+          this.updateIncludedActivityAccess(true);
           this.subscriptionStateResolved.set(true);
           this.successMessage.set('Você já possui uma inscrição ativa neste evento.');
           return;
@@ -138,9 +143,26 @@ export class EventDetailsComponent implements OnInit {
   }
 
   activityRequiresRegistration(activity: EventActivity): boolean {
-    return activity.registration_policy
-      ? activity.registration_policy !== 'PUBLIC'
-      : activity.registration_mode === 'REQUIRED';
+    return activity.registration_policy === 'ACTIVITY_REGISTRANTS_ONLY'
+      || (!activity.registration_policy && activity.registration_mode === 'REQUIRED');
+  }
+
+  activityIsIncludedWithEvent(activity: EventActivity): boolean {
+    return activity.registration_policy === 'INHERITED_FROM_EVENT';
+  }
+
+  activityParticipationMessage(activity: EventActivity): string {
+    if (activity.registration_policy === 'PUBLIC'
+      || (!activity.registration_policy && (activity.registration_mode === 'NONE'
+        || activity.access_requirement === 'PUBLIC'))) {
+      return 'Participação livre — sem inscrição.';
+    }
+    if (this.activityIsIncludedWithEvent(activity)) {
+      return this.subscribed()
+        ? 'Incluída na sua inscrição no evento.'
+        : 'Incluída automaticamente ao se inscrever no evento.';
+    }
+    return 'Inscrição individual necessária após a inscrição no evento.';
   }
 
   activityRegistrationBlocked(activity: EventActivity): boolean {
@@ -150,9 +172,7 @@ export class EventDetailsComponent implements OnInit {
     if (activity.can_subscribe !== null && activity.can_subscribe !== undefined) {
       return !activity.can_subscribe;
     }
-    return (activity.registration_policy ? activity.registration_policy !== 'PUBLIC'
-      : activity.access_requirement === 'EVENT_REGISTRATION')
-      && this.subscriptionStateResolved()
+    return this.subscriptionStateResolved()
       && !this.subscribed();
   }
 
@@ -164,9 +184,7 @@ export class EventDetailsComponent implements OnInit {
     if (activity.subscription_unavailable_reason) return activity.subscription_unavailable_reason;
     if (activity.can_subscribe === false) return 'Inscrições indisponíveis para esta atividade.';
     if (
-      (activity.registration_policy ? activity.registration_policy !== 'PUBLIC'
-        : activity.access_requirement === 'EVENT_REGISTRATION')
-      && this.subscriptionStateResolved()
+      this.subscriptionStateResolved()
       && !this.subscribed()
     ) {
       return 'Inscreva-se primeiro no evento para reservar esta atividade.';
@@ -294,6 +312,17 @@ export class EventDetailsComponent implements OnInit {
       ? {
           ...event,
           activities: (event.activities ?? []).map((activity) => activity.id === activityId
+            ? { ...activity, subscribed }
+            : activity),
+        }
+      : event);
+  }
+
+  private updateIncludedActivityAccess(subscribed: boolean): void {
+    this.event.update((event) => event
+      ? {
+          ...event,
+          activities: (event.activities ?? []).map((activity) => this.activityIsIncludedWithEvent(activity)
             ? { ...activity, subscribed }
             : activity),
         }

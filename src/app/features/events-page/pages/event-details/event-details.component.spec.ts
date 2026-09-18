@@ -45,6 +45,8 @@ describe('EventDetailsComponent', () => {
     getAllActivities: vi.fn(() => of([scheduleActivity])),
     subscribeActivity: vi.fn(() => of({ message: 'Inscrição confirmada.' })),
     unsubscribeActivity: vi.fn(() => of({ message: 'Inscrição cancelada.' })),
+    subscribe: vi.fn(() => of({ message: 'Inscrição no evento confirmada.' })),
+    unsubscribe: vi.fn(() => of({ message: 'Inscrição no evento cancelada.' })),
   };
 
   beforeEach(async () => {
@@ -109,14 +111,14 @@ describe('EventDetailsComponent', () => {
       ...scheduleActivity,
       id: 30,
       title: 'Palestra de abertura',
-      registration_policy: 'EVENT_REGISTRANTS_ONLY',
+      registration_policy: 'ACTIVITY_REGISTRANTS_ONLY',
       subscribed: true,
     };
     const conflicting: EventActivity = {
       ...scheduleActivity,
       id: 31,
       title: 'Oficina simultânea',
-      registration_policy: 'EVENT_REGISTRANTS_ONLY',
+      registration_policy: 'ACTIVITY_REGISTRANTS_ONLY',
       start_date: '2026-09-12T14:30:00',
       end_date: '2026-09-12T16:00:00',
       subscribed: false,
@@ -137,13 +139,13 @@ describe('EventDetailsComponent', () => {
     const reserved: EventActivity = {
       ...scheduleActivity,
       id: 30,
-      registration_policy: 'EVENT_REGISTRANTS_ONLY',
+      registration_policy: 'ACTIVITY_REGISTRANTS_ONLY',
       subscribed: true,
     };
     const next: EventActivity = {
       ...scheduleActivity,
       id: 31,
-      registration_policy: 'EVENT_REGISTRANTS_ONLY',
+      registration_policy: 'ACTIVITY_REGISTRANTS_ONLY',
       start_date: '2026-09-12T15:00:00',
       end_date: '2026-09-12T16:00:00',
       subscribed: false,
@@ -162,6 +164,21 @@ describe('EventDetailsComponent', () => {
     expect(eventsService.subscribeActivity).not.toHaveBeenCalled();
   });
 
+  it('treats inherited activities as included in the event instead of offering an extra reservation', () => {
+    const activity = { ...scheduleActivity, registration_policy: 'INHERITED_FROM_EVENT' as const, subscribed: false };
+    authenticated.set(true);
+    component.event.set({ ...event, enrollment_status: 'OPEN', activities: [activity] });
+    component.subscribed.set(false);
+    expect(component.activityRequiresRegistration(activity)).toBe(false);
+    expect(component.activityParticipationMessage(activity)).toContain('automaticamente');
+    component.toggleActivitySubscription(activity);
+    expect(eventsService.subscribeActivity).not.toHaveBeenCalled();
+    component.toggleSubscription();
+    expect(eventsService.subscribe).toHaveBeenCalledWith(event.id);
+    expect(component.event()?.activities?.[0].subscribed).toBe(true);
+    expect(component.activityParticipationMessage(activity)).toContain('sua inscrição');
+  });
+
   it('requires event registration for nonpublic policies as enforced by the current API', () => {
     authenticated.set(true);
     component.subscriptionStateResolved.set(true);
@@ -173,7 +190,7 @@ describe('EventDetailsComponent', () => {
   });
 
   it('allows cancellation without inventing enrollment status after reload', () => {
-    const activity = { ...scheduleActivity, registration_policy: 'EVENT_REGISTRANTS_ONLY' as const };
+    const activity = { ...scheduleActivity, registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const };
     authenticated.set(true);
     component.event.set({ ...event, activities: [activity] });
     component.toggleActivitySubscription(activity, true);
@@ -182,7 +199,7 @@ describe('EventDetailsComponent', () => {
   });
 
   it('recognizes an existing subscription only when the API confirms the conflict', () => {
-    const activity = { ...scheduleActivity, registration_policy: 'EVENT_REGISTRANTS_ONLY' as const };
+    const activity = { ...scheduleActivity, registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const };
     authenticated.set(true);
     component.event.set({ ...event, activities: [activity] });
     eventsService.subscribeActivity.mockReturnValueOnce(throwError(() => new HttpErrorResponse({
@@ -194,7 +211,7 @@ describe('EventDetailsComponent', () => {
   });
 
   it('reports a missing activity without incorrectly claiming the API route is unavailable', () => {
-    const activity = { ...scheduleActivity, registration_policy: 'EVENT_REGISTRANTS_ONLY' as const };
+    const activity = { ...scheduleActivity, registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const };
     authenticated.set(true);
     eventsService.subscribeActivity.mockReturnValueOnce(throwError(() => new HttpErrorResponse({
       status: 404, error: { message: 'Atividade não encontrada.' },

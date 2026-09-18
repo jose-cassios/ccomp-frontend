@@ -18,6 +18,8 @@ import {
   EventPublicationStatus,
   EventsFilter,
   EventsPageResponse,
+  ActivityRegistrationPolicy,
+  normalizeActivityRegistrationPolicy,
   UpdateActivityPayload,
   UpdateEventPayload,
 } from '../models/event.model';
@@ -74,8 +76,8 @@ interface ApiEventActivity {
   endDate?: string | null;
   end_date?: string | null;
   registrationMode?: EventActivity['registration_mode'];
-  registrationPolicy?: EventActivity['registration_policy'];
-  registration_policy?: EventActivity['registration_policy'];
+  registrationPolicy?: ActivityRegistrationPolicy | 'EVENT_REGISTRANTS_ONLY';
+  registration_policy?: ActivityRegistrationPolicy | 'EVENT_REGISTRANTS_ONLY';
   registration_mode?: EventActivity['registration_mode'];
   accessRequirement?: EventActivity['access_requirement'];
   access_requirement?: EventActivity['access_requirement'];
@@ -406,7 +408,9 @@ export class EventsService {
   }
 
   private toActivity(activity: ApiEventActivity, fallbackEventId: number | string = 0): EventActivity {
-    const policy = activity.registrationPolicy ?? activity.registration_policy ?? null;
+    const policy = normalizeActivityRegistrationPolicy(
+      activity.registrationPolicy ?? activity.registration_policy ?? null,
+    );
     const guestName = activity.guest?.name ?? activity.guestName ?? activity.guest_name ?? null;
     const guestImageUrl = activity.guest?.imageUrl
       ?? activity.guest?.image_url

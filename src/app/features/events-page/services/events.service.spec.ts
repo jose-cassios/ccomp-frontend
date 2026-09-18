@@ -322,9 +322,14 @@ describe('EventsService', () => {
     expect(api.get).toHaveBeenCalledTimes(2);
   });
 
-  it.each(['PUBLIC', 'ACTIVITY_REGISTRANTS_ONLY', 'EVENT_REGISTRANTS_ONLY', 'INHERITED_FROM_EVENT'])(
-    'normalizes the snake_case policy %s without inventing enrollment status', (policy) => {
-      api.get.mockReturnValueOnce(of({ content: [{ id: 1, registration_policy: policy }], next_cursor: null }) as never);
+  it.each([
+    ['PUBLIC', 'PUBLIC'],
+    ['ACTIVITY_REGISTRANTS_ONLY', 'ACTIVITY_REGISTRANTS_ONLY'],
+    ['INHERITED_FROM_EVENT', 'INHERITED_FROM_EVENT'],
+    ['EVENT_REGISTRANTS_ONLY', 'ACTIVITY_REGISTRANTS_ONLY'],
+  ] as const)(
+    'normalizes the snake_case policy %s without inventing enrollment status', (apiPolicy, policy) => {
+      api.get.mockReturnValueOnce(of({ content: [{ id: 1, registration_policy: apiPolicy }], next_cursor: null }) as never);
       service.getActivities(12).subscribe(({ content: [activity] }) => {
         expect(activity.registration_policy).toBe(policy);
         expect(activity.registration_mode).toBe(policy === 'PUBLIC' ? 'NONE' : 'REQUIRED');

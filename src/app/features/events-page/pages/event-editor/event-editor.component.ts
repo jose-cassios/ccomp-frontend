@@ -12,7 +12,9 @@ import {
   ActivityPayload,
   ACTIVITY_REGISTRATION_POLICY_OPTIONS,
   ActivityRegistrationPolicy,
+  ActivityRegistrationPolicyOption,
   activityRegistrationPolicyLabel,
+  activityRegistrationPolicyDescription,
   ApiMessage,
   CreateEventPayload,
   EVENT_ACTIVITY_TYPE_OPTIONS,
@@ -88,7 +90,7 @@ export class EventEditorComponent implements OnInit {
     location: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
     start_date: ['', Validators.required],
     end_date: ['', Validators.required],
-    registration_policy: this.fb.nonNullable.control<ActivityRegistrationPolicy>('EVENT_REGISTRANTS_ONLY', Validators.required),
+    registration_policy: this.fb.nonNullable.control<ActivityRegistrationPolicy>('ACTIVITY_REGISTRANTS_ONLY', Validators.required),
   });
   readonly editorForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -122,6 +124,11 @@ export class EventEditorComponent implements OnInit {
   readonly activityTypes = EVENT_ACTIVITY_TYPE_OPTIONS;
   readonly activityRegistrationPolicies = ACTIVITY_REGISTRATION_POLICY_OPTIONS;
   readonly activityPolicyLabel = activityRegistrationPolicyLabel;
+  readonly activityPolicyDescription = activityRegistrationPolicyDescription;
+  readonly activityPolicyMenuOpen = signal(false);
+  readonly selectedActivityPolicy = computed(() => this.activityRegistrationPolicies.find(
+    (policy) => policy.value === this.activityForm.controls.registration_policy.value,
+  ) ?? this.activityRegistrationPolicies[1]);
   readonly steps = EDITOR_STEPS;
   readonly isBusy = computed(() => this.operation() !== 'idle');
   readonly isAdmin = computed(() => this.authService.hasAnyRole(ADMINISTRATION_ROLES));
@@ -544,7 +551,7 @@ export class EventEditorComponent implements OnInit {
       location: activity.location ?? '',
       start_date: this.toLocalInput(activity.start_date ?? null),
       end_date: this.toLocalInput(activity.end_date ?? null),
-      registration_policy: activity.registration_policy ?? 'EVENT_REGISTRANTS_ONLY',
+      registration_policy: activity.registration_policy ?? 'ACTIVITY_REGISTRANTS_ONLY',
     });
     this.errorMessage.set(null);
     this.successMessage.set(null);
@@ -576,6 +583,7 @@ export class EventEditorComponent implements OnInit {
     this.activityDialogEndDay.set(day);
     this.errorMessage.set(null);
     this.successMessage.set(null);
+    this.activityPolicyMenuOpen.set(false);
     this.activityDialog?.nativeElement.showModal();
   }
 
@@ -600,6 +608,20 @@ export class EventEditorComponent implements OnInit {
     const day = field === 'start_date' ? this.activityDialogDay() : this.activityDialogEndDay();
     this.activityForm.controls[field].setValue(day && value ? `${day}T${value}` : '');
     this.activityForm.controls[field].markAsDirty();
+  }
+
+  toggleActivityPolicyMenu(): void {
+    this.activityPolicyMenuOpen.update((open) => !open);
+  }
+
+  selectActivityPolicy(policy: ActivityRegistrationPolicyOption): void {
+    this.activityForm.controls.registration_policy.setValue(policy.value);
+    this.activityForm.controls.registration_policy.markAsDirty();
+    this.activityPolicyMenuOpen.set(false);
+  }
+
+  closeActivityPolicyMenu(): void {
+    this.activityPolicyMenuOpen.set(false);
   }
 
   selectActivityDay(dayKey: string): void {
@@ -919,7 +941,7 @@ export class EventEditorComponent implements OnInit {
       location: '',
       start_date: '',
       end_date: '',
-      registration_policy: 'EVENT_REGISTRANTS_ONLY',
+      registration_policy: 'ACTIVITY_REGISTRANTS_ONLY',
     });
   }
 
