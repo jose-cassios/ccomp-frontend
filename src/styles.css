@@ -2,34 +2,6 @@
 
 @import './styles/_variables.scss';
 
-:root {
-  /* Marca */
-  --brand-50: #f0f6f2;
-  --brand-100: #dcece1;
-  --brand-500: #2d864a;
-  --brand-600: #257a43;
-  --brand-700: #1d6336;
-  /* Verde claro, para uso sobre fundo escuro */
-  --brand-accent: #8ec89f;
-
-  /* Texto */
-  --text-strong: #1d2923;
-  --text-muted: #6f7e76;
-
-  /* Superfícies e estados reutilizáveis */
-  --surface-page: #f5f7f6;
-  --surface-card: #ffffff;
-  --surface-subtle: #eef1ef;
-  --border-subtle: #dfe5e1;
-  --focus-ring: rgba(45, 134, 74, 0.16);
-  --danger-bg: #fff0f2;
-  --danger-text: #942c3a;
-  --warning-bg: #fff5e6;
-  --warning-text: #8f5010;
-  --info-bg: #edf6fb;
-  --info-text: #275f87;
-}
-
 * {
     margin: 0;
     padding: 0;
@@ -116,10 +88,10 @@ body {
   display: grid;
   gap: 18px;
   margin-top: 22px;
-  border: 1px solid #dce8df;
+  border: 1px solid var(--border-primary);
   border-radius: 12px;
   padding: 20px;
-  background: #f8fbf9;
+  background: var(--brand-50);
 }
 
 .event-editor-page .activity-form-heading,
@@ -138,7 +110,7 @@ body {
   letter-spacing: .08em;
   text-transform: uppercase;
 }
-.event-editor-page .activity-form-heading strong { color: #21382a; font-size: .98rem; }
+.event-editor-page .activity-form-heading strong { color: var(--text-primary); font-size: .98rem; }
 .event-editor-page .activity-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -146,20 +118,20 @@ body {
 }
 .event-editor-page .activity-settings {
   margin: 0;
-  border: 1px solid #dce8df;
+  border: 1px solid var(--border-primary);
   border-radius: 10px;
   padding: 15px;
   background: #fff;
 }
 .event-editor-page .activity-settings legend {
   padding: 0 6px;
-  color: #24382c;
+  color: var(--text-primary);
   font-size: .82rem;
   font-weight: 800;
 }
 .event-editor-page .activity-settings legend small {
   margin-left: 5px;
-  color: #718078;
+  color: var(--text-tertiary);
   font-size: .68rem;
   font-weight: 650;
 }
@@ -179,8 +151,8 @@ body {
   margin: 18px 0 0;
   border-radius: 9px;
   padding: 12px 14px;
-  background: #f1f5f3;
-  color: #526159;
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
   font-size: .82rem;
 }
 .event-editor-page .schedule-notice--error,
@@ -201,9 +173,9 @@ body {
 .event-editor-page .schedule-days button,
 .details-page .schedule-days button {
   flex: 0 0 auto;
-  border: 1px solid #d7e2da;
+  border: 1px solid var(--border-primary);
   background: #fff;
-  color: #526159;
+  color: var(--text-secondary);
   cursor: pointer;
   font: inherit;
 }
@@ -223,7 +195,7 @@ body {
   height: 20px;
   place-items: center;
   border-radius: 50%;
-  background: #edf3ef;
+  background: var(--brand-100);
   font-size: .66rem;
 }
 .event-editor-page .schedule-days button.active {
@@ -235,7 +207,7 @@ body {
 .event-editor-page .compact-schedule,
 .details-page .public-schedule {
   margin-top: 4px;
-  border-top: 1px solid #e2ebe5;
+  border-top: 1px solid var(--border-primary);
 }
 .event-editor-page .schedule-slot,
 .details-page .schedule-slot {
@@ -243,14 +215,14 @@ body {
   grid-template-columns: 78px minmax(0, 1fr);
   gap: 15px;
   padding: 14px 0;
-  border-bottom: 1px solid #e2ebe5;
+  border-bottom: 1px solid var(--border-primary);
 }
 .event-editor-page .schedule-slot > time {
   align-self: start;
   border-radius: 8px;
   padding: 9px 7px;
-  background: #eaf4ed;
-  color: #176b35;
+  background: var(--brand-tint);
+  color: var(--brand-700);
   font-size: .86rem;
   font-weight: 850;
   text-align: center;
@@ -263,7 +235,7 @@ body {
   align-items: center;
   gap: 14px;
   min-width: 0;
-  border: 1px solid #e1e8e3;
+  border: 1px solid var(--border-primary);
   border-radius: 10px;
   padding: 13px 14px;
   background: #fff;
@@ -275,8 +247,8 @@ body {
 .details-page .activity-badges span {
   border-radius: 999px;
   padding: 3px 7px;
-  background: #edf6ef;
-  color: #1c6d39;
+  background: var(--brand-tint);
+  color: var(--brand-700);
   font-size: .6rem;
   font-weight: 850;
   letter-spacing: .04em;
@@ -286,7 +258,7 @@ body {
 .details-page .activity-card h3 {
   margin: 0;
   overflow-wrap: anywhere;
-  color: #1f3227;
+  color: var(--text-primary);
   font-size: .94rem;
   line-height: 1.35;
 }
@@ -311,7 +283,7 @@ body {
   align-items: center;
   gap: 8px;
   margin-top: 9px;
-  color: #40534a;
+  color: var(--text-secondary);
   font-size: .76rem;
   font-weight: 750;
 }
@@ -319,10 +291,10 @@ body {
 .details-page .activity-guest img {
   width: 30px;
   height: 30px;
-  border: 1px solid #dce5df;
+  border: 1px solid var(--border-primary);
   border-radius: 50%;
   object-fit: cover;
-  background: #e7eeea;
+  background: var(--surface-subtle);
 }
 
 .details-page .schedule-intro { margin: -5px 0 0; color: #64748b; font-size: .84rem; line-height: 1.5; }
@@ -335,25 +307,25 @@ body {
   text-align: left;
 }
 .details-page .schedule-days button span { font-size: .66rem; font-weight: 750; text-transform: capitalize; }
-.details-page .schedule-days button strong { color: #24382c; font-size: .84rem; }
+.details-page .schedule-days button strong { color: var(--text-primary); font-size: .84rem; }
 .details-page .schedule-days button.active {
   border-color: var(--brand-600);
-  background: #eaf7ee;
-  color: #176b35;
+  background: var(--brand-tint);
+  color: var(--brand-700);
   box-shadow: inset 0 -2px 0 var(--brand-600);
 }
-.details-page .schedule-days button.active strong { color: #12592f; }
+.details-page .schedule-days button.active strong { color: var(--brand-800); }
 .details-page .schedule-time { display: grid; align-content: start; gap: 4px; }
 .details-page .schedule-time strong {
   border-radius: 8px;
   padding: 8px;
-  background: #eaf4ed;
-  color: #176b35;
+  background: var(--brand-tint);
+  color: var(--brand-700);
   font-size: .85rem;
   text-align: center;
 }
 .details-page .schedule-time span {
-  color: #7b8881;
+  color: var(--text-tertiary);
   font-size: .63rem;
   font-weight: 700;
   line-height: 1.3;
@@ -364,7 +336,7 @@ body {
   grid-template-columns: minmax(0, 1fr) minmax(145px, 185px);
   align-items: center;
   gap: 14px;
-  border: 1px solid #e1e8e3;
+  border: 1px solid var(--border-primary);
   border-radius: 10px;
   padding: 13px 14px;
   background: #fff;
@@ -400,15 +372,15 @@ body {
   font-weight: 800;
 }
 .details-page .activity-card__action button:disabled {
-  border-color: #d9e1dc;
-  background: #eef2ef;
-  color: #748078;
+  border-color: var(--border-primary);
+  background: var(--surface-subtle);
+  color: var(--text-disabled);
   cursor: not-allowed;
 }
 .details-page .activity-card__action .activity-subscribe--active {
   border-color: #cad8ce;
   background: #fff;
-  color: #356044;
+  color: var(--brand-700);
 }
 .details-page .activity-card__action small {
   color: #8a5d16;
@@ -419,8 +391,8 @@ body {
 .details-page .free-access {
   border-radius: 8px;
   padding: 8px 10px;
-  background: #eff7f1;
-  color: #176b35;
+  background: var(--brand-tint);
+  color: var(--brand-700);
   font-size: .72rem;
   font-weight: 800;
   text-align: center;

@@ -19,11 +19,11 @@ app-proximos-eventos + app-proximos-eventos { display: block; margin-top: 32px; 
 .management h2 { margin: 4px 0 0; color: var(--text-strong); font-size: 1.3rem; }
 .editable-list { display: grid; gap: 0; margin-top: 18px; }
 .editable-list article { display: grid; grid-template-columns: 52px minmax(0,1fr) auto; align-items: center; gap: 16px; border-top: 1px solid #e6ecee; padding: 15px 0; }
-.editable-list__cover { display: grid; overflow: hidden; place-items: center; border-radius: 9px; background: #edf1ef; color: #526159; font-size: .9rem; font-weight: 900; }
+.editable-list__cover { display: grid; overflow: hidden; place-items: center; border-radius: 9px; background: var(--surface-subtle); color: var(--gray-600); font-size: .9rem; font-weight: 900; }
 .editable-list__cover { width: 52px; height: 52px; }
 .editable-list__cover img { width: 100%; height: 100%; object-fit: cover; }
 .editable-list article span, .editable-list article p { color: #6b7b84; font-size: .82rem; }
-.editable-list h3 { margin: 4px 0; color: #21352a; font-size: 1rem; }
+.editable-list h3 { margin: 4px 0; color: var(--text-primary); font-size: 1rem; }
 .editable-list p { margin: 0; }
 .editable-list a { border-color: #cfd8d3; background: #f6f8f7; color: #34453c; }
 @media (max-width: 700px) { .events-page { padding: 20px 12px 42px; } .page-header, .management__heading { align-items: stretch; flex-direction: column; } .page-header { gap: 14px; padding-bottom: 16px; } .page-header h1 { font-size: clamp(1.55rem, 7vw, 1.85rem); } .page-header p { font-size: .88rem; } .page-actions { justify-content: flex-start; } .editable-list article { grid-template-columns: 52px minmax(0,1fr); } .editable-list article a { grid-column: 1 / -1; width: 100%; } .management { padding: 18px; } }

@@ -24,7 +24,7 @@
   padding: 0.9rem 1.2rem;
   border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 1rem;
-  color: #143524;
+  color: var(--brand-800);
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 1rem 2.5rem rgba(8, 45, 25, 0.2);
   font-weight: 750;
@@ -33,8 +33,8 @@
 .loading-overlay__spinner {
   width: 1.45rem;
   height: 1.45rem;
-  border: 3px solid #cfe5d6;
-  border-top-color: #218447;
+  border: 3px solid var(--brand-100);
+  border-top-color: var(--brand-600);
   border-radius: 50%;
   animation: loading-spin 0.7s linear infinite;
 }

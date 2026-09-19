@@ -5,12 +5,12 @@
 .section-header h2 { margin: 0; color: var(--text-strong); font-size: 1.5rem; }
 .section-caption { color: #64748b; font-size: .8rem; }
 .clubes-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
-.clube-card { display: flex; overflow: hidden; flex-direction: column; border: 1px solid #34433b; border-radius: 13px; background: #202c26; transition: border-color .2s ease; }
-.clube-card:hover { border-color: #52645a; }
+.clube-card { display: flex; overflow: hidden; flex-direction: column; border: 1px solid var(--brand-700); border-radius: 13px; background: var(--brand-900); transition: border-color .2s ease; }
+.clube-card:hover { border-color: var(--brand-accent); }
 .card-details { display: flex; flex: 1; flex-direction: column; width: 100%; border: 0; padding: 0; background: transparent; cursor: pointer; text-align: left; }
 .card-image { position: relative; height: 190px; overflow: hidden; }
 .card-image img { width: 100%; height: 100%; object-fit: cover; }
-.image-placeholder { display: grid; width: 100%; height: 100%; place-items: center; background: #263b30; color: rgba(255, 255, 255, .88); font-size: 4rem; font-weight: 800; }
+.image-placeholder { display: grid; width: 100%; height: 100%; place-items: center; background: var(--brand-800); color: rgba(255, 255, 255, .88); font-size: 4rem; font-weight: 800; }
 .card-overlay { position: absolute; inset: 0; background: rgba(20, 29, 24, .16); }
 .card-content { display: flex; flex: 1; flex-direction: column; padding: 22px 24px 16px; }
 .card-category { margin-bottom: 8px; color: var(--brand-accent); font-size: .7rem; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; }
