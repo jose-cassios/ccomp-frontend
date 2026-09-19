@@ -34,8 +34,17 @@
             <div class="news-img news-img--placeholder" aria-hidden="true">CCOMP</div>
           }
 
-          <div class="badge-novo-floating fade-in">
-            <span class="dot-white"></span> {{ currentHighlight().label }}
+          <div class="carousel-indicators" aria-label="Navegação dos destaques">
+            @for (item of carouselItems(); track item.source_type + ':' + item.source_id; let i = $index) {
+              <button
+                type="button"
+                class="dot"
+                [class.active]="i === currentIndex()"
+                [attr.aria-label]="'Exibir destaque ' + (i + 1)"
+                [attr.aria-current]="i === currentIndex() ? 'true' : null"
+                (click)="goTo(i)"
+              ></button>
+            }
           </div>
         </div>
 
@@ -53,18 +62,6 @@
 
           <h2 class="news-title">{{ currentHighlight().title }}</h2>
           <p class="news-desc">{{ currentHighlight().summary || 'Acesse para conferir mais informações.' }}</p>
-
-          <div class="carousel-indicators">
-            @for (item of carouselItems(); track item.source_type + ':' + item.source_id; let i = $index) {
-              <button
-                type="button"
-                class="dot"
-                [class.active]="i === currentIndex()"
-                [attr.aria-label]="'Exibir destaque ' + (i + 1)"
-                (click)="goTo(i)"
-              ></button>
-            }
-          </div>
 
           <div class="news-footer">
             <a [routerLink]="currentHighlight().link" class="link-acessar">+ Mais informações</a>

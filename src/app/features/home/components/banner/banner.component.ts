@@ -1,4 +1,5 @@
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { AfterViewInit, Component, computed, effect, inject, input, OnDestroy, output, PLATFORM_ID, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { GlobalHighlight } from '../../models/global-highlight.model';
 
@@ -14,7 +15,9 @@ interface StatItem {
   templateUrl: './banner.component.html',
   styleUrl: './banner.component.css'
 })
-export class BannerComponent {
+export class BannerComponent implements AfterViewInit, OnDestroy {
+  private readonly platformId = inject(PLATFORM_ID);
+  private carouselTimer: ReturnType<typeof setInterval> | null = null;
   readonly highlights = input<readonly GlobalHighlight[]>([]);
   readonly eventsCount = input(0);
   readonly newsCount = input(0);
@@ -34,6 +37,18 @@ export class BannerComponent {
     effect(() => {
       if (this.currentIndex() >= this.carouselItems().length) this.currentIndex.set(0);
     });
+  }
+
+  ngAfterViewInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    this.carouselTimer = setInterval(() => {
+      if (this.carouselItems().length > 1) this.next();
+    }, 6000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.carouselTimer !== null) clearInterval(this.carouselTimer);
   }
 
   next() {
