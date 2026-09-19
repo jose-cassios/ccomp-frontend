@@ -1,19 +1,19 @@
 :host { display: block; background: var(--surface-page); }
-.clubs-page { min-height: 75vh; padding: 42px 0 70px; }
-.page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; width: min(1200px, calc(100% - 40px)); margin: 0 auto 42px; }
+.clubs-page { min-height: 75vh; padding: 32px 0 56px; }
+.page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; width: min(1360px, calc(100% - 32px)); margin: 0 auto 28px; }
 .eyebrow { color: var(--brand-600); font-size: .7rem; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
-.page-header h1 { margin: 5px 0; color: var(--text-strong); font-size: clamp(2.2rem, 5vw, 3.4rem); }
-.page-header p { margin: 0; color: #64748b; }
+.page-header h1 { margin: 0 0 6px; color: var(--text-strong); font-size: clamp(1.65rem, 2.4vw, 2rem); line-height: 1.15; letter-spacing: -.025em; }
+.page-header p { margin: 0; color: #64748b; font-size: .9rem; line-height: 1.45; }
 .primary-button, .secondary-button, .danger-button, .row-actions button, .load-more { min-height: 40px; border-radius: 8px; padding: 0 15px; cursor: pointer; font-weight: 750; }
 .primary-button { border: 1px solid var(--brand-600); background: var(--brand-600); color: #fff; }
 .secondary-button, .row-actions button { border: 1px solid #cbd5e1; background: #fff; color: #415466; }
 .danger-button, .row-actions .danger-button { border: 1px solid #fecdd3; background: #fff1f2; color: #9f1239; }
 button:disabled { cursor: not-allowed; opacity: .55; }
-.notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: min(1160px, calc(100% - 40px)); margin: 0 auto 22px; border-radius: 10px; padding: 13px 16px; }
+.notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: min(1360px, calc(100% - 32px)); margin: 0 auto 18px; border-radius: 10px; padding: 13px 16px; }
 .notice button { border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 1.3rem; }
 .notice--success { background: #eaf8ee; color: #166534; }
 .notice--error { width: 100%; margin: 0 0 16px; background: #fff1f2; color: #9f1239; }
-.management-section { width: min(1160px, calc(100% - 40px)); margin: 48px auto 0; border: 1px solid var(--border-subtle); border-radius: 13px; padding: 24px; background: #fff; }
+.management-section { width: min(1360px, calc(100% - 32px)); margin: 36px auto 0; border: 1px solid var(--border-subtle); border-radius: 13px; padding: 22px; background: #fff; }
 .management-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
 .management-heading h2 { margin: 5px 0 0; color: var(--text-strong); }
 .managed-list { display: grid; gap: 4px; margin-top: 20px; }
@@ -58,4 +58,4 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .member-role { color: #53646f; font-size: .78rem; font-weight: 700; }
 .status-button { border: 1px solid #a7dfb5; border-radius: 999px; padding: 6px 10px; background: #eaf8ee; color: #166534; cursor: pointer; font-size: .72rem; font-weight: 800; }
 .status-button--inactive { border-color: #cbd5e1; background: #f1f5f9; color: #64748b; }
-@media (max-width: 720px) { .page-header, .management-heading, .managed-list article { align-items: stretch; flex-direction: column; } .row-actions { flex-wrap: wrap; } .row-actions button { flex: 1; } .modal { padding: 18px 14px; } .upload-row, .add-member-form { grid-template-columns: 1fr; } .upload-button { min-height: 42px; } .member-filters { align-items: stretch; flex-direction: column; } .member-filters label { width: 100%; } .member-list article { grid-template-columns: 38px minmax(0, 1fr) auto; } .member-role { display: none; } }
+@media (max-width: 720px) { .clubs-page { padding: 26px 0 44px; } .page-header, .management-heading, .managed-list article { align-items: stretch; flex-direction: column; } .page-header, .notice, .management-section { width: min(1360px, calc(100% - 24px)); } .page-header h1 { font-size: clamp(1.55rem, 7vw, 1.85rem); } .row-actions { flex-wrap: wrap; } .row-actions button { flex: 1; } .modal { padding: 18px 14px; } .upload-row, .add-member-form { grid-template-columns: 1fr; } .upload-button { min-height: 42px; } .member-filters { align-items: stretch; flex-direction: column; } .member-filters label { width: 100%; } .member-list article { grid-template-columns: 38px minmax(0, 1fr) auto; } .member-role { display: none; } }

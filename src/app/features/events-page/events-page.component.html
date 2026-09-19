@@ -1,12 +1,10 @@
 <main class="events-page">
   <header class="page-header">
     <div class="page-intro">
-      <span class="page-kicker">Agenda da comunidade</span>
       <h1>Agenda da Computação</h1>
       <p>Encontros, oficinas e experiências para aprender, criar e participar.</p>
     </div>
     <div class="page-actions">
-      <button class="page-action page-action--secondary" type="button" (click)="openCalendar()">Ver calendário</button>
       @if (canManageEvents()) {
         <a class="page-action page-action--primary" routerLink="/eventos/novo">+ Novo evento</a>
       }
@@ -75,55 +73,6 @@
         (loadMore)="loadMore()"
       />
     }
-  }
-
-  @if (calendarOpen()) {
-    <div class="modal-backdrop" role="presentation" (click)="closeCalendar()">
-      <section
-        class="calendar-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="calendar-title"
-        (click)="$event.stopPropagation()"
-      >
-        <header>
-          <div>
-            <span>Agenda completa</span>
-            <h2 id="calendar-title">Calendário de eventos</h2>
-          </div>
-          <button type="button" aria-label="Fechar calendário" (click)="closeCalendar()">×</button>
-        </header>
-
-        @if (calendarLoading()) {
-          <p role="status">Carregando calendário...</p>
-        } @else if (calendarError()) {
-          <p class="notice notice--error" role="alert">{{ calendarError() }}</p>
-        } @else if (calendarEvents().length) {
-          <div class="calendar-list">
-            @for (event of calendarEvents(); track event.id) {
-              <button type="button" (click)="closeCalendar(); openEvent(event.id)">
-                <time [attr.datetime]="event.start_date">
-                  {{ event.start_date | date: 'dd/MM' }}
-                </time>
-                <span class="calendar-cover" aria-hidden="true">
-                  @if (event.cover_image_url; as coverImageUrl) {
-                    <img [src]="coverImageUrl" [alt]="''" />
-                  } @else {
-                    {{ event.title.slice(0, 1).toUpperCase() }}
-                  }
-                </span>
-                <span>
-                  <strong>{{ event.title }}</strong>
-                  {{ event.start_date | date: 'HH:mm' }} · {{ formatLabel(event.format) }}
-                </span>
-              </button>
-            }
-          </div>
-        } @else {
-          <p>Nenhum evento disponível no calendário.</p>
-        }
-      </section>
-    </div>
   }
 
 </main>

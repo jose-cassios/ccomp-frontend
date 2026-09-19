@@ -6,9 +6,9 @@
 }
 
 .noticias-wrapper {
-  max-width: 1200px;
+  max-width: 1360px;
   margin: 0 auto;
-  padding: 80px 20px;
+  padding: 56px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -75,12 +75,6 @@
   flex-direction: column;
   flex: 1;
   max-width: 500px;
-}
-
-/* Sobre o fundo escuro da seção, a linha usa o verde claro */
-.linha-verde {
-  width: 27px;
-  background-color: var(--brand-accent);
 }
 
 .label{

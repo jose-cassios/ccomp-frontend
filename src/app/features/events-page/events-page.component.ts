@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -10,15 +9,13 @@ import {
   EventFormat,
   EventListItem,
   EventsFilter,
-  eventCategoryLabel,
-  eventFormatLabel,
 } from './models/event.model';
 import { EventsService } from './services/events.service';
 
 @Component({
   selector: 'app-events-page',
   standalone: true,
-  imports: [DatePipe, RouterLink, ProximosEventosComponent],
+  imports: [RouterLink, ProximosEventosComponent],
   templateUrl: './events-page.component.html',
   styleUrl: './events-page.component.css',
 })
@@ -45,15 +42,9 @@ export class EventsPageComponent implements OnInit {
   readonly editorEventsError = signal<string | null>(null);
   readonly isAuthenticated = this.authService.isAuthenticatedState;
   readonly errorMessage = signal<string | null>(null);
-  readonly calendarOpen = signal(false);
-  readonly calendarEvents = signal<EventListItem[]>([]);
-  readonly calendarLoading = signal(false);
-  readonly calendarError = signal<string | null>(null);
   readonly canManageEvents = computed(() =>
     this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
   );
-  readonly categoryLabel = eventCategoryLabel;
-  readonly formatLabel = eventFormatLabel;
 
   ngOnInit(): void {
     this.reload();
@@ -104,24 +95,6 @@ export class EventsPageComponent implements OnInit {
   changeFormat(format: EventFormat | null): void {
     this.selectedFormat.set(format);
     this.reload();
-  }
-
-  openCalendar(): void {
-    this.calendarOpen.set(true);
-    if (this.calendarEvents().length || this.calendarLoading()) return;
-
-    this.calendarLoading.set(true);
-    this.calendarError.set(null);
-    this.eventsService.search({}, undefined, 50).pipe(
-      finalize(() => this.calendarLoading.set(false)),
-    ).subscribe({
-      next: (page) => this.calendarEvents.set(page.content),
-      error: () => this.calendarError.set('Não foi possível carregar o calendário de eventos.'),
-    });
-  }
-
-  closeCalendar(): void {
-    this.calendarOpen.set(false);
   }
 
   openEvent(id: number): void {

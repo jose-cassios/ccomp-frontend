@@ -1,8 +1,7 @@
 :host { display: block; }
-.clubes-destaque-section { width: min(1200px, 100%); margin: 0 auto; padding: 0 20px; }
+.clubes-destaque-section { width: min(1360px, calc(100% - 32px)); margin: 0 auto; padding: 0; }
 .section-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 26px; }
 .header-left { display: flex; align-items: center; gap: 12px; }
-.linha-verde { width: 27px; height: 2px; background: var(--brand-600); }
 .section-header h2 { margin: 0; color: var(--text-strong); font-size: 1.5rem; }
 .section-caption { color: #64748b; font-size: .8rem; }
 .clubes-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
