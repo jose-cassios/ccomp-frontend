@@ -102,7 +102,7 @@
                     <p>{{ draft.summary || 'Sem resumo salvo.' }}</p>
                   </div>
                   <div class="draft-actions">
-                    <a [routerLink]="['/noticias', draft.id, 'editar']">Continuar edição →</a>
+                    <a [routerLink]="['/noticias', draft.id, 'editar']">Continuar edição</a>
                     @if (canDeleteDraft(draft)) {
                       <button
                         type="button"

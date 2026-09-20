@@ -23,7 +23,7 @@
           <span class="news-tag">{{ currentHighlight().label }}</span>
           <h2>{{ currentHighlight().title }}</h2>
           <p>{{ currentHighlight().summary || 'Acesse para conferir mais informações.' }}</p>
-          <a class="highlight-link" [routerLink]="currentHighlight().link">Mais informações <span aria-hidden="true">→</span></a>
+          <a class="highlight-link" [routerLink]="currentHighlight().link">Mais informações ...</a>
           @if (canManageHighlights()) {
             <button class="manage-highlight" type="button" (click)="manageHighlights.emit()">Gerenciar destaques</button>
           }
@@ -63,7 +63,7 @@
             [heading]="panelTitle()" [loading]="eventsLoading()" [error]="eventsError()"
             [emptyMessage]="selectedDay() ? 'Nenhum evento neste dia. Explore outras datas na agenda.' : 'Nenhum evento previsto no momento.'"
             (selected)="openEvent($event)" />
-          <a class="all-events-link" routerLink="/eventos">Ver todos os eventos <span aria-hidden="true">→</span></a>
+          <a class="all-events-link" routerLink="/eventos">Ver todos os eventos</a>
         </div>
       </div>
     </div>

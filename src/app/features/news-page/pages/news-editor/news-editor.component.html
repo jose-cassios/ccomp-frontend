@@ -1,7 +1,6 @@
 <section class="editor-page">
   <header class="editor-header">
     <div>
-      <a routerLink="/noticias" class="back-link">← Voltar para notícias</a>
       <div class="title-row">
         <h1>{{ news() ? 'Editar notícia' : 'Nova notícia' }}</h1>
         @if (isPublished()) {
