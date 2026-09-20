@@ -376,6 +376,7 @@ export class EventsService {
       title: event.title,
       slug: event.slug,
       description: event.summary ?? event.description ?? null,
+      content: event.content ?? null,
       cover_image_url: event.coverImageUrl ?? event.cover_image_url ?? null,
       format: event.format,
       category: event.category,

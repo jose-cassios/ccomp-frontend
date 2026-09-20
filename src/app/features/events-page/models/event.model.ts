@@ -118,6 +118,8 @@ export interface EventListItem {
   title: string;
   slug: string;
   description: string | null;
+  /** Conteúdo recebido pela listagem; também é usado pela busca global. */
+  content?: string | null;
   cover_image_url?: string | null;
   format: EventFormat;
   category: EventCategory;

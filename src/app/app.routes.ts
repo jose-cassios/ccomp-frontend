@@ -76,6 +76,13 @@ export const routes: Routes = [
             ),
         },
         { path: 'eventos', component: EventsPageComponent },
+        {
+          path: 'busca',
+          loadComponent: () =>
+            import('./features/global-search/global-search.component').then(
+              (module) => module.GlobalSearchComponent,
+            ),
+        },
         { path: 'projetos/clubes', component: Clubes },
         { path: 'clubes', redirectTo: 'projetos/clubes', pathMatch: 'full' },
         {

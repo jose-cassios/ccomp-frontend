@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { finalize, of, switchMap } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { distinctUntilChanged, filter, finalize, map, of, switchMap } from 'rxjs';
 import { StorageService } from '../../core/storage/storage.service';
 import { apiErrorMessage } from '../../core/api/api-error';
 import { CONTENT_MANAGEMENT_ROLES } from '../auth/config/auth.config';
@@ -33,6 +34,8 @@ export class Clubes implements OnInit {
   private readonly storageService = inject(StorageService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
 
   readonly clubs = signal<Club[]>([]);
@@ -92,6 +95,12 @@ export class Clubes implements OnInit {
     if (this.isAuthenticated()) {
       this.loadManagedClubs();
     }
+    this.route.queryParamMap.pipe(
+      map((params) => Number(params.get('club'))),
+      filter((clubId) => Number.isInteger(clubId) && clubId > 0),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe((clubId) => this.openClubFromSearch(clubId));
   }
 
   loadClubs(loadMore = false): void {
@@ -151,6 +160,19 @@ export class Clubes implements OnInit {
     this.clubsService.getById(club.id).subscribe({
       next: (details) => this.selectedClub.set(details),
       error: (error: unknown) => this.modalError.set(this.errorMessage(error, 'Não foi possível carregar todos os detalhes do clube.')),
+    });
+  }
+
+  private openClubFromSearch(clubId: number): void {
+    this.clubsService.getById(clubId).subscribe({
+      next: (club) => {
+        this.selectedClub.set(club);
+        this.activeModal.set('details');
+        this.modalError.set(null);
+      },
+      error: (error: unknown) => {
+        this.publicError.set(this.errorMessage(error, 'Não foi possível abrir o clube encontrado.'));
+      },
     });
   }
 
