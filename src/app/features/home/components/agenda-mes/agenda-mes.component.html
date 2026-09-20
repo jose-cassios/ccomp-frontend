@@ -38,7 +38,7 @@
         <div class="calendar-day" [class.outside-month]="!day.inMonth" [class.selected]="isSelected(day)">
           <button type="button" class="day-number" [class.is-today]="day.today"
             [attr.aria-label]="day.label" [attr.aria-pressed]="isSelected(day)"
-            [attr.aria-current]="day.today ? 'date' : null" aria-controls="agenda-day-details"
+            [attr.aria-current]="day.today ? 'date' : null" [attr.aria-controls]="showDayDetails() ? 'agenda-day-details' : 'hero-events'"
             (click)="selectDay(day)">
             <time [attr.datetime]="day.key">{{ day.date.getDate() }}</time>
           </button>
@@ -57,10 +57,14 @@
             }
           </div>
           @if (day.events.length) {
+            @if (compact()) {
+            <span class="mobile-count" aria-hidden="true"></span>
+            } @else {
             <button type="button" class="mobile-count" [attr.aria-label]="day.label"
-              aria-controls="agenda-day-details" (click)="selectDay(day)">
+              [attr.aria-controls]="showDayDetails() ? 'agenda-day-details' : 'hero-events'" (click)="selectDay(day)">
               <span aria-hidden="true">●</span> {{ day.events.length }}
             </button>
+            }
           }
         </div>
       }
@@ -71,6 +75,7 @@
     </footer>
   </div>
 
+  @if (showDayDetails()) {
   <section class="day-details" id="agenda-day-details" aria-labelledby="selected-day-title" aria-live="polite">
     <h3 id="selected-day-title">{{ selectedLabel() }}</h3>
     <div class="day-detail-list">
@@ -85,4 +90,5 @@
       }
     </div>
   </section>
+  }
 </section>

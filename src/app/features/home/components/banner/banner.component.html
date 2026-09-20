@@ -1,73 +1,71 @@
-<section class="hero-banner">
-  <div class="hero-bg">
-    <div class="bg-overlay"></div>
-  </div>
-
+<section class="hero-banner" aria-labelledby="hero-title">
   <div class="hero-container">
     <div class="hero-content-area">
-      <div class="hero-titles">
+      <div class="hero-intro">
         <span class="badge-inst">Instituto Federal do Maranhão</span>
-        <h1 class="hero-title">
-          Bem-vindo ao Bacharelado em <br><span class="text-highlight">Ciência da Computação</span>
-        </h1>
-        <p class="hero-desc">
-          Consulte informações sobre a organização acadêmica, atividades de ensino, pesquisa e extensão, eventos, notícias e iniciativas desenvolvidas no âmbito do curso.
-        </p>
+        <h1 id="hero-title">Bem-vindo ao Bacharelado em <span>Ciência da Computação</span></h1>
+        <p class="hero-desc">Consulte informações sobre a organização acadêmica, atividades de ensino, pesquisa e extensão, eventos, notícias e iniciativas desenvolvidas no âmbito do curso.</p>
+        <div class="hero-stats">
+          @for (stat of estatisticas(); track stat.label) {
+            <div><strong>{{ stat.valor }}</strong><span>{{ stat.label }}</span></div>
+          }
+        </div>
       </div>
-
-      <div class="hero-stats">
-        @for (stat of estatisticas(); track stat.label) {
-          <div class="stat-item">
-            <p class="stat-value">{{ stat.valor }}</p>
-            <p class="stat-label">{{ stat.label }}</p>
-          </div>
-        }
-      </div>
+      <div class="campus-image" aria-hidden="true"></div>
+      <a class="course-link" routerLink="/sobre/apresentacao">Conheça o curso <span aria-hidden="true">↗</span></a>
     </div>
 
-    <div class="hero-card-area">
-      <div class="news-card">
+    <div class="hero-dashboard">
+      <article class="news-card" aria-label="Destaques da comunidade"
+        (mouseenter)="hovered.set(true)" (mouseleave)="hovered.set(false)"
+        (focusin)="focused.set(true)" (focusout)="focused.set(false)">
+        <div class="news-content">
+          <span class="news-tag">{{ currentHighlight().label }}</span>
+          <h2>{{ currentHighlight().title }}</h2>
+          <p>{{ currentHighlight().summary || 'Acesse para conferir mais informações.' }}</p>
+          <a class="highlight-link" [routerLink]="currentHighlight().link">Mais informações <span aria-hidden="true">→</span></a>
+          @if (canManageHighlights()) {
+            <button class="manage-highlight" type="button" (click)="manageHighlights.emit()">Gerenciar destaques</button>
+          }
+        </div>
         <div class="news-img-container">
           @if (currentHighlight().image_url) {
-            <img [src]="currentHighlight().image_url" [alt]="currentHighlight().title" class="news-img fade-in" />
+            <img [src]="currentHighlight().image_url" [alt]="currentHighlight().title" />
           } @else {
-            <div class="news-img news-img--placeholder" aria-hidden="true">CCOMP</div>
+            <div class="news-placeholder" aria-hidden="true">CCOMP</div>
           }
-
-          <div class="carousel-indicators" aria-label="Navegação dos destaques">
-            @for (item of carouselItems(); track item.source_type + ':' + item.source_id; let i = $index) {
-              <button
-                type="button"
-                class="dot"
-                [class.active]="i === currentIndex()"
-                [attr.aria-label]="'Exibir destaque ' + (i + 1)"
-                [attr.aria-current]="i === currentIndex() ? 'true' : null"
-                (click)="goTo(i)"
-              ></button>
-            }
-          </div>
-        </div>
-
-        <div class="news-content fade-in">
-          <div class="news-header">
-            <h3 class="news-tag">{{ currentHighlight().label }}</h3>
+          @if (carouselItems().length > 1) {
             <div class="news-controls">
-              @if (canManageHighlights()) {
-                <button class="manage-highlight" type="button" (click)="manageHighlights.emit()">Gerenciar destaques</button>
-              }
               <button type="button" aria-label="Destaque anterior" (click)="prev()">‹</button>
+              <button type="button" [attr.aria-label]="carouselPaused() ? 'Retomar carrossel' : 'Pausar carrossel'" [attr.aria-pressed]="carouselPaused()" (click)="carouselPaused.set(!carouselPaused())">{{ carouselPaused() ? '▶' : 'Ⅱ' }}</button>
               <button type="button" aria-label="Próximo destaque" (click)="next()">›</button>
             </div>
-          </div>
+            <div class="carousel-indicators" aria-label="Navegação dos destaques">
+              @for (item of carouselItems(); track item.source_type + ':' + item.source_id; let i = $index) {
+                <button type="button" class="dot" [class.active]="i === currentIndex()"
+                  [attr.aria-label]="'Exibir destaque ' + (i + 1)"
+                  [attr.aria-current]="i === currentIndex() ? 'true' : null" (click)="goTo(i)"></button>
+              }
+            </div>
+          }
+        </div>
+      </article>
 
-          <h2 class="news-title">{{ currentHighlight().title }}</h2>
-          <p class="news-desc">{{ currentHighlight().summary || 'Acesse para conferir mais informações.' }}</p>
-
-          <div class="news-footer">
-            <a [routerLink]="currentHighlight().link" class="link-acessar">+ Mais informações</a>
-          </div>
+      <div class="hero-agenda">
+        <app-agenda-mes [events]="events()" [compact]="true" [showDayDetails]="false" [activeDay]="selectedDay()"
+          [loading]="eventsLoading()" [error]="eventsError()" (retry)="retryEvents.emit()"
+          (daySelected)="selectedDay.set($event)" />
+        <div class="hero-events" id="hero-events" aria-live="polite">
+          @if (selectedDay()) {
+            <button class="reset-day" type="button" (click)="selectedDay.set(null)">← Próximos eventos</button>
+          }
+          <app-proximos-eventos [eventos]="agendaEvents()" [agendaMode]="true"
+            [heading]="panelTitle()" [loading]="eventsLoading()" [error]="eventsError()"
+            [emptyMessage]="selectedDay() ? 'Nenhum evento neste dia. Explore outras datas na agenda.' : 'Nenhum evento previsto no momento.'"
+            (selected)="openEvent($event)" />
+          <a class="all-events-link" routerLink="/eventos">Ver todos os eventos <span aria-hidden="true">→</span></a>
         </div>
       </div>
-      </div>
     </div>
+  </div>
 </section>

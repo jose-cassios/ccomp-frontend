@@ -1,3 +1,29 @@
+@if (agendaMode()) {
+  <section class="agenda-events" [attr.aria-label]="heading()" [attr.aria-busy]="loading()">
+    <h2>{{ heading() }}</h2>
+    <div class="agenda-events-list">
+      @for (event of eventos(); track event.id) {
+        <button class="agenda-event" type="button" (click)="selected.emit(event.id)">
+          <span class="agenda-event-date">
+            <strong>{{ event.start_date | date: 'dd' }}</strong>
+            <small>{{ monthLabel(event.start_date) }}</small>
+          </span>
+          <span class="agenda-event-copy">
+            <span class="agenda-event-time">
+              {{ event.start_date | date: 'HH:mm' }}
+              @if (event.end_date) { – {{ event.end_date | date: 'dd/MM HH:mm' }} }
+            </span>
+            <strong>{{ event.title }}</strong>
+            <small>{{ formatLabel(event.format) }}</small>
+          </span>
+          <span class="agenda-event-arrow" aria-hidden="true">›</span>
+        </button>
+      } @empty {
+        <p role="status">{{ loading() ? 'Carregando eventos...' : error() ? 'Eventos indisponíveis no momento.' : emptyMessage() }}</p>
+      }
+    </div>
+  </section>
+} @else {
 <section class="events-list" aria-labelledby="events-list-title">
   <div class="section-heading">
     <h2 id="events-list-title">{{ heading() }}</h2>
@@ -85,3 +111,4 @@
     </button>
   }
 </section>
+}

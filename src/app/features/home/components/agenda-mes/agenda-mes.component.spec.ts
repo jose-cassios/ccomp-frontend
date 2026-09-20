@@ -81,4 +81,24 @@ describe('AgendaMesComponent', () => {
     expect(component.selectedDate()).toEqual(component.today);
     expect(component.days().find(day => day.today)).toBeDefined();
   });
+
+  it('emits day selection in compact mode without duplicated details or tiny focusable markers', () => {
+    fixture.componentRef.setInput('compact', true);
+    fixture.componentRef.setInput('showDayDetails', false);
+    component.month.set(new Date(2026, 8, 1));
+    fixture.componentRef.setInput('events', [event(1, '2026-09-18T10:00:00')]);
+    const selected: Array<Date | null> = [];
+    component.daySelected.subscribe(day => selected.push(day));
+    component.selectDay(component.days().find(day => day.key === '2026-09-18')!);
+    fixture.detectChanges();
+    expect(selected).toEqual([new Date(2026, 8, 18)]);
+    expect(fixture.nativeElement.querySelector('.day-details')).toBeNull();
+    expect(fixture.nativeElement.querySelector('button.mobile-count')).toBeNull();
+    expect(fixture.nativeElement.querySelector('span.mobile-count')).not.toBeNull();
+    fixture.componentRef.setInput('activeDay', null);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.calendar-day.selected')).toBeNull();
+    component.changeMonth(1);
+    expect(selected.at(-1)).toBeNull();
+  });
 });

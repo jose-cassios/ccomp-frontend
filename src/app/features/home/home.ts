@@ -7,12 +7,9 @@ import { EventListItem } from '../events-page/models/event.model';
 import { EventsService } from '../events-page/services/events.service';
 import { NewsItemType } from '../news-page/interface/news.interface';
 import { NewsService } from '../news-page/services/news.service';
-import { AgendaMesComponent } from './components/agenda-mes/agenda-mes.component';
 import { BannerComponent } from './components/banner/banner.component';
 import { DestaquesSemana } from './components/destaques-semana/destaques-semana';
-import { EventosAndamentoComponent } from './components/eventos-andamento/eventos-andamento.component';
 import { HeroHighlightEditorComponent } from './components/hero-highlight-editor/hero-highlight-editor.component';
-import { NoticiasClubeComponent } from './components/noticias-clube/noticias-clube.component';
 import { GlobalHighlight } from './models/global-highlight.model';
 import { HeroHighlightsService } from './services/hero-highlights.service';
 
@@ -21,10 +18,7 @@ import { HeroHighlightsService } from './services/hero-highlights.service';
   standalone: true,
   imports: [
     BannerComponent,
-    AgendaMesComponent,
-    EventosAndamentoComponent,
     DestaquesSemana,
-    NoticiasClubeComponent,
     HeroHighlightEditorComponent,
   ],
   templateUrl: './home.html',
@@ -46,17 +40,6 @@ export class Home implements OnInit {
   readonly canManageHighlights = computed(() =>
     this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
   );
-  readonly clubHighlights = computed(() =>
-    this.highlights().filter((highlight) => highlight.source_type === 'CLUB'),
-  );
-  readonly ongoingEvents = computed(() => {
-    const now = Date.now();
-    return this.events().filter((event) => {
-      const start = event.start_date ? new Date(event.start_date).getTime() : Number.POSITIVE_INFINITY;
-      const end = event.end_date ? new Date(event.end_date).getTime() : Number.NEGATIVE_INFINITY;
-      return start <= now && end >= now;
-    });
-  });
 
   ngOnInit(): void {
     this.loadFeaturedNews();

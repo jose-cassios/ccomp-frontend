@@ -16,7 +16,7 @@ import {
   standalone: true,
   imports: [DatePipe],
   templateUrl: './proximos-eventos.component.html',
-  styleUrl: './proximos-eventos.component.css',
+  styleUrls: ['./proximos-eventos.component.css', './proximos-eventos-agenda.css'],
 })
 export class ProximosEventosComponent {
   readonly eventos = input.required<readonly EventListItem[]>();
@@ -24,6 +24,11 @@ export class ProximosEventosComponent {
   readonly showFilters = input(true);
   readonly manageMode = input(false);
   readonly compactMode = input(false);
+  readonly agendaMode = input(false);
+  readonly emptyMessage = input('Nenhum evento programado.');
+  readonly loading = input(false);
+  readonly error = input<string | null>(null);
+  readonly months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
   readonly selectedCategory = input<EventCategory | null>(null);
   readonly selectedFormat = input<EventFormat | null>(null);
   readonly hasMore = input(false);
@@ -37,4 +42,7 @@ export class ProximosEventosComponent {
   readonly categoryLabel = eventCategoryLabel;
   readonly formatLabel = eventFormatLabel;
   readonly publicationStatusLabel = eventPublicationStatusLabel;
+  monthLabel(date: string | null): string {
+    return date ? this.months[new Date(date).getMonth()] : '';
+  }
 }

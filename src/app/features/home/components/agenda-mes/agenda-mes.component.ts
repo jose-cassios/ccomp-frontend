@@ -20,10 +20,15 @@ interface CalendarDay {
   selector: 'app-agenda-mes',
   imports: [RouterLink],
   templateUrl: './agenda-mes.component.html',
-  styleUrl: './agenda-mes.component.css',
+  styleUrls: ['./agenda-mes.component.css', './agenda-mes-compact.css'],
+  host: { '[class.compact]': 'compact()' },
 })
 export class AgendaMesComponent {
   readonly events = input<readonly EventListItem[]>([]);
+  readonly compact = input(false);
+  readonly showDayDetails = input(true);
+  readonly activeDay = input<Date | null | undefined>(undefined);
+  readonly daySelected = output<Date | null>();
   readonly loading = input(false);
   readonly error = input<string | null>(null);
   readonly retry = output<void>();
@@ -76,19 +81,23 @@ export class AgendaMesComponent {
     const next = new Date(current.getFullYear(), current.getMonth() + offset, 1);
     this.month.set(next);
     this.selectedDate.set(next);
+    this.daySelected.emit(null);
   }
 
   goToToday(): void {
     this.month.set(new Date(this.today.getFullYear(), this.today.getMonth(), 1));
     this.selectedDate.set(this.today);
+    this.daySelected.emit(this.today);
   }
 
   selectDay(day: CalendarDay): void {
     this.selectedDate.set(day.date);
+    this.daySelected.emit(day.date);
   }
 
   isSelected(day: CalendarDay): boolean {
-    return day.date.getTime() === this.selectedDate().getTime();
+    const selected = this.activeDay() === undefined ? this.selectedDate() : this.activeDay();
+    return day.date.getTime() === selected?.getTime();
   }
 
   timeLabel(item: CalendarEvent, date: Date): string {
