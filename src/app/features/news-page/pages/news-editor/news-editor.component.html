@@ -27,7 +27,7 @@
           {{ operation() === 'deleting' ? 'Excluindo...' : 'Excluir' }}
         </button>
       }
-      <button type="button" class="button button--primary" [disabled]="isBusy() || form.invalid || isPublished()" (click)="save()">
+      <button type="button" class="button button--primary" [disabled]="isBusy() || form.invalid" (click)="save()">
         @if (operation() === 'creating' || operation() === 'saving') {
           Salvando...
         } @else {
@@ -43,7 +43,7 @@
   @if (operation() !== 'loading') {
     @if (isPublished()) {
       <div class="published-message">
-        Esta notícia já está publicada. Os campos foram bloqueados para deixar claro qual versão está disponível ao público.
+        Esta notícia está publicada. Você pode atualizar o conteúdo; ao salvar, a versão pública será atualizada.
       </div>
     }
 
@@ -93,7 +93,7 @@
               <input
                 type="file"
                 accept="image/*"
-                [disabled]="uploadingCover() || isPublished()"
+                [disabled]="uploadingCover() || isBusy()"
                 (change)="uploadCover($event)"
               />
             </label>
@@ -116,7 +116,7 @@
             <div class="panel-label">Editar</div>
             <app-markdown-editor
               [content]="form.controls.content.value"
-              [disabled]="isPublished()"
+              [disabled]="isBusy()"
               (contentChange)="updateContent($event)"
             ></app-markdown-editor>
             @if (form.controls.content.touched && form.controls.content.invalid) {
@@ -190,7 +190,7 @@
         }
       </div>
       <div class="editor-actions">
-        <button type="button" class="button button--primary" [disabled]="isBusy() || form.invalid || isPublished()" (click)="save()">
+        <button type="button" class="button button--primary" [disabled]="isBusy() || form.invalid" (click)="save()">
           {{ news() ? 'Salvar alterações' : 'Criar e salvar' }}
         </button>
         <button type="button" class="button button--publish" [disabled]="!canPublish()" [title]="publishDisabledReason()" (click)="publish()">
