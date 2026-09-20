@@ -35,4 +35,15 @@ describe('Header', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('links directly to the course presentation without a dropdown menu', () => {
+    fixture.detectChanges();
+
+    const links = fixture.nativeElement.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>;
+    const courseLink = Array.from(links)
+      .find((link) => link.textContent?.trim() === 'Sobre o curso');
+
+    expect(courseLink?.getAttribute('href')).toBe('/sobre/apresentacao');
+    expect(fixture.nativeElement.querySelector('.dropdown-menu')).toBeNull();
+  });
 });

@@ -160,36 +160,6 @@
   color: var(--brand-700) !important;
 }
 
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  z-index: 1001;
-  display: none;
-  min-width: 240px;
-  margin: 0;
-  padding: 7px;
-  border: 1px solid var(--border-primary);
-  border-top: 2px solid var(--brand-500);
-  border-radius: 0 0 8px 8px;
-  background: var(--surface-card);
-  box-shadow: var(--shadow-lg);
-  list-style: none;
-}
-
-.dropdown-menu li a {
-  display: block;
-  border-radius: 5px;
-  padding: 9px 11px;
-  color: var(--text-secondary);
-  font-size: .82rem;
-  text-decoration: none;
-}
-
-.dropdown-menu li a:hover { background: var(--brand-50); color: var(--brand-700); }
-.has-dropdown:hover .dropdown-menu,
-.has-dropdown:focus-within .dropdown-menu { display: block; }
-
 .session-actions {
   flex: 0 0 auto;
   gap: 9px;

@@ -44,18 +44,8 @@
         <li class="nav-item">
           <a class="nav-link" routerLink="/projetos/clubes" routerLinkActive="active-link">Clubes</a>
         </li>
-        <li class="nav-item has-dropdown">
-          <a class="nav-link" routerLink="/sobre/apresentacao" routerLinkActive="active-link">Sobre o Curso <span aria-hidden="true">⌄</span></a>
-          <ul class="dropdown-menu">
-            <li><a routerLink="/sobre/apresentacao">Apresentação</a></li>
-            <li><a routerLink="/sobre/docentes">Corpo Docente</a></li>
-            <li><a routerLink="/sobre/infraestrutura">Infraestrutura</a></li>
-            <li><a routerLink="/ensino/matriz">Matriz Curricular</a></li>
-            <li><a routerLink="/ensino/calendario">Calendário Acadêmico</a></li>
-            <li><a routerLink="/ensino/editais">Editais</a></li>
-            <li><a routerLink="/projetos/pesquisa-extensao">Pesquisa e Extensão</a></li>
-            <li><a routerLink="/processo-seletivo">Processo Seletivo</a></li>
-          </ul>
+        <li class="nav-item">
+          <a class="nav-link" routerLink="/sobre/apresentacao" routerLinkActive="active-link">Sobre o curso</a>
         </li>
 
         @if (canAccessAdministration()) {
