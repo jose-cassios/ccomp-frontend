@@ -1,4 +1,6 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { EMPTY, expand, finalize, throwError } from 'rxjs';
 import { CONTENT_MANAGEMENT_ROLES } from '../auth/config/auth.config';
 import { AuthService } from '../auth/services/auth.service';
 import { EventListItem } from '../events-page/models/event.model';
@@ -29,6 +31,7 @@ import { HeroHighlightsService } from './services/hero-highlights.service';
   styleUrl: './home.css',
 })
 export class Home implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly newsService = inject(NewsService);
   private readonly eventsService = inject(EventsService);
   private readonly authService = inject(AuthService);
@@ -36,6 +39,8 @@ export class Home implements OnInit {
 
   readonly newsItems = signal<NewsItemType[]>([]);
   readonly events = signal<EventListItem[]>([]);
+  readonly eventsLoading = signal(false);
+  readonly eventsError = signal<string | null>(null);
   readonly highlights = signal<GlobalHighlight[]>([]);
   readonly highlightEditorOpen = signal(false);
   readonly canManageHighlights = computed(() =>
@@ -67,9 +72,27 @@ export class Home implements OnInit {
   }
 
   loadEvents(): void {
-    this.eventsService.search({}, undefined, 12).subscribe({
-      next: (response) => this.events.set(response.content),
-      error: () => this.events.set([]),
+    if (this.eventsLoading()) return;
+    this.eventsLoading.set(true);
+    this.eventsError.set(null);
+    const loaded = new Map<number, EventListItem>();
+    const cursors = new Set<string>();
+    this.eventsService.search({}, undefined, 50).pipe(
+      expand(response => {
+        const cursor = response.next_cursor;
+        if (!cursor) return EMPTY;
+        if (cursors.has(cursor)) return throwError(() => new Error('Repeated events cursor'));
+        cursors.add(cursor);
+        return this.eventsService.search({}, cursor, 50);
+      }, 1),
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.eventsLoading.set(false)),
+    ).subscribe({
+      next: response => {
+        response.content.forEach(event => loaded.set(event.id, event));
+        this.events.set([...loaded.values()]);
+      },
+      error: () => this.eventsError.set('Não foi possível carregar toda a agenda. Tente novamente.'),
     });
   }
 
