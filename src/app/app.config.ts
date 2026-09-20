@@ -1,5 +1,5 @@
 import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 
 import { routes } from './app.routes';
@@ -13,7 +13,14 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideHttpClient(withFetch(), withInterceptors([loadingInterceptor, authInterceptor])),
     provideAppInitializer(() => inject(AuthService).restoreSession()),
-    provideRouter(routes),
+    provideRouter(
+      routes,
+      withInMemoryScrolling({
+        // Cada navegação começa no início da nova página; âncoras continuam funcionando.
+        scrollPositionRestoration: 'top',
+        anchorScrolling: 'enabled',
+      }),
+    ),
     provideClientHydration(withEventReplay())
   ]
 };

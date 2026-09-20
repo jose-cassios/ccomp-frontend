@@ -116,6 +116,18 @@ export const routes: Routes = [
         },
         { path: 'sobre/apresentacao', component: ApresentacaoComponent },
         { path: 'sobre/docentes', redirectTo: 'sobre/apresentacao', pathMatch: 'full' },
+        {
+          path: 'termos',
+          loadComponent: () =>
+            import('./features/legal/legal-page.component').then((module) => module.LegalPageComponent),
+          data: { legalDocument: 'terms' },
+        },
+        {
+          path: 'privacidade',
+          loadComponent: () =>
+            import('./features/legal/legal-page.component').then((module) => module.LegalPageComponent),
+          data: { legalDocument: 'privacy' },
+        },
         { path: 'noticias', component: NewsPageComponent },
         { path: 'news/:slug', component: NewsComponent },
         { path: '**', component: EmConstrucao }

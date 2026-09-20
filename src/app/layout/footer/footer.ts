@@ -15,8 +15,8 @@ export class Footer {
 
   readonly quickLinks = [
     { label: 'Eventos', path: '/eventos' },
-    { label: 'O Curso', path: '/curso' },
-    { label: 'Projetos', path: '/projetos' },
+    { label: 'Notícias', path: '/noticias' },
     { label: 'Clubes', path: '/clubes' },
+    { label: 'O Curso', path: '/sobre/apresentacao' },
   ];
 }

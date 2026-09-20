@@ -121,9 +121,14 @@
   }
 }
 
-.footer .footer-institutional .ifma-logo {
+.footer .footer-institutional .ccomp-logo {
   max-width: 180px;
   filter: brightness(0) invert(1);
+  opacity: 0.9;
+}
+
+.footer .footer-institutional .ifma-logo {
+  max-width: 180px;
   opacity: 0.9;
 }
 
