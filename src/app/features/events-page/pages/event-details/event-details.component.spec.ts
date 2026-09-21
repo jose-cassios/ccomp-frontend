@@ -7,6 +7,7 @@ import { AuthService } from '../../../auth/services/auth.service';
 import { EventActivity, EventDetails } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 import { EventDetailsComponent } from './event-details.component';
+import { EventGuestsService } from '../../services/event-guests.service';
 
 describe('EventDetailsComponent', () => {
   let fixture: ComponentFixture<EventDetailsComponent>;
@@ -43,6 +44,8 @@ describe('EventDetailsComponent', () => {
   const eventsService = {
     getById: vi.fn(() => of(event)),
     getAllActivities: vi.fn(() => of([scheduleActivity])),
+    getMyActivitySubscriptions: vi.fn(() => of([] as EventActivity[])),
+    getActivityConflicts: vi.fn(() => of([] as EventActivity[])),
     subscribeActivity: vi.fn(() => of({ message: 'Inscrição confirmada.' })),
     unsubscribeActivity: vi.fn(() => of({ message: 'Inscrição cancelada.' })),
     subscribe: vi.fn(() => of({ message: 'Inscrição no evento confirmada.' })),
@@ -59,9 +62,10 @@ describe('EventDetailsComponent', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: event.id }) } } },
         {
           provide: AuthService,
-          useValue: { isAuthenticatedState: authenticated, hasAnyRole: () => false },
+          useValue: { isAuthenticatedState: authenticated, hasAnyRole: () => false, getCurrentUser: () => null },
         },
         { provide: EventsService, useValue: eventsService },
+        { provide: EventGuestsService, useValue: { guests: () => of({ content: [], next_cursor: null }) } },
       ],
     }).compileComponents();
 
@@ -78,6 +82,34 @@ describe('EventDetailsComponent', () => {
   it('should render the event cover image', () => {
     const cover = fixture.nativeElement.querySelector('.event-hero__cover') as HTMLImageElement;
     expect(cover.src).toBe('https://example.com/pesquisa.jpg');
+  });
+
+  it('restores activity subscriptions from the dedicated endpoint', () => {
+    authenticated.set(true);
+    eventsService.getMyActivitySubscriptions.mockReturnValueOnce(of([scheduleActivity]));
+    component.reloadActivitySubscriptions();
+    expect(component.event()?.activities?.[0].subscribed).toBe(true);
+    expect(component.activitySubscriptionsLoading()).toBe(false);
+  });
+
+  it('blocks new reservations when the subscription lookup fails and allows retry', () => {
+    authenticated.set(true);
+    eventsService.getMyActivitySubscriptions.mockReturnValueOnce(throwError(() => new HttpErrorResponse({status: 500})));
+    component.reloadActivitySubscriptions();
+    expect(component.activitySubscriptionsError()).toBeTruthy();
+    expect(component.activityRegistrationBlocked(scheduleActivity)).toBe(true);
+    component.reloadActivitySubscriptions();
+    expect(component.activitySubscriptionsError()).toBeNull();
+  });
+
+  it('checks server-side conflicts before subscribing, including another event', () => {
+    authenticated.set(true);
+    const activity = { ...scheduleActivity, registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const };
+    eventsService.getActivityConflicts.mockReturnValueOnce(of([{ ...activity, id: 99, event_id: 100, title: 'Outro evento' }]));
+    component.toggleActivitySubscription(activity);
+    expect(eventsService.subscribeActivity).not.toHaveBeenCalled();
+    expect(component.errorMessage()).toContain('Outro evento');
+    expect(component.activitySubscriptionBusyId()).toBeNull();
   });
 
   it('should load the compact schedule with location and guest', () => {

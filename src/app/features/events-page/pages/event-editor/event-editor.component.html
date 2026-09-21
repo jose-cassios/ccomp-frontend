@@ -186,6 +186,19 @@
             </div>
           </div>
           <p class="card-copy">Organize a agenda por dia e horário. Atividades simultâneas serão apresentadas juntas aos participantes.</p>
+          @if (canManageActivities()) {
+            <div class="inline-form">
+              <label class="field field--grow"><span>Inscrições em horários simultâneos</span>
+                <select [formControl]="conflictPolicy">
+                  <option value="">Manter configuração atual (não informada pela API)</option>
+                  <option value="PREVENT">Impedir inscrições com conflito</option>
+                  <option value="ALLOW">Permitir inscrições com conflito</option>
+                </select>
+              </label>
+              <button type="button" class="button button--outline" [disabled]="isBusy() || !conflictPolicy.value" (click)="saveConflictPolicy()">Aplicar regra</button>
+            </div>
+            <p class="card-copy">Enquanto a API não retornar a regra salva, o site mantém o bloqueio preventivo ao participante.</p>
+          }
 
           @if (!canManageActivities()) {
             <p class="access-note">A programação pode ser alterada apenas pelo responsável ou por um editor do evento.</p>
@@ -253,6 +266,7 @@
                               <span>{{ activityPolicyLabel(activity.registration_policy) }}</span>
                             </div>
                             <h3>{{ activity.title }}</h3>
+                            <app-activity-people [eventId]="event()!.id" [activityId]="activity.id" [manage]="canManageActivities()" />
                             <p class="activity-row__meta">
                               @if (activity.end_date) { até {{ activity.end_date | date: 'HH:mm' }} }
                               @if (activity.location) { <span>• {{ activity.location }}</span> }
@@ -302,6 +316,9 @@
             </div>
           </div>
           <p class="card-copy">Inclua moderadores que poderão editar as informações e a programação.</p>
+          @if (event(); as currentEvent) {
+            <app-event-guests [eventId]="currentEvent.id" [manage]="canManageActivities()" />
+          }
 
           @if (canManageTeam()) {
             <form class="inline-form" [formGroup]="editorForm" (ngSubmit)="addEditor()">
@@ -559,7 +576,7 @@
 
                 <fieldset class="activity-settings field--wide" disabled>
                   <legend>Convidado externo <small>Opcional</small></legend>
-                  <p>O cadastro de nome e foto de convidados ainda não está disponível na API.</p>
+                  <p>Convide pessoas na etapa Equipe. O vínculo com uma atividade e o cadastro de nome/foto ainda dependem de novas rotas da API.</p>
                   <div class="activity-form-grid">
                     <label class="field">
                       <span>Nome</span>

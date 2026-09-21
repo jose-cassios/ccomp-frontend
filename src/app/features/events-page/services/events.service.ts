@@ -25,6 +25,8 @@ import {
 } from '../models/event.model';
 
 interface ApiEvent {
+  scheduleConflictPolicy?: 'ALLOW' | 'PREVENT' | null;
+  schedule_conflict_policy?: 'ALLOW' | 'PREVENT' | null;
   id: number;
   title: string;
   slug: string;
@@ -304,16 +306,52 @@ export class EventsService {
   }
 
   getAllActivities(eventId: number | string): Observable<EventActivity[]> {
+    return this.collectActivities((cursor) => this.getActivities(eventId, cursor));
+  }
+
+  getMyActivitySubscriptions(eventId: number | string): Observable<EventActivity[]> {
+    return this.collectActivities((cursor) => this.activityPage(
+      `/events/${encodeURIComponent(eventId)}/activities/my-subscriptions`, cursor,
+    ));
+  }
+
+  getActivityConflicts(activityId: number | string): Observable<EventActivity[]> {
+    return this.collectActivities((cursor) => this.activityPage(
+      `/events/activities/${encodeURIComponent(activityId)}/conflicts`, cursor,
+    ));
+  }
+
+  getActivityEnrollments(activityId: number, cursor?: string): Observable<EventEnrollmentsPage> {
+    let params = new HttpParams().set('pageSize', '20');
+    if (cursor) params = params.set('cursor', cursor);
+    return this.api.get<ApiEnrollmentsPage>(`/events/activities/${activityId}/enrollments`, { params }).pipe(
+      map((page) => ({
+        content: page.content.map((item) => this.toEnrollment({ ...item, status: item.status ?? 'CONFIRMED' })),
+        next_cursor: page.nextCursor ?? page.next_cursor ?? null,
+      })),
+    );
+  }
+
+  private activityPage(path: string, cursor?: string): Observable<EventActivitiesPage> {
+    let params = new HttpParams().set('pageSize', '50');
+    if (cursor) params = params.set('cursor', cursor);
+    return this.api.get<ApiEventActivitiesPage>(path, { params }).pipe(map((page) => ({
+      content: page.content.map((activity) => this.toActivity(activity)),
+      next_cursor: page.nextCursor ?? page.next_cursor ?? null,
+    })));
+  }
+
+  private collectActivities(load: (cursor?: string) => Observable<EventActivitiesPage>): Observable<EventActivity[]> {
     return defer(() => {
       const cursors = new Set<string>();
-      return this.getActivities(eventId).pipe(
+      return load().pipe(
         expand((page) => {
           if (!page.next_cursor) return EMPTY;
           if (cursors.has(page.next_cursor)) {
             return throwError(() => new Error('A API repetiu o cursor da programação. Tente novamente.'));
           }
           cursors.add(page.next_cursor);
-          return this.getActivities(eventId, page.next_cursor);
+          return load(page.next_cursor);
         }),
         reduce((activities, page) => {
           const byId = new Map(activities.map((activity) => [activity.id, activity]));
@@ -392,6 +430,7 @@ export class EventsService {
     const listItem = this.toListItem(event);
     return {
       ...listItem,
+      schedule_conflict_policy: event.schedule_conflict_policy ?? event.scheduleConflictPolicy ?? null,
       summary: event.summary ?? event.description ?? null,
       description: event.content ?? event.description ?? event.summary ?? null,
       content: event.content ?? null,

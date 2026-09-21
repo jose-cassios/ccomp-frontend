@@ -5,6 +5,7 @@ import { AuthService } from '../../../auth/services/auth.service';
 import { EventDetails, EventEditor } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 import { EventEditorComponent } from './event-editor.component';
+import { EventGuestsService } from '../../services/event-guests.service';
 
 describe('EventEditorComponent', () => {
   let component: EventEditorComponent;
@@ -70,6 +71,7 @@ describe('EventEditorComponent', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({}) } } },
         { provide: AuthService, useValue: { hasAnyRole: () => false, currentUserState: () => ({ id: 'event-owner' }) } },
         { provide: EventsService, useValue: eventsService },
+        { provide: EventGuestsService, useValue: { guests: () => of({ content: [], next_cursor: null }), invitations: () => of({ content: [], next_cursor: null }) } },
       ],
     }).compileComponents();
 

@@ -33,6 +33,22 @@ export const routes: Routes = [
         children: [
         { path: '', component: Home },
         {
+          path: 'admin/arquivos',
+          loadComponent: () => import('./features/admin/pages/admin-files/admin-files.component').then(m => m.AdminFilesComponent),
+          canActivate: [authGuard, roleGuard],
+          data: { roles: CONTENT_MANAGEMENT_ROLES },
+        },
+        {
+          path: 'minha-conta',
+          loadComponent: () => import('./features/auth/pages/account/account.component').then(m => m.AccountComponent),
+          canActivate: [authGuard],
+        },
+        {
+          path: 'accept-guest-invite',
+          loadComponent: () => import('./features/events-page/pages/guest-invitation/guest-invitation.component').then(m => m.GuestInvitationComponent),
+          canActivate: [authGuard],
+        },
+        {
           path: 'eventos/novo',
           loadComponent: () =>
             import('./features/events-page/pages/event-editor/event-editor.component').then(
@@ -67,6 +83,10 @@ export const routes: Routes = [
           // Exigir apenas cargo aqui impediria um colaborador válido de abrir o evento.
           canActivate: [authGuard],
           canDeactivate: [pendingEventChangesGuard],
+        },
+        {
+          path: 'eventos/slug/:slug',
+          loadComponent: () => import('./features/events-page/pages/event-details/event-details.component').then(m => m.EventDetailsComponent),
         },
         {
           path: 'eventos/:id',

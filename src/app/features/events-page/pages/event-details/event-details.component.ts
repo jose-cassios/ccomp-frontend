@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { catchError, finalize, of } from 'rxjs';
+import { catchError, finalize, of, switchMap, throwError } from 'rxjs';
 import { CONTENT_MANAGEMENT_ROLES } from '../../../auth/config/auth.config';
 import { AuthService } from '../../../auth/services/auth.service';
 import {
@@ -22,11 +22,13 @@ import {
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
+import { EventGuestsComponent } from '../../components/event-guests/event-guests.component';
+import { ActivityPeopleComponent } from '../../components/activity-people/activity-people.component';
 
 @Component({
   selector: 'app-event-details',
   standalone: true,
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, EventGuestsComponent, ActivityPeopleComponent],
   templateUrl: './event-details.component.html',
   styleUrl: './event-details.component.css',
 })
@@ -44,6 +46,8 @@ export class EventDetailsComponent implements OnInit {
   readonly subscriptionStateResolved = signal(false);
   readonly activitiesLoading = signal(false);
   readonly activitiesError = signal<string | null>(null);
+  readonly activitySubscriptionsLoading = signal(false);
+  readonly activitySubscriptionsError = signal<string | null>(null);
   readonly activitySubscriptionBusyId = signal<number | null>(null);
   readonly activeActivityDay = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
@@ -76,13 +80,15 @@ export class EventDetailsComponent implements OnInit {
     }
 
     const id = this.route.snapshot.paramMap.get('id');
-    if (!id || !/^\d+$/.test(id)) {
+    const slug = this.route.snapshot.paramMap.get('slug');
+    if (!slug && (!id || !/^\d+$/.test(id))) {
       this.loading.set(false);
       this.errorMessage.set('O identificador do evento é inválido.');
       return;
     }
 
-    this.eventsService.getById(id).pipe(finalize(() => this.loading.set(false))).subscribe({
+    const request = slug ? this.eventsService.getBySlug(slug) : this.eventsService.getById(id!);
+    request.pipe(finalize(() => this.loading.set(false))).subscribe({
       next: (event) => {
         this.event.set({ ...event, activities: event.activities ?? [] });
         this.ensureActiveActivityDay();
@@ -123,6 +129,7 @@ export class EventDetailsComponent implements OnInit {
           return next;
         });
         this.subscriptionStateResolved.set(true);
+        this.reloadActivitySubscriptions();
         this.successMessage.set(response.response ?? response.message ?? 'Inscrição atualizada com sucesso.');
       },
       error: (error: unknown) => {
@@ -166,9 +173,10 @@ export class EventDetailsComponent implements OnInit {
   }
 
   activityRegistrationBlocked(activity: EventActivity): boolean {
+    if (this.activitySubscriptionsLoading() || this.activitySubscriptionsError()) return true;
     if (activity.subscribed) return false;
     if (!this.isAuthenticated()) return false;
-    if (this.activityConflict(activity)) return true;
+    if (this.event()?.schedule_conflict_policy !== 'ALLOW' && this.activityConflict(activity)) return true;
     if (activity.can_subscribe !== null && activity.can_subscribe !== undefined) {
       return !activity.can_subscribe;
     }
@@ -213,7 +221,11 @@ export class EventDetailsComponent implements OnInit {
     this.successMessage.set(null);
     const request = cancel
       ? this.eventsService.unsubscribeActivity(activity.id)
-      : this.eventsService.subscribeActivity(activity.id);
+      : this.eventsService.getActivityConflicts(activity.id).pipe(switchMap((conflicts) =>
+          conflicts.length && currentEvent.schedule_conflict_policy !== 'ALLOW'
+            ? throwError(() => new Error(this.activityConflictMessage(conflicts[0])))
+            : this.eventsService.subscribeActivity(activity.id),
+        ));
 
     request.pipe(finalize(() => this.activitySubscriptionBusyId.set(null))).subscribe({
       next: (response: ApiMessage) => {
@@ -235,7 +247,8 @@ export class EventDetailsComponent implements OnInit {
           this.successMessage.set('Você já está inscrito nesta atividade.');
           return;
         }
-        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível alterar a inscrição nesta atividade.'));
+        this.errorMessage.set(error instanceof Error && !(error instanceof HttpErrorResponse)
+          ? error.message : this.getErrorMessage(error, 'Não foi possível alterar a inscrição nesta atividade.'));
       },
     });
   }
@@ -269,6 +282,7 @@ export class EventDetailsComponent implements OnInit {
       next: (activities) => {
         this.event.update((event) => event ? { ...event, activities } : event);
         this.ensureActiveActivityDay();
+        this.reloadActivitySubscriptions();
       },
       // Mantém as atividades incluídas nos detalhes quando a consulta complementar falha.
       error: (error: unknown) => {
@@ -281,6 +295,26 @@ export class EventDetailsComponent implements OnInit {
     });
   }
 
+  reloadActivitySubscriptions(): void {
+    const eventId = this.event()?.id;
+    if (!eventId || !this.isAuthenticated()) return;
+    this.activitySubscriptionsLoading.set(true);
+    this.activitySubscriptionsError.set(null);
+    this.eventsService.getMyActivitySubscriptions(eventId).pipe(
+      finalize(() => this.activitySubscriptionsLoading.set(false)),
+    ).subscribe({
+      next: (subscriptions) => {
+        const ids = new Set(subscriptions.map((activity) => activity.id));
+        this.event.update((event) => event ? { ...event, activities: event.activities?.map((activity) => ({
+          ...activity, subscribed: this.activityIsIncludedWithEvent(activity) ? this.subscribed() : ids.has(activity.id),
+        })) } : event);
+      },
+      error: (error: unknown) => this.activitySubscriptionsError.set(
+        this.getErrorMessage(error, 'Não foi possível consultar suas inscrições nas atividades. Tente novamente.'),
+      ),
+    });
+  }
+
   private loadSubscriptionState(eventId: number): void {
     if (!this.isAuthenticated()) return;
 
@@ -290,6 +324,7 @@ export class EventDetailsComponent implements OnInit {
     ).subscribe({
       next: (subscribed) => {
         this.subscribed.set(subscribed);
+        this.updateIncludedActivityAccess(subscribed);
         this.subscriptionStateResolved.set(true);
       },
       error: () => this.subscriptionStateResolved.set(false),

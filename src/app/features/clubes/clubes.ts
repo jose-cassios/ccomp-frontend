@@ -67,6 +67,7 @@ export class Clubes implements OnInit {
   readonly canManage = computed(() =>
     this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES) || this.managedClubs().length > 0,
   );
+  readonly canCreate = computed(() => this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES));
   readonly isAuthenticated = this.authService.isAuthenticatedState;
   readonly editingClub = computed(() => this.clubForm.controls.id.value > 0);
 
@@ -138,7 +139,7 @@ export class Clubes implements OnInit {
 
     this.managedLoading.set(true);
     this.managementError.set(null);
-    this.clubsService.getMine(cursor, 10, 'INSTRUCTOR').pipe(
+    this.clubsService.getMine(cursor, 10).pipe(
       finalize(() => this.managedLoading.set(false)),
     ).subscribe({
       next: (page) => {
@@ -199,6 +200,16 @@ export class Clubes implements OnInit {
     this.clubForm.reset({ id: 0, name: '', summary: '', cover_image_url: '', published_at: '', content: '' });
     this.modalError.set(null);
     this.activeModal.set('editor');
+  }
+
+  unenroll(club: Club): void {
+    if (this.enrollingClubId() !== null || !window.confirm(`Cancelar sua participação em “${club.name}”?`)) return;
+    this.enrollingClubId.set(club.id);
+    this.clearFeedback();
+    this.clubsService.unenroll(club.id).pipe(finalize(() => this.enrollingClubId.set(null))).subscribe({
+      next: () => { this.message.set('Participação cancelada.'); this.loadManagedClubs(); },
+      error: (error: unknown) => this.managementError.set(this.errorMessage(error, 'Não foi possível cancelar sua participação.')),
+    });
   }
 
   openEditClub(club: Club): void {
@@ -337,10 +348,11 @@ export class Clubes implements OnInit {
     });
   }
 
-  changeMemberStatus(member: ClubMemberListItem): void {
+  changeMemberStatus(member: ClubMemberListItem, targetStatus?: ClubMemberStatus): void {
     const club = this.selectedClub();
-    if (!club) return;
-    const status: ClubMemberStatus = member.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    if (!club || this.changingMemberId() !== null) return;
+    const status: ClubMemberStatus = targetStatus ?? (member.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE');
+    if (status === 'CANCELLED' && !window.confirm(`Cancelar o vínculo de ${member.user.name} com este clube?`)) return;
     this.changingMemberId.set(member.id);
     this.modalError.set(null);
     this.clubsService.changeMemberStatus(club.id, member.id, status).pipe(

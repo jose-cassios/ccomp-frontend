@@ -212,6 +212,18 @@ export class AuthService {
     );
   }
 
+  updateProfile(name: string): Observable<User> {
+    return this.api.patch<CurrentUserResponse>('/users', { name: name.trim() }).pipe(
+      map((response) => ({ ...this.currentUser()!, id: response.id, name: response.name,
+        email: response.email_address, email_address: response.email_address })),
+      tap((user) => this.persistUser(user)),
+    );
+  }
+
+  deactivateAccount(): Observable<AuthMessageResponse> {
+    return this.api.delete<AuthMessageResponse>('/users').pipe(tap(() => this.clearSession()));
+  }
+
   private handleAuthSuccess(response: AuthResponse): void {
     const token = response.accessToken ?? response.access_token;
     if (!token) {

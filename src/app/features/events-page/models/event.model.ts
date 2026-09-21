@@ -131,6 +131,7 @@ export interface EventListItem {
 }
 
 export interface EventDetails extends EventListItem {
+  schedule_conflict_policy?: 'ALLOW' | 'PREVENT' | null;
   summary?: string | null;
   content?: string | null;
   owner_id?: string | null;
@@ -170,6 +171,7 @@ export interface CreateEventPayload {
 
 /** Contrato de PATCH /events/{eventId}. */
 export interface UpdateEventPayload {
+  schedule_conflict_policy?: 'ALLOW' | 'PREVENT';
   title?: string;
   summary?: string;
   content?: string;

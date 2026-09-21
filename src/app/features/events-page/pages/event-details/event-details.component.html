@@ -125,6 +125,7 @@
                               }
                             </div>
                             <h3>{{ activity.title }}</h3>
+                            <app-activity-people [eventId]="currentEvent.id" [activityId]="activity.id" />
                             <p class="activity-meta">
                               @if (activity.end_date) {
                                 <span>Até {{ activity.end_date | date: 'HH:mm' }}</span>
@@ -164,9 +165,11 @@
                                   Inscrever-se
                                 }
                               </button>
-                              @if (isAuthenticated() && activity.subscribed === undefined) {
-                                <small>A API ainda não informa sua inscrição nesta lista. Se já se inscreveu, você pode cancelar abaixo.</small>
-                                <button type="button" [disabled]="activitySubscriptionBusyId() !== null" (click)="toggleActivitySubscription(activity, true)">Cancelar inscrição existente</button>
+                              @if (activitySubscriptionsLoading()) {
+                                <small role="status">Consultando suas inscrições…</small>
+                              } @else if (activitySubscriptionsError()) {
+                                <small role="alert">{{ activitySubscriptionsError() }}</small>
+                                <button type="button" (click)="reloadActivitySubscriptions()">Tentar novamente</button>
                               }
                               @if (activityRegistrationHint(activity); as hint) {
                                 <small [class.activity-conflict]="activityConflict(activity)">{{ hint }}</small>
@@ -191,6 +194,7 @@
       </section>
 
       <aside class="info-card">
+        <app-event-guests [eventId]="currentEvent.id" />
         <h2>Informações</h2>
         <dl>
           <div>

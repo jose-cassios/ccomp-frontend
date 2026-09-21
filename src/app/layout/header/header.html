@@ -57,13 +57,13 @@
 
       <div class="session-actions">
         @if (isAuthenticated()) {
-          <div class="user-summary" aria-label="Usuário autenticado">
+          <a class="user-summary" routerLink="/minha-conta" aria-label="Abrir minha conta">
             <span class="user-avatar" aria-hidden="true">{{ userInitials() }}</span>
             <div class="user-data">
               <strong>{{ currentUser()?.name || 'Usuário conectado' }}</strong>
               <span>{{ currentUser()?.email || currentUser()?.email_address || 'Sessão ativa' }}</span>
             </div>
-          </div>
+          </a>
           <button class="session-button" type="button" [disabled]="isLoggingOut()" (click)="logout()">
             {{ isLoggingOut() ? 'Saindo...' : 'Sair' }}
           </button>

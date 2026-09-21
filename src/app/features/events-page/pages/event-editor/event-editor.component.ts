@@ -38,6 +38,8 @@ import {
   buildEventActivityDays,
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
+import { EventGuestsComponent } from '../../components/event-guests/event-guests.component';
+import { ActivityPeopleComponent } from '../../components/activity-people/activity-people.component';
 
 type EditorOperation = 'idle' | 'loading' | 'saving' | 'publishing' | 'deleting' | 'activity' | 'editor';
 type EventEditorStep = 'details' | 'presentation' | 'schedule' | 'team' | 'review';
@@ -53,7 +55,7 @@ const EDITOR_STEPS: ReadonlyArray<{ value: EventEditorStep; label: string }> = [
 @Component({
   selector: 'app-event-editor',
   standalone: true,
-  imports: [DatePipe, ReactiveFormsModule, RouterLink],
+  imports: [DatePipe, ReactiveFormsModule, RouterLink, EventGuestsComponent, ActivityPeopleComponent],
   templateUrl: './event-editor.component.html',
   styleUrls: ['./event-editor.component.css', './event-activity-dialog.css'],
 })
@@ -164,6 +166,20 @@ export class EventEditorComponent implements OnInit {
     const schedule = this.activitySchedule();
     return schedule.find((day) => day.key === this.activeActivityDay()) ?? schedule[0] ?? null;
   });
+  readonly conflictPolicy = this.fb.nonNullable.control<'' | 'PREVENT' | 'ALLOW'>('');
+
+  saveConflictPolicy(): void {
+    const event = this.event();
+    const policy = this.conflictPolicy.value;
+    if (!event || !policy || this.isBusy()) return;
+    this.operation.set('saving'); this.errorMessage.set(null);
+    this.eventsService.update(event.id, { schedule_conflict_policy: policy }).pipe(
+      finalize(() => this.operation.set('idle')),
+    ).subscribe({
+      next: () => this.successMessage.set('Regra de conflito atualizada. A API ainda não devolve essa configuração na consulta do evento.'),
+      error: (error: unknown) => this.errorMessage.set(apiErrorMessage(error, 'Não foi possível atualizar a regra de conflito.')),
+    });
+  }
   readonly canManageTeam = computed(() => this.isOwner());
   readonly canViewEnrollments = computed(() =>
     this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
