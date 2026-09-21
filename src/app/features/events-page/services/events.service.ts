@@ -176,6 +176,31 @@ export class EventsService {
     );
   }
 
+  /**
+   * Carrega todas as páginas de uma busca. Usado pelos filtros temporais,
+   * que ainda não são oferecidos pelo endpoint de busca do backend.
+   */
+  searchAll(filter: EventsFilter = {}, pageSize = 50): Observable<EventListItem[]> {
+    return defer(() => {
+      const cursors = new Set<string>();
+      return this.search(filter, undefined, pageSize).pipe(
+        expand((page) => {
+          if (!page.next_cursor) return EMPTY;
+          if (cursors.has(page.next_cursor)) {
+            return throwError(() => new Error('A API repetiu o cursor da busca de eventos.'));
+          }
+          cursors.add(page.next_cursor);
+          return this.search(filter, page.next_cursor, pageSize);
+        }),
+        reduce((events, page) => {
+          const byId = new Map(events.map((event) => [event.id, event]));
+          page.content.forEach((event) => byId.set(event.id, event));
+          return [...byId.values()];
+        }, [] as EventListItem[]),
+      );
+    });
+  }
+
   getById(id: number | string): Observable<EventDetails> {
     return this.api.get<ApiEvent>(`/events/${encodeURIComponent(id)}`).pipe(
       map((event) => this.toDetails(event)),

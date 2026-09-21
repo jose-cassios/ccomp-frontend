@@ -76,6 +76,27 @@ describe('EventsService', () => {
     expect(params?.get('pageSize')).toBe('20');
   });
 
+  it('should collect every search page for client-side temporal filters', () => {
+    api.post
+      .mockReturnValueOnce(of({
+        content: [{ id: 1, title: 'Primeiro', slug: 'primeiro', format: 'ONLINE', category: 'ACADEMIC_EDUCATIONAL' }],
+        nextCursor: 'page-2',
+      }))
+      .mockReturnValueOnce(of({
+        content: [{ id: 2, title: 'Segundo', slug: 'segundo', format: 'ONLINE', category: 'ACADEMIC_EDUCATIONAL' }],
+        nextCursor: null,
+      }));
+
+    service.searchAll({ format: 'ONLINE' }).subscribe((events) => {
+      expect(events.map((event) => event.id)).toEqual([1, 2]);
+    });
+
+    expect(api.post).toHaveBeenCalledTimes(2);
+    const secondParams = api.post.mock.calls[1]?.[2]?.params;
+    expect(secondParams?.get('nextCursor')).toBe('page-2');
+    expect(secondParams?.get('pageSize')).toBe('50');
+  });
+
   it('should use the available public event endpoints', () => {
     service.getById(12).subscribe();
     service.getBySlug('semana-da-computacao').subscribe();

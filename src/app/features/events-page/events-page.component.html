@@ -65,11 +65,13 @@
         heading="Programação disponível"
         [selectedCategory]="selectedCategory()"
         [selectedFormat]="selectedFormat()"
+        [selectedExecutionStatus]="selectedExecutionStatus()"
         [hasMore]="nextCursor() !== null"
         [loadingMore]="loadingMore()"
         (selected)="openEvent($event)"
         (categoryChanged)="changeCategory($event)"
         (formatChanged)="changeFormat($event)"
+        (executionStatusChanged)="changeExecutionStatus($event)"
         (loadMore)="loadMore()"
       />
     }

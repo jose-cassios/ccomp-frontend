@@ -30,6 +30,19 @@
     @if (showFilters()) {
       <div class="filters">
         <label>
+          <span>Período</span>
+          <select
+            aria-label="Filtrar eventos por período"
+            [value]="selectedExecutionStatus() || ''"
+            (change)="executionStatusChanged.emit($any($event.target).value || null)"
+          >
+            <option value="">Todos os períodos</option>
+            @for (status of executionStatuses; track status.value) {
+              <option [value]="status.value">{{ status.label }}</option>
+            }
+          </select>
+        </label>
+        <label>
           <span>Formato</span>
           <select
             [value]="selectedFormat() || ''"

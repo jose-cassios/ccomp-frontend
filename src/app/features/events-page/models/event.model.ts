@@ -233,6 +233,16 @@ export const EVENT_FORMAT_OPTIONS: ReadonlyArray<{
   { value: 'ONLINE', label: 'Online' },
 ];
 
+/** Opções de período calculadas pelas datas de início e término do evento. */
+export const EVENT_EXECUTION_FILTER_OPTIONS: ReadonlyArray<{
+  value: EventExecutionStatus;
+  label: string;
+}> = [
+  { value: 'IN_PROGRESS', label: 'Em execução' },
+  { value: 'NOT_STARTED', label: 'Eventos futuros' },
+  { value: 'FINISHED', label: 'Eventos passados' },
+];
+
 export const EVENT_ACTIVITY_TYPE_OPTIONS: ReadonlyArray<{
   value: EventActivityType;
   label: string;

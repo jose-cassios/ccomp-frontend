@@ -6,6 +6,7 @@ import { AuthService } from '../auth/services/auth.service';
 import { ProximosEventosComponent } from './components/proximos-eventos/proximos-eventos.component';
 import {
   EventCategory,
+  EventExecutionStatus,
   EventFormat,
   EventListItem,
   EventsFilter,
@@ -28,6 +29,7 @@ export class EventsPageComponent implements OnInit {
   readonly myEvents = signal<EventListItem[]>([]);
   readonly selectedCategory = signal<EventCategory | null>(null);
   readonly selectedFormat = signal<EventFormat | null>(null);
+  readonly selectedExecutionStatus = signal<EventExecutionStatus | null>(null);
   readonly nextCursor = signal<string | null>(null);
   readonly loading = signal(true);
   readonly loadingMore = signal(false);
@@ -55,6 +57,13 @@ export class EventsPageComponent implements OnInit {
   reload(): void {
     this.loading.set(true);
     this.errorMessage.set(null);
+
+    const executionStatus = this.selectedExecutionStatus();
+    if (executionStatus) {
+      this.loadEventsByExecutionStatus(executionStatus);
+      return;
+    }
+
     this.eventsService.search(this.buildFilter()).pipe(
       finalize(() => this.loading.set(false)),
     ).subscribe({
@@ -94,6 +103,11 @@ export class EventsPageComponent implements OnInit {
 
   changeFormat(format: EventFormat | null): void {
     this.selectedFormat.set(format);
+    this.reload();
+  }
+
+  changeExecutionStatus(status: EventExecutionStatus | null): void {
+    this.selectedExecutionStatus.set(status);
     this.reload();
   }
 
@@ -181,6 +195,32 @@ export class EventsPageComponent implements OnInit {
       ...(eventCategory ? { category: eventCategory } : {}),
       ...(format ? { format } : {}),
     };
+  }
+
+  private loadEventsByExecutionStatus(status: EventExecutionStatus): void {
+    this.nextCursor.set(null);
+    this.eventsService.searchAll(this.buildFilter()).pipe(
+      finalize(() => this.loading.set(false)),
+    ).subscribe({
+      next: (events) => this.events.set(events.filter((event) => this.matchesExecutionStatus(event, status))),
+      error: () => {
+        this.events.set([]);
+        this.errorMessage.set('Não foi possível carregar os eventos para este período.');
+      },
+    });
+  }
+
+  private matchesExecutionStatus(event: EventListItem, status: EventExecutionStatus): boolean {
+    const start = event.start_date ? new Date(event.start_date).getTime() : Number.NaN;
+    if (!Number.isFinite(start)) return false;
+
+    const suppliedEnd = event.end_date ? new Date(event.end_date).getTime() : Number.NaN;
+    const end = Number.isFinite(suppliedEnd) ? suppliedEnd : start;
+    const now = Date.now();
+
+    if (status === 'NOT_STARTED') return start > now;
+    if (status === 'FINISHED') return end < now;
+    return start <= now && end >= now;
   }
 
 }

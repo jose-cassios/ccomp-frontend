@@ -36,6 +36,7 @@ describe('EventsPageComponent', () => {
   ];
   const eventsService = {
     search: vi.fn(() => of({ content: catalog, next_cursor: null, previous_cursor: null })),
+    searchAll: vi.fn(() => of(catalog)),
   };
 
   beforeEach(async () => {
@@ -81,5 +82,13 @@ describe('EventsPageComponent', () => {
   it('should not show the public event proposal call to action', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Quer propor um evento ou palestra?');
     expect(fixture.nativeElement.querySelector('a[href="/eventos/novo"]')).toBeNull();
+  });
+
+  it('should filter the complete catalog by execution period', () => {
+    component.changeExecutionStatus('FINISHED');
+
+    expect(eventsService.searchAll).toHaveBeenCalledWith({});
+    expect(component.events().map((event) => event.id)).toEqual([1]);
+    expect(component.nextCursor()).toBeNull();
   });
 });
