@@ -227,7 +227,7 @@ export class Clubes implements OnInit {
   }
 
   saveClub(): void {
-    if (this.clubForm.invalid || this.saving()) {
+    if (this.clubForm.invalid || this.saving() || this.uploading()) {
       this.clubForm.markAllAsTouched();
       return;
     }

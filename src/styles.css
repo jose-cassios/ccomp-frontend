@@ -409,6 +409,13 @@ body {
 
 @keyframes activity-spin { to { transform: rotate(360deg); } }
 
+/* Upload local da capa na edição de eventos; global para não inflar o orçamento do componente. */
+.event-editor-page .cover-upload-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.event-editor-page .cover-upload-actions small { flex: 1 1 15rem; }
+.event-editor-page .cover-upload-button { position: relative; display: inline-flex; min-height: 40px; align-items: center; justify-content: center; border: 1px solid var(--border-secondary); border-radius: 8px; padding: 0 14px; background: #f6f8f7; color: #405048; cursor: pointer; font-size: .82rem; font-weight: 750; }
+.event-editor-page .cover-upload-button:has(input:disabled) { cursor: wait; opacity: .6; }
+.event-editor-page .cover-upload-button input { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
+
 @media (max-width: 760px) {
   .event-editor-page .activity-form-grid { grid-template-columns: 1fr; }
   .event-editor-page .activity-editor-form { padding: 16px; }

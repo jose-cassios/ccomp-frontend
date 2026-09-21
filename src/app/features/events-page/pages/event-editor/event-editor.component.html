@@ -152,14 +152,25 @@
               }
             </label>
 
-            <label class="field field--wide">
-              <span>URL da imagem de capa</span>
-              <input type="url" formControlName="cover_image_url" placeholder="https://exemplo.com/imagem-do-evento.jpg" />
-              <small>Opcional. Use uma URL pública iniciada por http:// ou https://.</small>
+            <div class="field field--wide">
+              <label for="event-cover-url">Imagem de capa</label>
+              <input id="event-cover-url" type="url" formControlName="cover_image_url" placeholder="https://exemplo.com/imagem-do-evento.jpg" />
+              <div class="cover-upload-actions">
+                <label class="cover-upload-button">
+                  {{ uploadingCover() ? 'Enviando imagem...' : 'Escolher imagem do computador' }}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    [disabled]="uploadingCover() || isBusy()"
+                    (change)="uploadCover($event)"
+                  />
+                </label>
+                <small>Envie uma imagem local ou cole uma URL pública. O envio preenche este campo automaticamente.</small>
+              </div>
               @if (presentationForm.controls.cover_image_url.touched && presentationForm.controls.cover_image_url.invalid) {
                 <strong>Informe uma URL válida para a imagem.</strong>
               }
-            </label>
+            </div>
 
             @if (presentationForm.controls.cover_image_url.value; as coverUrl) {
               <figure class="cover-preview field--wide">
@@ -172,7 +183,7 @@
 
           <footer class="form-footer">
             <span>Você poderá alterar estes dados sempre que precisar.</span>
-            <button class="button button--primary" type="submit" [disabled]="isBusy()">Próximo: programação</button>
+            <button class="button button--primary" type="submit" [disabled]="isBusy() || uploadingCover()">Próximo: programação</button>
           </footer>
         </form>
       }

@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../auth/services/auth.service';
 import { EventDetails, EventEditor } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
+import { StorageService } from '../../../../core/storage/storage.service';
 import { EventEditorComponent } from './event-editor.component';
 import { EventGuestsService } from '../../services/event-guests.service';
 
@@ -61,6 +62,9 @@ describe('EventEditorComponent', () => {
     addEditor: vi.fn(() => of({ message: 'Editor adicionado.' })),
     removeEditor: vi.fn(),
   };
+  const storageService = {
+    upload: vi.fn(),
+  };
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -71,6 +75,7 @@ describe('EventEditorComponent', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({}) } } },
         { provide: AuthService, useValue: { hasAnyRole: () => false, currentUserState: () => ({ id: 'event-owner' }) } },
         { provide: EventsService, useValue: eventsService },
+        { provide: StorageService, useValue: storageService },
         { provide: EventGuestsService, useValue: { guests: () => of({ content: [], next_cursor: null }), invitations: () => of({ content: [], next_cursor: null }) } },
       ],
     }).compileComponents();
@@ -172,6 +177,32 @@ describe('EventEditorComponent', () => {
       enrollment_end_date: '2026-09-09T18:00',
       enrollment_paused: false,
     });
+  });
+
+  it('uploads a local event cover and stores the returned URL in the form', () => {
+    const image = new File(['cover'], 'capa.png', { type: 'image/png' });
+    const input = { files: [image], value: 'capa.png' } as unknown as HTMLInputElement;
+    storageService.upload.mockReturnValueOnce(of({
+      url: 'https://storage.example.com/capa.png',
+      file_name: 'capa.png',
+    }));
+
+    component.uploadCover({ target: input } as unknown as Event);
+
+    expect(storageService.upload).toHaveBeenCalledWith(image);
+    expect(component.presentationForm.controls.cover_image_url.value).toBe('https://storage.example.com/capa.png');
+    expect(component.successMessage()).toContain('Imagem enviada');
+    expect(component.uploadingCover()).toBe(false);
+  });
+
+  it('does not upload a non-image as an event cover', () => {
+    const file = new File(['text'], 'notas.txt', { type: 'text/plain' });
+    const input = { files: [file], value: 'notas.txt' } as unknown as HTMLInputElement;
+
+    component.uploadCover({ target: input } as unknown as Event);
+
+    expect(storageService.upload).not.toHaveBeenCalled();
+    expect(component.errorMessage()).toContain('arquivo de imagem');
   });
 
   it('should accept registrations before the event, but not after it ends', () => {

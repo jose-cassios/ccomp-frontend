@@ -135,7 +135,7 @@ export class NewsEditorComponent implements OnInit {
   }
 
   save(): void {
-    if (this.isBusy()) {
+    if (this.isBusy() || this.uploadingCover()) {
       return;
     }
 
@@ -160,7 +160,7 @@ export class NewsEditorComponent implements OnInit {
 
   publish(): void {
     const currentNews = this.news();
-    if (!currentNews || !this.canPublish()) {
+    if (this.uploadingCover() || !currentNews || !this.canPublish()) {
       if (this.hasUnsavedChanges()) {
         this.errorMessage.set('Salve as alterações antes de publicar para garantir que a prévia seja a versão enviada.');
       }

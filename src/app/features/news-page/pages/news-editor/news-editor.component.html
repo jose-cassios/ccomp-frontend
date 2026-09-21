@@ -27,14 +27,14 @@
           {{ operation() === 'deleting' ? 'Excluindo...' : 'Excluir' }}
         </button>
       }
-      <button type="button" class="button button--primary" [disabled]="isBusy() || form.invalid" (click)="save()">
+      <button type="button" class="button button--primary" [disabled]="isBusy() || uploadingCover() || form.invalid" (click)="save()">
         @if (operation() === 'creating' || operation() === 'saving') {
           Salvando...
         } @else {
           {{ news() ? 'Salvar alterações' : 'Criar e salvar' }}
         }
       </button>
-      <button type="button" class="button button--publish" [disabled]="!canPublish()" [title]="publishDisabledReason()" (click)="publish()">
+      <button type="button" class="button button--publish" [disabled]="uploadingCover() || !canPublish()" [title]="uploadingCover() ? 'Aguarde o envio da imagem terminar.' : publishDisabledReason()" (click)="publish()">
         {{ operation() === 'publishing' ? 'Publicando...' : 'Publicar' }}
       </button>
     </div>
@@ -190,10 +190,10 @@
         }
       </div>
       <div class="editor-actions">
-        <button type="button" class="button button--primary" [disabled]="isBusy() || form.invalid" (click)="save()">
+        <button type="button" class="button button--primary" [disabled]="isBusy() || uploadingCover() || form.invalid" (click)="save()">
           {{ news() ? 'Salvar alterações' : 'Criar e salvar' }}
         </button>
-        <button type="button" class="button button--publish" [disabled]="!canPublish()" [title]="publishDisabledReason()" (click)="publish()">
+        <button type="button" class="button button--publish" [disabled]="uploadingCover() || !canPublish()" [title]="uploadingCover() ? 'Aguarde o envio da imagem terminar.' : publishDisabledReason()" (click)="publish()">
           Publicar
         </button>
       </div>

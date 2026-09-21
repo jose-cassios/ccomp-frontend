@@ -8,6 +8,7 @@ import { catchError, finalize, map, Observable, of, switchMap } from 'rxjs';
 import { ADMINISTRATION_ROLES, CONTENT_MANAGEMENT_ROLES } from '../../../auth/config/auth.config';
 import { AuthService } from '../../../auth/services/auth.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
+import { StorageService } from '../../../../core/storage/storage.service';
 import {
   ActivityPayload,
   ACTIVITY_REGISTRATION_POLICY_OPTIONS,
@@ -68,6 +69,7 @@ export class EventEditorComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly eventsService = inject(EventsService);
+  private readonly storageService = inject(StorageService);
   private readonly authService = inject(AuthService);
 
   readonly form = this.fb.nonNullable.group({
@@ -118,6 +120,7 @@ export class EventEditorComponent implements OnInit {
   readonly ownedEventIds = signal<ReadonlySet<number>>(new Set());
   readonly editableEventIds = signal<ReadonlySet<number>>(new Set());
   readonly operation = signal<EditorOperation>('idle');
+  readonly uploadingCover = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly hasUnsavedChanges = signal(false);
@@ -572,6 +575,37 @@ export class EventEditorComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
     this.activityDialog?.nativeElement.showModal();
+  }
+
+  /** Sends a local cover image to storage and keeps the resulting public URL in the form. */
+  uploadCover(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || this.uploadingCover() || this.isBusy()) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.errorMessage.set('Selecione um arquivo de imagem válido.');
+      input.value = '';
+      return;
+    }
+
+    this.uploadingCover.set(true);
+    this.errorMessage.set(null);
+    this.storageService.upload(file).pipe(
+      finalize(() => {
+        this.uploadingCover.set(false);
+        input.value = '';
+      }),
+    ).subscribe({
+      next: (response) => {
+        this.presentationForm.controls.cover_image_url.setValue(response.url);
+        this.presentationForm.controls.cover_image_url.markAsTouched();
+        this.successMessage.set('Imagem enviada. Ela será aplicada ao avançar ou salvar o evento.');
+      },
+      error: (error: unknown) => {
+        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível enviar a imagem.'));
+      },
+    });
   }
 
   cancelActivityEdit(): void {
