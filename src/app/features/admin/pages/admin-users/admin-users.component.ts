@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { finalize, forkJoin, map, switchMap } from 'rxjs';
 import { apiErrorMessage } from '../../../../core/api/api-error';
 import { AuthService } from '../../../auth/services/auth.service';
@@ -27,7 +28,7 @@ interface RoleOperation {
 }
 
 @Component({
-  selector: 'app-admin-users', standalone: true, imports: [FormsModule, DatePipe],
+  selector: 'app-admin-users', standalone: true, imports: [FormsModule, DatePipe, RouterLink],
   templateUrl: './admin-users.component.html', styleUrl: './admin-users.component.css',
 })
 export class AdminUsersComponent implements OnInit {

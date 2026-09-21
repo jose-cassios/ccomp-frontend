@@ -76,9 +76,9 @@
     color="primary" 
     type="submit" 
     class="full-width submit-button"
-    [disabled]="registerForm.invalid || isLoading"
+    [disabled]="registerForm.invalid || isSubmitting"
   >
-    <span *ngIf="!isLoading">Criar Conta</span>
-    <mat-spinner *ngIf="isLoading" diameter="20"></mat-spinner>
+    <span *ngIf="!isSubmitting">Criar Conta</span>
+    <mat-spinner *ngIf="isSubmitting" diameter="20"></mat-spinner>
   </button>
 </form>

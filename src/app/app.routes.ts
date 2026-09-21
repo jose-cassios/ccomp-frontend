@@ -20,7 +20,6 @@ import {
 import { pendingNewsChangesGuard } from './features/news-page/guards/pending-news-changes.guard';
 import { pendingEventChangesGuard } from './features/events-page/guards/pending-event-changes.guard';
 import { ApresentacaoComponent } from './features/apresentacao/apresentacao.component';
-import { CorpoDocenteComponent } from './features/corpo-docente/corpo-docente.component';
 
 export const routes: Routes = [
     // Rotas fora do layout principal (sem header/footer)
@@ -33,6 +32,22 @@ export const routes: Routes = [
         component: MainLayoutComponent,
         children: [
         { path: '', component: Home },
+        {
+          path: 'admin/arquivos',
+          loadComponent: () => import('./features/admin/pages/admin-files/admin-files.component').then(m => m.AdminFilesComponent),
+          canActivate: [authGuard, roleGuard],
+          data: { roles: CONTENT_MANAGEMENT_ROLES },
+        },
+        {
+          path: 'minha-conta',
+          loadComponent: () => import('./features/auth/pages/account/account.component').then(m => m.AccountComponent),
+          canActivate: [authGuard],
+        },
+        {
+          path: 'accept-guest-invite',
+          loadComponent: () => import('./features/events-page/pages/guest-invitation/guest-invitation.component').then(m => m.GuestInvitationComponent),
+          canActivate: [authGuard],
+        },
         {
           path: 'eventos/novo',
           loadComponent: () =>
@@ -70,6 +85,10 @@ export const routes: Routes = [
           canDeactivate: [pendingEventChangesGuard],
         },
         {
+          path: 'eventos/slug/:slug',
+          loadComponent: () => import('./features/events-page/pages/event-details/event-details.component').then(m => m.EventDetailsComponent),
+        },
+        {
           path: 'eventos/:id',
           loadComponent: () =>
             import('./features/events-page/pages/event-details/event-details.component').then(
@@ -77,6 +96,13 @@ export const routes: Routes = [
             ),
         },
         { path: 'eventos', component: EventsPageComponent },
+        {
+          path: 'busca',
+          loadComponent: () =>
+            import('./features/global-search/global-search.component').then(
+              (module) => module.GlobalSearchComponent,
+            ),
+        },
         { path: 'projetos/clubes', component: Clubes },
         { path: 'clubes', redirectTo: 'projetos/clubes', pathMatch: 'full' },
         {
@@ -109,7 +135,19 @@ export const routes: Routes = [
           canDeactivate: [pendingNewsChangesGuard],
         },
         { path: 'sobre/apresentacao', component: ApresentacaoComponent },
-        { path: 'sobre/docentes', component: CorpoDocenteComponent },
+        { path: 'sobre/docentes', redirectTo: 'sobre/apresentacao', pathMatch: 'full' },
+        {
+          path: 'termos',
+          loadComponent: () =>
+            import('./features/legal/legal-page.component').then((module) => module.LegalPageComponent),
+          data: { legalDocument: 'terms' },
+        },
+        {
+          path: 'privacidade',
+          loadComponent: () =>
+            import('./features/legal/legal-page.component').then((module) => module.LegalPageComponent),
+          data: { legalDocument: 'privacy' },
+        },
         { path: 'noticias', component: NewsPageComponent },
         { path: 'news/:slug', component: NewsComponent },
         { path: '**', component: EmConstrucao }

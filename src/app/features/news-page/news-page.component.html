@@ -3,7 +3,6 @@
     <main class="news-main">
       <header class="news-header">
         <div>
-          <span class="eyebrow">Informação e comunidade</span>
           <h1 class="page-title">Notícias</h1>
           <p>Fique por dentro das novidades do curso de Computação.</p>
         </div>
@@ -103,7 +102,7 @@
                     <p>{{ draft.summary || 'Sem resumo salvo.' }}</p>
                   </div>
                   <div class="draft-actions">
-                    <a [routerLink]="['/noticias', draft.id, 'editar']">Continuar edição →</a>
+                    <a [routerLink]="['/noticias', draft.id, 'editar']">Continuar edição</a>
                     @if (canDeleteDraft(draft)) {
                       <button
                         type="button"

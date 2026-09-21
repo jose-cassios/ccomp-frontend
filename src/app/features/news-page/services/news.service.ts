@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, catchError, of, switchMap, throwError } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
 import {
   NewsItemType,
@@ -10,7 +10,7 @@ import {
   NewsUpdatePayload,
   UserNewsResponse,
 } from '../interface/news.interface';
-import { HttpParams } from '@angular/common/http';
+import { HttpErrorResponse, HttpParams } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root',
@@ -56,7 +56,15 @@ export class NewsService {
   }
 
   delete(id: number | string): Observable<MessageResponse> {
-    return this.api.delete<MessageResponse>(`/news/${id}`);
+    return this.api.delete<MessageResponse>(`/news/${id}`).pipe(
+      switchMap((response) => this.getById(id).pipe(
+        switchMap(() => throwError(() => new HttpErrorResponse({ status: 502, error: {
+          message: 'A API respondeu à exclusão, mas a notícia continua cadastrada. A exclusão ainda precisa ser corrigida no backend.',
+        } }))),
+        catchError((error: unknown) => error instanceof HttpErrorResponse && error.status === 404
+          ? of(response) : throwError(() => error)),
+      )),
+    );
   }
 
   getEditors(newsId: number | string): Observable<NewsEditorUser[]> {

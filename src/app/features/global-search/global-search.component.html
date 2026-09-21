@@ -1,0 +1,59 @@
+<main class="search-page">
+  <header class="search-header">
+    <span class="search-kicker">Busca global</span>
+    <h1>Encontre conteúdos da plataforma</h1>
+    <p>Pesquise por termos presentes em títulos, resumos e conteúdos de eventos, notícias e clubes.</p>
+    <form class="search-form" role="search" (submit)="$event.preventDefault(); submitSearch(searchInput.value)">
+      <label class="sr-only" for="global-results-search">Buscar na plataforma</label>
+      <input id="global-results-search" #searchInput [value]="inputValue()" type="search" minlength="2"
+        placeholder="Ex.: inteligência artificial, monitoria, laboratório" />
+      <button type="submit">Buscar</button>
+    </form>
+  </header>
+
+  @if (!query()) {
+    <section class="search-state">
+      <h2>O que você procura?</h2>
+      <p>Digite ao menos dois caracteres para buscar na plataforma.</p>
+    </section>
+  } @else if (query().length < 2) {
+    <section class="search-state"><p>Use pelo menos dois caracteres para realizar a busca.</p></section>
+  } @else if (loading()) {
+    <section class="search-state" role="status"><span class="spinner" aria-hidden="true"></span> Buscando em eventos, notícias e clubes...</section>
+  } @else if (error()) {
+    <section class="search-state search-state--error" role="alert">
+      <p>{{ error() }}</p>
+      <button type="button" (click)="submitSearch(query())">Tentar novamente</button>
+    </section>
+  } @else {
+    <section class="results-summary" aria-live="polite">
+      <h2>Resultados para “{{ query() }}”</h2>
+      <p>{{ resultCount() }} {{ resultCount() === 1 ? 'resultado encontrado' : 'resultados encontrados' }}</p>
+    </section>
+
+    <div class="results-grid">
+      @for (group of [{ key: 'events', title: 'Eventos', items: results().events }, { key: 'news', title: 'Notícias', items: results().news }, { key: 'clubs', title: 'Clubes', items: results().clubs }]; track group.key) {
+        <section class="result-group" [attr.aria-label]="group.title">
+          <h3>{{ group.title }} <span>{{ group.items.length }}</span></h3>
+          @for (result of group.items; track result.type + ':' + result.id) {
+            <a class="result-card" [routerLink]="result.link" [queryParams]="result.queryParams">
+              @if (result.imageUrl) {
+                <img [src]="result.imageUrl" [alt]="''" />
+              } @else {
+                <span class="result-image-placeholder" aria-hidden="true">{{ resultTypeLabel(result.type).charAt(0) }}</span>
+              }
+              <span class="result-copy">
+                <span class="result-meta">{{ resultTypeLabel(result.type) }} · encontrado em {{ result.matchLabel }}</span>
+                <strong>{{ result.title }}</strong>
+                <span>{{ excerpt(result) }}</span>
+              </span>
+              <span class="result-arrow" aria-hidden="true">→</span>
+            </a>
+          } @empty {
+            <p class="empty-group">Nenhum resultado nesta seção.</p>
+          }
+        </section>
+      }
+    </div>
+  }
+</main>

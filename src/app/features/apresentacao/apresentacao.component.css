@@ -3,10 +3,6 @@
   background: var(--white);
   color: var(--text-primary);
 
-  /* Extensões locais já existente */
-  --brand-50: #f0f6f2;
-  --brand-900: #1d2923;
-
   /* Mesma largura do header, do footer e da home (.section-container) */
   .page-shell {
     width: 100%;
@@ -127,7 +123,7 @@
     overflow: hidden;
     border-radius: 1rem;
     color: var(--white);
-    background: var(--brand-900, #1d2923);
+    background: var(--brand-900);
     box-shadow: 0 8px 20px var(--shadow-md);
   }
 
@@ -306,7 +302,7 @@
 
   .mission-card-dark {
     border-color: transparent;
-    background: #26362e;
+    background: var(--brand-800);
     color: var(--white);
   }
 

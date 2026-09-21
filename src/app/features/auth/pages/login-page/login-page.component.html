@@ -12,7 +12,10 @@
       @if (errorMessage()) {
         <p class="auth-error" role="alert">{{ errorMessage() }}</p>
       }
-      <app-login-form (login)="onLogin($event)"></app-login-form>
+      <app-login-form
+        [isSubmitting]="isSubmitting()"
+        (login)="onLogin($event)"
+      ></app-login-form>
     </mat-card-content>
     
     <mat-card-actions>

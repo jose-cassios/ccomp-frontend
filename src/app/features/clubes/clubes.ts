@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { finalize, of, switchMap } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { distinctUntilChanged, filter, finalize, map, of, switchMap } from 'rxjs';
 import { StorageService } from '../../core/storage/storage.service';
 import { apiErrorMessage } from '../../core/api/api-error';
 import { CONTENT_MANAGEMENT_ROLES } from '../auth/config/auth.config';
@@ -33,6 +34,8 @@ export class Clubes implements OnInit {
   private readonly storageService = inject(StorageService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
 
   readonly clubs = signal<Club[]>([]);
@@ -64,6 +67,7 @@ export class Clubes implements OnInit {
   readonly canManage = computed(() =>
     this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES) || this.managedClubs().length > 0,
   );
+  readonly canCreate = computed(() => this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES));
   readonly isAuthenticated = this.authService.isAuthenticatedState;
   readonly editingClub = computed(() => this.clubForm.controls.id.value > 0);
 
@@ -92,6 +96,12 @@ export class Clubes implements OnInit {
     if (this.isAuthenticated()) {
       this.loadManagedClubs();
     }
+    this.route.queryParamMap.pipe(
+      map((params) => Number(params.get('club'))),
+      filter((clubId) => Number.isInteger(clubId) && clubId > 0),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe((clubId) => this.openClubFromSearch(clubId));
   }
 
   loadClubs(loadMore = false): void {
@@ -129,7 +139,7 @@ export class Clubes implements OnInit {
 
     this.managedLoading.set(true);
     this.managementError.set(null);
-    this.clubsService.getMine(cursor, 10, 'INSTRUCTOR').pipe(
+    this.clubsService.getMine(cursor, 10).pipe(
       finalize(() => this.managedLoading.set(false)),
     ).subscribe({
       next: (page) => {
@@ -151,6 +161,19 @@ export class Clubes implements OnInit {
     this.clubsService.getById(club.id).subscribe({
       next: (details) => this.selectedClub.set(details),
       error: (error: unknown) => this.modalError.set(this.errorMessage(error, 'Não foi possível carregar todos os detalhes do clube.')),
+    });
+  }
+
+  private openClubFromSearch(clubId: number): void {
+    this.clubsService.getById(clubId).subscribe({
+      next: (club) => {
+        this.selectedClub.set(club);
+        this.activeModal.set('details');
+        this.modalError.set(null);
+      },
+      error: (error: unknown) => {
+        this.publicError.set(this.errorMessage(error, 'Não foi possível abrir o clube encontrado.'));
+      },
     });
   }
 
@@ -179,6 +202,16 @@ export class Clubes implements OnInit {
     this.activeModal.set('editor');
   }
 
+  unenroll(club: Club): void {
+    if (this.enrollingClubId() !== null || !window.confirm(`Cancelar sua participação em “${club.name}”?`)) return;
+    this.enrollingClubId.set(club.id);
+    this.clearFeedback();
+    this.clubsService.unenroll(club.id).pipe(finalize(() => this.enrollingClubId.set(null))).subscribe({
+      next: () => { this.message.set('Participação cancelada.'); this.loadManagedClubs(); },
+      error: (error: unknown) => this.managementError.set(this.errorMessage(error, 'Não foi possível cancelar sua participação.')),
+    });
+  }
+
   openEditClub(club: Club): void {
     this.setClubForm(club);
     this.selectedClub.set(club);
@@ -194,7 +227,7 @@ export class Clubes implements OnInit {
   }
 
   saveClub(): void {
-    if (this.clubForm.invalid || this.saving()) {
+    if (this.clubForm.invalid || this.saving() || this.uploading()) {
       this.clubForm.markAllAsTouched();
       return;
     }
@@ -315,10 +348,11 @@ export class Clubes implements OnInit {
     });
   }
 
-  changeMemberStatus(member: ClubMemberListItem): void {
+  changeMemberStatus(member: ClubMemberListItem, targetStatus?: ClubMemberStatus): void {
     const club = this.selectedClub();
-    if (!club) return;
-    const status: ClubMemberStatus = member.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    if (!club || this.changingMemberId() !== null) return;
+    const status: ClubMemberStatus = targetStatus ?? (member.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE');
+    if (status === 'CANCELLED' && !window.confirm(`Cancelar o vínculo de ${member.user.name} com este clube?`)) return;
     this.changingMemberId.set(member.id);
     this.modalError.set(null);
     this.clubsService.changeMemberStatus(club.id, member.id, status).pipe(

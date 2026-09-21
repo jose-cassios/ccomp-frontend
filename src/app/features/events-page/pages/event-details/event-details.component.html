@@ -1,5 +1,4 @@
 <main class="details-page">
-  <a class="back-link" routerLink="/eventos">← Todos os eventos</a>
 
   @if (loading()) {
     <p class="notice" role="status">Carregando evento...</p>
@@ -80,25 +79,122 @@
         <section class="schedule-card" aria-labelledby="schedule-title">
           <span class="section-kicker">Programação</span>
           <h2 id="schedule-title">Atividades do evento</h2>
-          @if (currentEvent.activities?.length) {
-            <div class="activity-list">
-              @for (activity of currentEvent.activities!; track activity.id; let index = $index) {
-                <article>
-                  <span>{{ index + 1 }}</span>
-                  <div>
-                    <h3>{{ activity.title }}</h3>
-                    <p>{{ activity.description || 'Sem descrição adicional.' }}</p>
-                  </div>
-                </article>
+          <p class="schedule-intro">Escolha um dia e veja as atividades em ordem de horário. Opções simultâneas aparecem no mesmo bloco.</p>
+
+          @if (activitiesError()) {
+            <p class="schedule-notice schedule-notice--error" role="alert">{{ activitiesError() }}</p>
+          }
+
+          @if (activitiesLoading() && !currentEvent.activities?.length) {
+            <p class="schedule-notice" role="status"><span class="mini-spinner"></span> Carregando programação...</p>
+          } @else if (activitySchedule().length) {
+            <div class="schedule-days" role="tablist" aria-label="Dias da programação">
+              @for (day of activitySchedule(); track day.key) {
+                <button
+                  type="button"
+                  role="tab"
+                  [class.active]="visibleActivityDay().key === day.key"
+                  [attr.aria-selected]="visibleActivityDay().key === day.key"
+                  (click)="selectActivityDay(day.key)"
+                >
+                  <span>{{ day.date ? activityWeekdayLabel(day.date) : 'Sem data' }}</span>
+                  <strong>{{ day.date ? (day.date | date: 'dd/MM') : 'A definir' }}</strong>
+                </button>
               }
             </div>
+
+            @if (visibleActivityDay(); as selectedDay) {
+              <div class="public-schedule" role="tabpanel">
+                @for (slot of selectedDay.slots; track slot.key) {
+                  <section class="schedule-slot">
+                    <div class="schedule-time">
+                      <strong>{{ slot.start_date ? (slot.start_date | date: 'HH:mm') : 'A definir' }}</strong>
+                      @if (slot.activities.length > 1) {
+                        <span>{{ slot.activities.length }} simultâneas</span>
+                      }
+                    </div>
+
+                    <div class="schedule-slot__activities">
+                      @for (activity of slot.activities; track activity.id) {
+                        <article class="activity-card">
+                          <div class="activity-card__body">
+                            <div class="activity-badges">
+                              <span>{{ activityTypeLabel(activity.type) }}</span>
+                              @if (activityRequiresRegistration(activity)) {
+                                <span class="activity-badge--registration">Inscrição individual</span>
+                              }
+                            </div>
+                            <h3>{{ activity.title }}</h3>
+                            <app-activity-people [eventId]="currentEvent.id" [activityId]="activity.id" />
+                            <p class="activity-meta">
+                              @if (activity.end_date) {
+                                <span>Até {{ activity.end_date | date: 'HH:mm' }}</span>
+                              }
+                              @if (activity.location) {
+                                <span>{{ activity.location }}</span>
+                              }
+                            </p>
+                            @if (activity.description) {
+                              <p class="activity-description">{{ activity.description }}</p>
+                            }
+                            @if (activity.guest; as guest) {
+                              <div class="activity-guest">
+                                @if (guest.image_url) {
+                                  <img [src]="guest.image_url" [alt]="'Foto de ' + guest.name" />
+                                }
+                                <span>{{ guest.name }}</span>
+                              </div>
+                            }
+                          </div>
+
+                          <div class="activity-card__action">
+                            @if (activityRequiresRegistration(activity)) {
+                              <button
+                                type="button"
+                                [class.activity-subscribe--active]="activity.subscribed"
+                                [disabled]="activitySubscriptionBusyId() !== null || subscriptionStateLoading() || activityRegistrationBlocked(activity)"
+                                (click)="toggleActivitySubscription(activity)"
+                              >
+                                @if (activitySubscriptionBusyId() === activity.id) {
+                                  <span class="mini-spinner"></span> Processando
+                                } @else if (activity.subscribed) {
+                                  Inscrito · cancelar
+                                } @else if (!isAuthenticated()) {
+                                  Entrar para se inscrever
+                                } @else {
+                                  Inscrever-se
+                                }
+                              </button>
+                              @if (activitySubscriptionsLoading()) {
+                                <small role="status">Consultando suas inscrições…</small>
+                              } @else if (activitySubscriptionsError()) {
+                                <small role="alert">{{ activitySubscriptionsError() }}</small>
+                                <button type="button" (click)="reloadActivitySubscriptions()">Tentar novamente</button>
+                              }
+                              @if (activityRegistrationHint(activity); as hint) {
+                                <small [class.activity-conflict]="activityConflict(activity)">{{ hint }}</small>
+                              }
+                            } @else {
+                              <span class="free-access">
+                                {{ activityParticipationMessage(activity) }}
+                              </span>
+                            }
+                          </div>
+                        </article>
+                      }
+                    </div>
+                  </section>
+                }
+              </div>
+            }
           } @else {
-            <p class="empty-activities">A programação será exibida aqui quando a API disponibilizar as atividades deste evento.</p>
+            <p class="empty-activities">A organização ainda não publicou atividades para este evento.</p>
           }
         </section>
       </section>
 
       <aside class="info-card">
+        <app-event-guests [eventId]="currentEvent.id" />
         <h2>Informações</h2>
         <dl>
           <div>
@@ -129,11 +225,21 @@
       </aside>
     </div>
 
-    @if (errorMessage()) {
-      <p class="notice notice--error" role="alert">{{ errorMessage() }}</p>
-    }
-    @if (successMessage()) {
-      <p class="notice notice--success" role="status">{{ successMessage() }}</p>
+    @if (errorMessage() || successMessage()) {
+      <aside class="feedback-viewport" aria-live="polite" aria-atomic="true">
+        @if (errorMessage()) {
+          <div class="feedback-toast feedback-toast--error" role="alert">
+            <span class="feedback-icon">!</span><span>{{ errorMessage() }}</span>
+            <button type="button" (click)="dismissFeedback()" aria-label="Fechar mensagem">×</button>
+          </div>
+        }
+        @if (successMessage()) {
+          <div class="feedback-toast feedback-toast--success" role="status">
+            <span class="feedback-icon">✓</span><span>{{ successMessage() }}</span>
+            <button type="button" (click)="dismissFeedback()" aria-label="Fechar mensagem">×</button>
+          </div>
+        }
+      </aside>
     }
   }
 </main>

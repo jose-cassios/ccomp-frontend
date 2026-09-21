@@ -19,7 +19,6 @@
     <div class="card-footer">
       <a [routerLink]="['/news', news().slug]" class="card-link">
         Ler notícia
-        <span class="arrow">→</span>
       </a>
       @if (canEdit()) {
         <a [routerLink]="['/noticias', news().id, 'editar']" class="edit-link">Editar</a>

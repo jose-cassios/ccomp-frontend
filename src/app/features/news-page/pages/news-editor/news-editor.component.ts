@@ -4,7 +4,7 @@ import { apiErrorMessage } from '../../../../core/api/api-error';
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize, switchMap, tap } from 'rxjs';
 import { StorageService } from '../../../../core/storage/storage.service';
 import { MarkdownEditorComponent } from '../../components/markdown-editor/markdown-editor.component';
@@ -37,7 +37,7 @@ const EMPTY_FORM: EditorFormValue = {
 @Component({
   selector: 'app-news-editor',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, MarkdownEditorComponent, NewsPreviewComponent],
+  imports: [ReactiveFormsModule, MarkdownEditorComponent, NewsPreviewComponent],
   templateUrl: './news-editor.component.html',
   styleUrl: './news-editor.component.css',
 })
@@ -135,7 +135,7 @@ export class NewsEditorComponent implements OnInit {
   }
 
   save(): void {
-    if (this.isBusy() || this.isPublished()) {
+    if (this.isBusy() || this.uploadingCover()) {
       return;
     }
 
@@ -160,7 +160,7 @@ export class NewsEditorComponent implements OnInit {
 
   publish(): void {
     const currentNews = this.news();
-    if (!currentNews || !this.canPublish()) {
+    if (this.uploadingCover() || !currentNews || !this.canPublish()) {
       if (this.hasUnsavedChanges()) {
         this.errorMessage.set('Salve as alterações antes de publicar para garantir que a prévia seja a versão enviada.');
       }
@@ -227,7 +227,7 @@ export class NewsEditorComponent implements OnInit {
   uploadCover(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-    if (!file || this.uploadingCover() || this.isPublished()) return;
+    if (!file || this.uploadingCover() || this.isBusy()) return;
     if (!file.type.startsWith('image/')) {
       this.errorMessage.set('Selecione um arquivo de imagem válido.');
       input.value = '';
@@ -377,12 +377,12 @@ export class NewsEditorComponent implements OnInit {
 
     this.news.set(news);
     this.form.reset(value, { emitEvent: false });
+    // A publicação controla a visibilidade. O PATCH continua permitido pela API
+    // para a pessoa autora, inclusive depois que a notícia está pública.
+    this.form.enable({ emitEvent: false });
     this.formValue.set(value);
     this.formIsValid.set(this.form.valid);
     this.hasUnsavedChanges.set(false);
-    if (news.published_at) {
-      this.form.disable({ emitEvent: false });
-    }
   }
 
   private loadEditors(newsId: number): void {

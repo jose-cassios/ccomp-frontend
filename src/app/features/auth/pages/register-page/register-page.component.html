@@ -11,7 +11,10 @@
       @if (errorMessage()) {
         <p class="auth-error" role="alert">{{ errorMessage() }}</p>
       }
-      <app-register-form (register)="onRegister($event)"></app-register-form>
+      <app-register-form
+        [isSubmitting]="isSubmitting()"
+        (register)="onRegister($event)"
+      ></app-register-form>
       
       <div class="divider-container">
         <mat-divider></mat-divider>
@@ -22,6 +25,7 @@
       <button 
         mat-stroked-button 
         class="google-login-button full-width"
+        [disabled]="isSubmitting()"
         (click)="onGoogleLogin()"
       >
         <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -35,7 +39,7 @@
     </mat-card-content>
     
     <mat-card-actions>
-      <button (click)="navigateToLogin()" class="login-link" mat-button>
+      <button (click)="navigateToLogin()" class="login-link" mat-button [disabled]="isSubmitting()">
         Já tem uma conta? Faça login
       </button>
     </mat-card-actions>

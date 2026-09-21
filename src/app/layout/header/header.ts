@@ -44,7 +44,8 @@ export class Header {
   }
 
   onSearch(term: string) {
-    // Implementação da busca global (Requisito Funcional)
-    console.log('Buscando por:', term); //[cite: 80]
+    const query = term.trim();
+    if (!query) return;
+    void this.router.navigate(['/busca'], { queryParams: { q: query } });
   }
 }

@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -7,18 +6,17 @@ import { AuthService } from '../auth/services/auth.service';
 import { ProximosEventosComponent } from './components/proximos-eventos/proximos-eventos.component';
 import {
   EventCategory,
+  EventExecutionStatus,
   EventFormat,
   EventListItem,
   EventsFilter,
-  eventCategoryLabel,
-  eventFormatLabel,
 } from './models/event.model';
 import { EventsService } from './services/events.service';
 
 @Component({
   selector: 'app-events-page',
   standalone: true,
-  imports: [DatePipe, RouterLink, ProximosEventosComponent],
+  imports: [RouterLink, ProximosEventosComponent],
   templateUrl: './events-page.component.html',
   styleUrl: './events-page.component.css',
 })
@@ -31,6 +29,7 @@ export class EventsPageComponent implements OnInit {
   readonly myEvents = signal<EventListItem[]>([]);
   readonly selectedCategory = signal<EventCategory | null>(null);
   readonly selectedFormat = signal<EventFormat | null>(null);
+  readonly selectedExecutionStatus = signal<EventExecutionStatus | null>(null);
   readonly nextCursor = signal<string | null>(null);
   readonly loading = signal(true);
   readonly loadingMore = signal(false);
@@ -45,15 +44,9 @@ export class EventsPageComponent implements OnInit {
   readonly editorEventsError = signal<string | null>(null);
   readonly isAuthenticated = this.authService.isAuthenticatedState;
   readonly errorMessage = signal<string | null>(null);
-  readonly calendarOpen = signal(false);
-  readonly calendarEvents = signal<EventListItem[]>([]);
-  readonly calendarLoading = signal(false);
-  readonly calendarError = signal<string | null>(null);
   readonly canManageEvents = computed(() =>
     this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
   );
-  readonly categoryLabel = eventCategoryLabel;
-  readonly formatLabel = eventFormatLabel;
 
   ngOnInit(): void {
     this.reload();
@@ -64,6 +57,13 @@ export class EventsPageComponent implements OnInit {
   reload(): void {
     this.loading.set(true);
     this.errorMessage.set(null);
+
+    const executionStatus = this.selectedExecutionStatus();
+    if (executionStatus) {
+      this.loadEventsByExecutionStatus(executionStatus);
+      return;
+    }
+
     this.eventsService.search(this.buildFilter()).pipe(
       finalize(() => this.loading.set(false)),
     ).subscribe({
@@ -106,22 +106,9 @@ export class EventsPageComponent implements OnInit {
     this.reload();
   }
 
-  openCalendar(): void {
-    this.calendarOpen.set(true);
-    if (this.calendarEvents().length || this.calendarLoading()) return;
-
-    this.calendarLoading.set(true);
-    this.calendarError.set(null);
-    this.eventsService.search({}, undefined, 50).pipe(
-      finalize(() => this.calendarLoading.set(false)),
-    ).subscribe({
-      next: (page) => this.calendarEvents.set(page.content),
-      error: () => this.calendarError.set('Não foi possível carregar o calendário de eventos.'),
-    });
-  }
-
-  closeCalendar(): void {
-    this.calendarOpen.set(false);
+  changeExecutionStatus(status: EventExecutionStatus | null): void {
+    this.selectedExecutionStatus.set(status);
+    this.reload();
   }
 
   openEvent(id: number): void {
@@ -208,6 +195,32 @@ export class EventsPageComponent implements OnInit {
       ...(eventCategory ? { category: eventCategory } : {}),
       ...(format ? { format } : {}),
     };
+  }
+
+  private loadEventsByExecutionStatus(status: EventExecutionStatus): void {
+    this.nextCursor.set(null);
+    this.eventsService.searchAll(this.buildFilter()).pipe(
+      finalize(() => this.loading.set(false)),
+    ).subscribe({
+      next: (events) => this.events.set(events.filter((event) => this.matchesExecutionStatus(event, status))),
+      error: () => {
+        this.events.set([]);
+        this.errorMessage.set('Não foi possível carregar os eventos para este período.');
+      },
+    });
+  }
+
+  private matchesExecutionStatus(event: EventListItem, status: EventExecutionStatus): boolean {
+    const start = event.start_date ? new Date(event.start_date).getTime() : Number.NaN;
+    if (!Number.isFinite(start)) return false;
+
+    const suppliedEnd = event.end_date ? new Date(event.end_date).getTime() : Number.NaN;
+    const end = Number.isFinite(suppliedEnd) ? suppliedEnd : start;
+    const now = Date.now();
+
+    if (status === 'NOT_STARTED') return start > now;
+    if (status === 'FINISHED') return end < now;
+    return start <= now && end >= now;
   }
 
 }

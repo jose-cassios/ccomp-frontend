@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { ActivatedRoute, Router } from '@angular/router';
+import { finalize } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { RegisterFormComponent } from './components/register-form/register-form.component';
 import { apiErrorMessage } from '../../../../core/api/api-error';
@@ -31,6 +32,7 @@ import { apiErrorMessage } from '../../../../core/api/api-error';
 })
 export class RegisterPageComponent {
   readonly errorMessage = signal<string | null>(null);
+  readonly isSubmitting = signal(false);
 
   constructor(
     private authService: AuthService,
@@ -39,8 +41,13 @@ export class RegisterPageComponent {
   ) {}
 
   onRegister(data: { name: string; email: string; password: string; confirmPassword?: string }): void {
+    if (this.isSubmitting()) return;
+
+    this.isSubmitting.set(true);
     this.errorMessage.set(null);
-    this.authService.register(data).subscribe({
+    this.authService.register(data).pipe(
+      finalize(() => this.isSubmitting.set(false)),
+    ).subscribe({
       next: () => {
         this.navigateToLogin();
       },

@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpParams } from '@angular/common/http';
-import { of } from 'rxjs';
+import { HttpErrorResponse, HttpParams } from '@angular/common/http';
+import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
 import { NewsUpdatePayload } from '../interface/news.interface';
 import { NewsService } from './news.service';
@@ -59,8 +59,15 @@ describe('NewsService', () => {
   });
 
   it('should delete a news item by id', () => {
+    api.get.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 404 })));
     service.delete(9).subscribe();
     expect(api.delete).toHaveBeenCalledWith('/news/9');
+  });
+
+  it('does not report deletion when the backend leaves the news item intact', () => {
+    const failure = vi.fn();
+    service.delete(9).subscribe({ error: failure });
+    expect(failure).toHaveBeenCalledWith(expect.objectContaining({ status: 502 }));
   });
 
   it('should manage news editors by email', () => {

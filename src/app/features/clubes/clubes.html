@@ -1,7 +1,6 @@
 <main class="clubs-page">
   <header class="page-header">
     <div>
-      <span class="eyebrow">Projetos e comunidades</span>
       <h1>Clubes</h1>
       <p>Encontre grupos do curso, conheça suas atividades e participe.</p>
     </div>
@@ -39,10 +38,10 @@
     <section class="management-section">
       <div class="management-heading">
         <div>
-          <span class="eyebrow">Área de gestão</span>
-          <h2>Clubes que você gerencia</h2>
+          <span class="eyebrow">Participação e gestão</span>
+          <h2>Meus clubes</h2>
         </div>
-        <button type="button" class="primary-button" (click)="openCreateClub()">Criar clube</button>
+        @if (canCreate()) { <button type="button" class="primary-button" (click)="openCreateClub()">Criar clube</button> }
       </div>
 
       @if (managementError()) {
@@ -61,6 +60,7 @@
                 <p>{{ club.summary || 'Sem resumo.' }}</p>
               </div>
               <div class="row-actions">
+                <button type="button" [disabled]="enrollingClubId() !== null" (click)="unenroll(club)">Sair do clube</button>
                 <button type="button" (click)="openMembers(club)">Membros</button>
                 <button type="button" (click)="openEditClub(club)">Editar</button>
                 <button type="button" class="danger-button" (click)="deleteClub(club)">Excluir</button>
@@ -74,7 +74,7 @@
           </button>
         }
       } @else if (!managementError()) {
-        <div class="empty-state">Você ainda não gerencia nenhum clube.</div>
+        <div class="empty-state">Você ainda não participa de nenhum clube.</div>
       }
     </section>
   }
@@ -239,8 +239,11 @@
                     [disabled]="changingMemberId() === member.id"
                     (click)="changeMemberStatus(member)"
                   >
-                    {{ member.status === 'ACTIVE' ? 'Ativo' : 'Inativo' }}
+                    {{ member.status === 'ACTIVE' ? 'Ativo' : member.status === 'CANCELLED' ? 'Cancelado · reativar' : 'Inativo · reativar' }}
                   </button>
+                  @if (member.status !== 'CANCELLED') {
+                    <button type="button" class="danger-button" [disabled]="changingMemberId() !== null" (click)="changeMemberStatus(member, 'CANCELLED')">Cancelar vínculo</button>
+                  }
                 </article>
               }
             </div>

@@ -4,7 +4,6 @@
   (mouseleave)="autoplayPausado.set(false)"
 >
   <div class="section-header">
-    <span class="linha-verde"></span>
     <a routerLink="/eventos"><h3>EVENTOS EM ANDAMENTO</h3></a>
   </div>
 
@@ -71,7 +70,7 @@
               [routerLink]="['/eventos', evento.id]"
               [attr.aria-label]="'Ver evento: ' + evento.title"
             >
-              Ver evento <span aria-hidden="true">→</span>
+              Ver evento
             </a>
           </div>
         </div>

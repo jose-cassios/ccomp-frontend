@@ -1,28 +1,94 @@
-<div class="split-layout">
-  <div class="agenda-wrapper">
-    <div class="section-header">
-      <span class="linha-verde"></span>
-      <h3>AGENDA DO MÊS</h3>
+<section class="monthly-agenda" aria-labelledby="agenda-title">
+  <header class="agenda-heading">
+    <div>
+      <h2 id="agenda-title">Agenda do mês</h2>
+      <p>Explore os dias e encontre seu próximo encontro.</p>
     </div>
-    <div class="agenda-list">
-      @for(item of agendaMes(); track item.id){
-        <a class="agenda-item" [routerLink]="['/eventos', item.id]">
-          <div class="agenda-date">
-            <span class="month">{{ item.start_date | date: 'MMM' }}</span>
-            <span class="day">{{ item.start_date | date: 'dd' }}</span>
+    <a class="all-events" routerLink="/eventos">Todos os eventos <span aria-hidden="true">↗</span></a>
+  </header>
+
+  <div class="calendar" [attr.aria-busy]="loading()">
+    <div class="calendar-toolbar">
+      <div class="month-navigation">
+        <button type="button" aria-label="Mês anterior" (click)="changeMonth(-1)">‹</button>
+        <h3 aria-live="polite">{{ monthLabel() }}</h3>
+        <button type="button" aria-label="Próximo mês" (click)="changeMonth(1)">›</button>
+      </div>
+      <div class="calendar-tools">
+        <span class="event-count">{{ monthCount() }} {{ monthCount() === 1 ? 'evento no mês' : 'eventos no mês' }}</span>
+        <button type="button" class="today-button" (click)="goToToday()">Hoje</button>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <p class="calendar-feedback" role="status"><span class="spinner" aria-hidden="true"></span> Carregando agenda...</p>
+    }
+    @if (error()) {
+      <div class="calendar-feedback calendar-feedback--error" role="alert">
+        <span>{{ error() }}</span>
+        <button type="button" (click)="retry.emit()" [disabled]="loading()">Tentar novamente</button>
+      </div>
+    }
+
+    <div class="calendar-weekdays" aria-hidden="true">
+      @for (weekday of weekdays; track weekday) { <span>{{ weekday }}</span> }
+    </div>
+    <div class="calendar-grid">
+      @for (day of days(); track day.key) {
+        <div class="calendar-day" [class.outside-month]="!day.inMonth" [class.selected]="isSelected(day)">
+          <button type="button" class="day-number" [class.is-today]="day.today"
+            [attr.aria-label]="day.label" [attr.aria-pressed]="isSelected(day)"
+            [attr.aria-current]="day.today ? 'date' : null" [attr.aria-controls]="showDayDetails() ? 'agenda-day-details' : 'hero-events'"
+            (click)="selectDay(day)">
+            <time [attr.datetime]="day.key">{{ day.date.getDate() }}</time>
+          </button>
+          <div class="day-events">
+            @for (item of day.events.slice(0, 3); track item.event.id) {
+              <a class="calendar-event" [routerLink]="['/eventos', item.event.id]"
+                [title]="item.event.title + ' · ' + intervalLabel(item)">
+                <span class="event-time">{{ timeLabel(item, day.date) }}</span>
+                <span class="event-name">{{ item.event.title }}</span>
+              </a>
+            }
+            @if (day.events.length > 3) {
+              <button type="button" class="more-events" aria-controls="agenda-day-details" (click)="selectDay(day)">
+                +{{ day.events.length - 3 }} eventos
+              </button>
+            }
           </div>
-          @if (item.cover_image_url; as coverImageUrl) {
-            <img class="agenda-cover" [src]="coverImageUrl" [alt]="'Capa do evento ' + item.title" />
+          @if (day.events.length) {
+            @if (compact()) {
+            <span class="mobile-count" aria-hidden="true"></span>
+            } @else {
+            <button type="button" class="mobile-count" [attr.aria-label]="day.label"
+              [attr.aria-controls]="showDayDetails() ? 'agenda-day-details' : 'hero-events'" (click)="selectDay(day)">
+              <span aria-hidden="true">●</span> {{ day.events.length }}
+            </button>
+            }
           }
-          <div class="agenda-info">
-            <span class="agenda-tag">{{ categoryLabel(item.category) }}</span>
-            <h4>{{ item.title }}</h4>
-          </div>
+        </div>
+      }
+    </div>
+    <footer class="calendar-caption">
+      <span><i aria-hidden="true"></i> Hoje</span>
+      <span>Selecione um dia para ver a programação. Horários no seu fuso local.</span>
+    </footer>
+  </div>
+
+  @if (showDayDetails()) {
+  <section class="day-details" id="agenda-day-details" aria-labelledby="selected-day-title" aria-live="polite">
+    <h3 id="selected-day-title">{{ selectedLabel() }}</h3>
+    <div class="day-detail-list">
+      @for (item of selectedEvents(); track item.event.id) {
+        <a class="day-detail" [routerLink]="['/eventos', item.event.id]">
+          <span class="detail-time">{{ intervalLabel(item) }}</span>
+          <span class="detail-copy"><strong>{{ item.event.title }}</strong><small>{{ categoryLabel(item.event.category) }}</small></span>
+          <span class="detail-arrow" aria-hidden="true">↗</span>
         </a>
       } @empty {
-        <p>Nenhum evento disponível na agenda.</p>
+        <p class="empty-day">{{ loading() ? 'Buscando eventos para este dia...' : error() ? 'A agenda não pôde ser carregada por completo.' : 'Nenhum evento programado para este dia.' }}</p>
       }
-      <a class="btn-text" routerLink="/eventos">Ver calendário completo →</a>
     </div>
-  </div>
-</div>
+  </section>
+  }
+</section>

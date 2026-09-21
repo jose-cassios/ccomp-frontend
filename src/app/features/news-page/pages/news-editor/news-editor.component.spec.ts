@@ -106,6 +106,18 @@ describe('NewsEditorComponent', () => {
     expect(component.isPublished()).toBe(true);
   });
 
+  it('keeps a published news editable and sends its updates through PATCH', () => {
+    const publishedNews = { ...savedNews, published_at: '2026-08-11T15:00:00' };
+    (component as any).applyNews(publishedNews);
+    component.form.controls.summary.setValue('Resumo atualizado após a publicação.');
+    component.save();
+
+    expect(component.form.enabled).toBe(true);
+    expect(newsService.update).toHaveBeenCalledWith(publishedNews.id, expect.objectContaining({
+      summary: 'Resumo atualizado após a publicação.',
+    }));
+  });
+
   it('should delete the current draft after confirmation', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);

@@ -1,0 +1,42 @@
+<section class="guest-panel" [attr.aria-busy]="loading() || busy()">
+  <h3>{{ activityId ? 'Convidados da atividade' : 'Convidados do evento' }}</h3>
+  @if (error()) { <p role="alert">{{ error() }}</p><button type="button" (click)="loadGuests()">Atualizar convidados</button> }
+  @if (message()) { <p role="status">{{ message() }}</p> }
+  @if (busy() || loading() || invitationsLoading()) { <p role="status"><span class="mini-spinner"></span> Carregando…</p> }
+  @if (manage && !activityId) {
+    <p>Convidados não recebem permissão de edição. Para colaboradores, use a equipe organizadora.</p>
+    <p>A integração está disponível, mas a API ainda precisa ajustar a identificação do usuário e o envio do e-mail. Se a operação falhar, nada será confirmado nesta tela.</p>
+    <form [formGroup]="form" (ngSubmit)="invite()">
+      <label>E-mail do convidado<input type="email" formControlName="email" required autocomplete="email"></label>
+      <button type="submit" [disabled]="busy()">Registrar convite</button>
+    </form>
+    @if (form.controls.email.touched && form.controls.email.invalid) { <p role="alert">Informe um e-mail válido.</p> }
+    <form (submit)="$event.preventDefault(); loadInvitations()">
+      <label>Buscar convite por e-mail<input type="email" [formControl]="filter" placeholder="Todos os convites"></label>
+      <button type="submit" [disabled]="invitationsLoading() || filter.invalid">Buscar</button>
+    </form>
+    @for (invitation of invitations(); track invitation.id) {
+      <article>
+        <div><strong>{{ invitation.email }}</strong><small>{{ statusLabels[invitation.status] || invitation.status }} · Expira {{ invitation.expires_at | date:'dd/MM/yyyy HH:mm' }}</small></div>
+        @if (invitation.status === 'PENDING') {
+          <a routerLink="/accept-guest-invite" [queryParams]="{code: invitation.code}">Link do convite</a>
+          <button type="button" [disabled]="busy()" (click)="cancel(invitation)">Cancelar convite</button>
+        }
+      </article>
+    } @empty { @if (!invitationsLoading()) { <p>Nenhum convite encontrado.</p> } }
+    @if (invitationCursor()) { <button type="button" [disabled]="invitationsLoading()" (click)="loadInvitations(true)">Mais convites</button> }
+  }
+  @for (guest of guests(); track guest.id) {
+    <article>
+      <div><strong>{{ guest.user_id === auth.getCurrentUser()?.id ? 'Você' : 'Convidado #' + guest.id }}</strong>
+        <small>{{ guest.status === 'CONFIRMED' ? 'Confirmado' : 'Cancelado' }} · {{ guest.visibility === 'PUBLIC' ? 'Visível ao público' : 'Privado' }}</small>
+      </div>
+      @if (canUpdate(guest)) {
+        <button type="button" [disabled]="busy()" (click)="update(guest, 'status')">{{ guest.status === 'CONFIRMED' ? 'Cancelar presença' : 'Confirmar presença' }}</button>
+        <button type="button" [disabled]="busy()" (click)="update(guest, 'visibility')">{{ guest.visibility === 'PUBLIC' ? 'Tornar privado' : 'Tornar público' }}</button>
+      }
+    </article>
+  } @empty { @if (!loading()) { <p>Nenhum convidado disponível para exibição.</p> } }
+  @if (guestCursor()) { <button type="button" [disabled]="loading()" (click)="loadGuests(true)">Mais convidados</button> }
+  @if (manage) { <small>A API ainda não fornece nome/foto nem permite vincular convidados a atividades.</small> }
+</section>

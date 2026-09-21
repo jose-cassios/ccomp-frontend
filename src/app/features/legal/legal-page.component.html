@@ -1,0 +1,37 @@
+<main class="legal-page">
+  <header class="legal-hero">
+    <a class="back-link" routerLink="/">← Voltar para a página inicial</a>
+    <span class="legal-kicker">{{ document().eyebrow }}</span>
+    <h1>{{ document().title }}</h1>
+    <p>{{ document().description }}</p>
+    <span class="updated-at">Última atualização: {{ document().lastUpdated }}</span>
+  </header>
+
+  <div class="legal-layout">
+    <aside class="legal-note">
+      <strong>Leitura importante</strong>
+      <p>Este documento orienta o uso da plataforma. Em caso de dúvida, fale conosco antes de utilizar um recurso que envolva sua conta ou dados pessoais.</p>
+      <a [routerLink]="document().title === 'Termos de uso' ? '/privacidade' : '/termos'">
+        {{ document().title === 'Termos de uso' ? 'Ler Política de privacidade' : 'Ler Termos de uso' }} →
+      </a>
+    </aside>
+
+    <article class="legal-content">
+      @for (section of document().sections; track section.title) {
+        <section>
+          <h2>{{ section.title }}</h2>
+          @for (paragraph of section.paragraphs; track paragraph) {
+            <p>{{ paragraph }}</p>
+          }
+          @if (section.items?.length) {
+            <ul>
+              @for (item of section.items; track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          }
+        </section>
+      }
+    </article>
+  </div>
+</main>

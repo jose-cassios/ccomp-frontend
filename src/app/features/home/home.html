@@ -4,21 +4,13 @@
       [highlights]="highlights()"
       [eventsCount]="events().length"
       [newsCount]="newsItems().length"
+      [events]="events()"
+      [eventsLoading]="eventsLoading()"
+      [eventsError]="eventsError()"
+      (retryEvents)="loadEvents()"
       [canManageHighlights]="canManageHighlights()"
       (manageHighlights)="openHighlightEditor()"
     ></app-banner>
-  </section>
-
-  <section class="section-container">
-    <app-agenda-mes [events]="events()"></app-agenda-mes>
-  </section>
-
-  <section class="section-container">
-    <app-eventos-andamento [eventos]="ongoingEvents()"></app-eventos-andamento>
-  </section>
-
-  <section class="full-width-section">
-    <app-noticias-clube [clubs]="clubHighlights()"></app-noticias-clube>
   </section>
 
   <section class="section-container">

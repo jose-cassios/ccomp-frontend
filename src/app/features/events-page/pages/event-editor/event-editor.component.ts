@@ -1,6 +1,6 @@
-import { Location } from '@angular/common';
+import { DatePipe, Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, HostListener, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, ViewChild, computed, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -8,26 +8,39 @@ import { catchError, finalize, map, Observable, of, switchMap } from 'rxjs';
 import { ADMINISTRATION_ROLES, CONTENT_MANAGEMENT_ROLES } from '../../../auth/config/auth.config';
 import { AuthService } from '../../../auth/services/auth.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
+import { StorageService } from '../../../../core/storage/storage.service';
 import {
   ActivityPayload,
+  ACTIVITY_REGISTRATION_POLICY_OPTIONS,
+  ActivityRegistrationPolicy,
+  ActivityRegistrationPolicyOption,
+  activityRegistrationPolicyLabel,
+  activityRegistrationPolicyDescription,
   ApiMessage,
   CreateEventPayload,
+  EVENT_ACTIVITY_TYPE_OPTIONS,
   EVENT_CATEGORY_OPTIONS,
   EVENT_FORMAT_OPTIONS,
   EventActivity,
+  EventActivityType,
   EventCategory,
   EventDetails,
   EventEditor,
   EventEnrollment,
   EventFormat,
   UpdateEventPayload,
+  eventActivityTypeLabel,
+  eventActivityWeekdayLabel,
   eventExecutionStatusLabel,
   eventEditorStatusLabel,
   eventEnrollmentStateLabel,
   eventPublicationStatusLabel,
   apiMessage,
+  buildEventActivityDays,
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
+import { EventGuestsComponent } from '../../components/event-guests/event-guests.component';
+import { ActivityPeopleComponent } from '../../components/activity-people/activity-people.component';
 
 type EditorOperation = 'idle' | 'loading' | 'saving' | 'publishing' | 'deleting' | 'activity' | 'editor';
 type EventEditorStep = 'details' | 'presentation' | 'schedule' | 'team' | 'review';
@@ -43,16 +56,20 @@ const EDITOR_STEPS: ReadonlyArray<{ value: EventEditorStep; label: string }> = [
 @Component({
   selector: 'app-event-editor',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [DatePipe, ReactiveFormsModule, RouterLink, EventGuestsComponent, ActivityPeopleComponent],
   templateUrl: './event-editor.component.html',
-  styleUrl: './event-editor.component.css',
+  styleUrls: ['./event-editor.component.css', './event-activity-dialog.css'],
 })
 export class EventEditorComponent implements OnInit {
+  @ViewChild('activityDialog') private activityDialog?: ElementRef<HTMLDialogElement>;
+  readonly activityDialogDay = signal<string | null>(null);
+  readonly activityDialogEndDay = signal<string | null>(null);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly eventsService = inject(EventsService);
+  private readonly storageService = inject(StorageService);
   private readonly authService = inject(AuthService);
 
   readonly form = this.fb.nonNullable.group({
@@ -71,8 +88,13 @@ export class EventEditorComponent implements OnInit {
     cover_image_url: ['', Validators.pattern(/^https?:\/\/.+/)],
   });
   readonly activityForm = this.fb.nonNullable.group({
-    title: ['', [Validators.required, Validators.maxLength(255)]],
-    description: ['', Validators.maxLength(2000)],
+    title: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
+    description: ['', Validators.maxLength(1000)],
+    type: this.fb.nonNullable.control<EventActivityType>('LECTURE', Validators.required),
+    location: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
+    start_date: ['', Validators.required],
+    end_date: ['', Validators.required],
+    registration_policy: this.fb.nonNullable.control<ActivityRegistrationPolicy>('ACTIVITY_REGISTRANTS_ONLY', Validators.required),
   });
   readonly editorForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -86,6 +108,9 @@ export class EventEditorComponent implements OnInit {
   readonly lastUnlockedStep = signal(0);
   readonly activities = signal<EventActivity[]>([]);
   readonly editingActivityId = signal<number | null>(null);
+  readonly activitiesLoading = signal(false);
+  readonly activitiesError = signal<string | null>(null);
+  readonly activeActivityDay = signal<string | null>(null);
   readonly editors = signal<EventEditor[]>([]);
   readonly editorAccessResolved = signal(false);
   readonly enrollments = signal<EventEnrollment[]>([]);
@@ -95,11 +120,20 @@ export class EventEditorComponent implements OnInit {
   readonly ownedEventIds = signal<ReadonlySet<number>>(new Set());
   readonly editableEventIds = signal<ReadonlySet<number>>(new Set());
   readonly operation = signal<EditorOperation>('idle');
+  readonly uploadingCover = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly hasUnsavedChanges = signal(false);
   readonly categories = EVENT_CATEGORY_OPTIONS;
   readonly formats = EVENT_FORMAT_OPTIONS;
+  readonly activityTypes = EVENT_ACTIVITY_TYPE_OPTIONS;
+  readonly activityRegistrationPolicies = ACTIVITY_REGISTRATION_POLICY_OPTIONS;
+  readonly activityPolicyLabel = activityRegistrationPolicyLabel;
+  readonly activityPolicyDescription = activityRegistrationPolicyDescription;
+  readonly activityPolicyMenuOpen = signal(false);
+  readonly selectedActivityPolicy = computed(() => this.activityRegistrationPolicies.find(
+    (policy) => policy.value === this.activityForm.controls.registration_policy.value,
+  ) ?? this.activityRegistrationPolicies[1]);
   readonly steps = EDITOR_STEPS;
   readonly isBusy = computed(() => this.operation() !== 'idle');
   readonly isAdmin = computed(() => this.authService.hasAnyRole(ADMINISTRATION_ROLES));
@@ -128,6 +162,27 @@ export class EventEditorComponent implements OnInit {
     );
   });
   readonly canManageActivities = computed(() => this.isOwner() || this.isAssignedEditor());
+  readonly activitySchedule = computed(() => buildEventActivityDays(
+    this.event()?.start_date, this.event()?.end_date, this.activities(),
+  ).map((day) => ({ ...day, count: day.slots.reduce((total, slot) => total + slot.activities.length, 0) })));
+  readonly visibleActivityDay = computed(() => {
+    const schedule = this.activitySchedule();
+    return schedule.find((day) => day.key === this.activeActivityDay()) ?? schedule[0] ?? null;
+  });
+  readonly conflictPolicy = this.fb.nonNullable.control<'' | 'PREVENT' | 'ALLOW'>('');
+
+  saveConflictPolicy(): void {
+    const event = this.event();
+    const policy = this.conflictPolicy.value;
+    if (!event || !policy || this.isBusy()) return;
+    this.operation.set('saving'); this.errorMessage.set(null);
+    this.eventsService.update(event.id, { schedule_conflict_policy: policy }).pipe(
+      finalize(() => this.operation.set('idle')),
+    ).subscribe({
+      next: () => this.successMessage.set('Regra de conflito atualizada. A API ainda não devolve essa configuração na consulta do evento.'),
+      error: (error: unknown) => this.errorMessage.set(apiErrorMessage(error, 'Não foi possível atualizar a regra de conflito.')),
+    });
+  }
   readonly canManageTeam = computed(() => this.isOwner());
   readonly canViewEnrollments = computed(() =>
     this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
@@ -146,6 +201,8 @@ export class EventEditorComponent implements OnInit {
   readonly publicationStatusLabel = eventPublicationStatusLabel;
   readonly executionStatusLabel = eventExecutionStatusLabel;
   readonly editorStatusLabel = eventEditorStatusLabel;
+  readonly activityTypeLabel = eventActivityTypeLabel;
+  readonly activityWeekdayLabel = eventActivityWeekdayLabel;
   readonly operationLabel = computed(() => {
     switch (this.operation()) {
       case 'loading': return 'Carregando evento...';
@@ -401,29 +458,66 @@ export class EventEditorComponent implements OnInit {
 
   saveActivity(): void {
     const currentEvent = this.event();
-    if (!currentEvent || this.activityForm.invalid || this.isBusy()) {
+    if (!currentEvent || this.isBusy()) return;
+    if (!this.canManageActivities()) {
+      this.errorMessage.set('Você não tem permissão para alterar a programação deste evento.');
+      return;
+    }
+    if (this.activityForm.invalid || this.activityDatesError()) {
       this.activityForm.markAllAsTouched();
+      this.errorMessage.set(this.activityDatesError() ?? 'Revise os dados obrigatórios e os horários da atividade.');
       return;
     }
 
-    const payload: ActivityPayload = this.activityForm.getRawValue();
+    const value = this.activityForm.getRawValue();
     const activityId = this.editingActivityId();
+    const payload: ActivityPayload = {
+      title: value.title.trim(),
+      description: value.description.trim(),
+      type: value.type,
+      location: value.location.trim(),
+      start_date: value.start_date,
+      end_date: value.end_date,
+      registration_policy: value.registration_policy,
+    };
     this.operation.set('activity');
     this.errorMessage.set(null);
     this.successMessage.set(null);
+    this.activitiesError.set(null);
     const request = activityId
       ? this.eventsService.updateActivity(activityId, payload)
-      : this.eventsService.createActivity(currentEvent.id, payload);
+      : this.eventsService.createActivity(currentEvent.id, {
+          title: payload.title, description: payload.description,
+        }).pipe(
+          switchMap((created) => {
+            // Keep the persisted ID and input when PATCH fails: retry must not create duplicates.
+            this.editingActivityId.set(created.id);
+            this.activities.update((items) => [...items.filter((item) => item.id !== created.id), created]);
+            return this.eventsService.updateActivity(created.id, payload);
+          }),
+        );
 
     request.pipe(
       finalize(() => this.operation.set('idle')),
     ).subscribe({
       next: (activity) => {
-        this.activities.update((activities) => activityId
-          ? activities.map((item) => item.id === activity.id ? activity : item)
-          : [...activities, activity]);
-        this.activityForm.reset({ title: '', description: '' });
+        this.activities.update((activities) => [...activities.filter((item) => item.id !== activity.id), activity]);
+        this.ensureActiveActivityDay();
+        if (this.activityResponseMatchesPayload(activity, payload)) {
+          this.successMessage.set(activityId
+            ? 'Atividade atualizada na programação.'
+            : 'Atividade adicionada à programação.');
+        } else {
+          this.errorMessage.set(
+            'A resposta da API não confirmou todos os dados da atividade. Confira a programação antes de continuar.',
+          );
+          return;
+        }
+        this.resetActivityForm();
         this.editingActivityId.set(null);
+        this.activityDialog?.nativeElement.close();
+        this.activityDialogDay.set(null);
+        this.activityDialogEndDay.set(null);
         this.loadActivities(currentEvent.id);
       },
       error: (error: unknown) => {
@@ -433,17 +527,20 @@ export class EventEditorComponent implements OnInit {
   }
 
   deleteActivity(activity: EventActivity): void {
-    if (this.isBusy()) return;
+    if (this.isBusy() || !this.canManageActivities()) return;
     if (typeof window !== 'undefined' && !window.confirm(`Excluir a atividade “${activity.title}”?`)) return;
 
     this.operation.set('activity');
     this.successMessage.set(null);
+    this.errorMessage.set(null);
     this.eventsService.deleteActivity(activity.id).pipe(
       finalize(() => this.operation.set('idle')),
     ).subscribe({
-      next: () => {
+      next: (response) => {
         this.activities.update((activities) => activities.filter((item) => item.id !== activity.id));
+        this.ensureActiveActivityDay();
         if (this.editingActivityId() === activity.id) this.cancelActivityEdit();
+        this.successMessage.set(apiMessage(response, 'Atividade excluída da programação.'));
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível excluir a atividade.'));
@@ -452,18 +549,180 @@ export class EventEditorComponent implements OnInit {
   }
 
   editActivity(activity: EventActivity): void {
-    if (this.isBusy()) return;
+    if (this.isBusy() || !this.canManageActivities()) return;
+    const startDay = this.toLocalInput(activity.start_date ?? null).slice(0, 10);
+    const fallbackDay = this.activitySchedule().find((day) => this.canAddActivityOnDay(day.key))?.key;
+    const day = this.canAddActivityOnDay(startDay) ? startDay : fallbackDay;
+    if (!day) {
+      this.errorMessage.set('Defina o período do evento antes de editar a programação.');
+      return;
+    }
+    this.activeActivityDay.set(day);
+    this.activityDialogDay.set(day);
+    // Do not silently shorten an existing activity spanning multiple days.
+    const endDay = this.toLocalInput(activity.end_date ?? null).slice(0, 10);
+    this.activityDialogEndDay.set(this.canAddActivityOnDay(endDay) && endDay >= day ? endDay : day);
     this.editingActivityId.set(activity.id);
     this.activityForm.reset({
       title: activity.title,
       description: activity.description ?? '',
+      type: activity.type ?? 'OTHER',
+      location: activity.location ?? '',
+      start_date: this.toLocalInput(activity.start_date ?? null),
+      end_date: this.toLocalInput(activity.end_date ?? null),
+      registration_policy: activity.registration_policy ?? 'ACTIVITY_REGISTRANTS_ONLY',
     });
     this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.activityDialog?.nativeElement.showModal();
+  }
+
+  /** Sends a local cover image to storage and keeps the resulting public URL in the form. */
+  uploadCover(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || this.uploadingCover() || this.isBusy()) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.errorMessage.set('Selecione um arquivo de imagem válido.');
+      input.value = '';
+      return;
+    }
+
+    this.uploadingCover.set(true);
+    this.errorMessage.set(null);
+    this.storageService.upload(file).pipe(
+      finalize(() => {
+        this.uploadingCover.set(false);
+        input.value = '';
+      }),
+    ).subscribe({
+      next: (response) => {
+        this.presentationForm.controls.cover_image_url.setValue(response.url);
+        this.presentationForm.controls.cover_image_url.markAsTouched();
+        this.successMessage.set('Imagem enviada. Ela será aplicada ao avançar ou salvar o evento.');
+      },
+      error: (error: unknown) => {
+        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível enviar a imagem.'));
+      },
+    });
   }
 
   cancelActivityEdit(): void {
+    if (this.isBusy()) return;
+    if (this.activityForm.dirty && typeof window !== 'undefined'
+      && !window.confirm('Descartar as alterações desta atividade?')) return;
+    this.activityDialog?.nativeElement.close();
+    this.activityDialogDay.set(null);
+    this.activityDialogEndDay.set(null);
     this.editingActivityId.set(null);
-    this.activityForm.reset({ title: '', description: '' });
+    this.resetActivityForm();
+  }
+
+  onActivityDialogCancel(event: Event): void {
+    event.preventDefault();
+    this.cancelActivityEdit();
+  }
+
+  openActivityDialog(): void {
+    const day = this.visibleActivityDay()?.key;
+    if (!day || this.isBusy() || !this.canManageActivities() || !this.canAddActivityOnDay(day)) return;
+    this.resetActivityForm();
+    this.editingActivityId.set(null);
+    this.activityDialogDay.set(day);
+    this.activityDialogEndDay.set(day);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.activityPolicyMenuOpen.set(false);
+    this.activityDialog?.nativeElement.showModal();
+  }
+
+  canAddActivityOnDay(day: string): boolean {
+    const start = this.toLocalInput(this.event()?.start_date ?? null);
+    const end = this.toLocalInput(this.event()?.end_date ?? null);
+    return /^\d{4}-\d{2}-\d{2}$/.test(day) && !!start && !!end
+      && start.slice(0, 10) <= day && day <= end.slice(0, 10);
+  }
+
+  activityTimeBounds(day: string | null): { min: string; max: string } {
+    const start = this.toLocalInput(this.event()?.start_date ?? null);
+    const end = this.toLocalInput(this.event()?.end_date ?? null);
+    return {
+      min: start.slice(0, 10) === day ? start.slice(11) : '00:00',
+      max: end.slice(0, 10) === day ? end.slice(11) : '23:59',
+    };
+  }
+
+  setActivityTime(field: 'start_date' | 'end_date', event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    const day = field === 'start_date' ? this.activityDialogDay() : this.activityDialogEndDay();
+    this.activityForm.controls[field].setValue(day && value ? `${day}T${value}` : '');
+    this.activityForm.controls[field].markAsDirty();
+  }
+
+  toggleActivityPolicyMenu(): void {
+    this.activityPolicyMenuOpen.update((open) => !open);
+  }
+
+  selectActivityPolicy(policy: ActivityRegistrationPolicyOption): void {
+    this.activityForm.controls.registration_policy.setValue(policy.value);
+    this.activityForm.controls.registration_policy.markAsDirty();
+    this.activityPolicyMenuOpen.set(false);
+  }
+
+  closeActivityPolicyMenu(): void {
+    this.activityPolicyMenuOpen.set(false);
+  }
+
+  selectActivityDay(dayKey: string): void {
+    this.activeActivityDay.set(dayKey);
+  }
+
+  navigateActivityDays(event: KeyboardEvent, dayKey: string): void {
+    const days = this.activitySchedule();
+    const index = days.findIndex((day) => day.key === dayKey);
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight': next = (index + 1) % days.length; break;
+      case 'ArrowLeft': next = (index - 1 + days.length) % days.length; break;
+      case 'Home': next = 0; break;
+      case 'End': next = days.length - 1; break;
+      default: return;
+    }
+    event.preventDefault();
+    this.selectActivityDay(days[next].key);
+    (event.currentTarget as HTMLElement).parentElement
+      ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+  }
+
+  activityDatesError(): string | null {
+    const start = this.activityForm.controls.start_date.value;
+    const end = this.activityForm.controls.end_date.value;
+    if (!start || !end) return null;
+    if (this.activityDialogDay() && (start.slice(0, 10) !== this.activityDialogDay()
+      || end.slice(0, 10) !== this.activityDialogEndDay())) {
+      return 'Selecione novamente os horários para o dia indicado no formulário.';
+    }
+
+    const startTimestamp = new Date(start).getTime();
+    const endTimestamp = new Date(end).getTime();
+    if (!Number.isFinite(startTimestamp) || !Number.isFinite(endTimestamp)) {
+      return 'Informe um horário válido para a atividade.';
+    }
+    if (startTimestamp >= endTimestamp) {
+      return 'O término da atividade deve ocorrer depois do início.';
+    }
+
+    const eventStart = this.event()?.start_date;
+    const eventEnd = this.event()?.end_date;
+    if (
+      eventStart
+      && eventEnd
+      && (startTimestamp < new Date(eventStart).getTime() || endTimestamp > new Date(eventEnd).getTime())
+    ) {
+      return 'A atividade deve acontecer dentro do período do evento.';
+    }
+    return null;
   }
 
   addEditor(): void {
@@ -528,14 +787,21 @@ export class EventEditorComponent implements OnInit {
     this.successMessage.set(null);
   }
 
+  retryLoadEvent(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id || this.isBusy()) return;
+    this.errorMessage.set(null);
+    this.loadEvent(id);
+  }
+
   canDeactivate(): boolean {
-    if (!this.hasUnsavedChanges() || typeof window === 'undefined') return true;
+    if ((!this.hasUnsavedChanges() && !(this.activityDialogDay() && this.activityForm.dirty)) || typeof window === 'undefined') return true;
     return window.confirm('Há alterações não salvas. Deseja sair mesmo assim?');
   }
 
   @HostListener('window:beforeunload', ['$event'])
   preventUnsavedUnload(event: BeforeUnloadEvent): void {
-    if (this.hasUnsavedChanges()) event.preventDefault();
+    if (this.hasUnsavedChanges() || (this.activityDialogDay() && this.activityForm.dirty)) event.preventDefault();
   }
 
   private loadEvent(id: string): void {
@@ -552,6 +818,7 @@ export class EventEditorComponent implements OnInit {
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível carregar o evento.'));
+        this.editorAccessResolved.set(true);
       },
     });
   }
@@ -579,10 +846,19 @@ export class EventEditorComponent implements OnInit {
   }
 
   private loadActivities(eventId: number): void {
-    this.eventsService.getActivities(eventId).subscribe({
-      next: (page) => this.activities.set(page.content),
+    this.activitiesLoading.set(true);
+    this.activitiesError.set(null);
+    this.eventsService.getAllActivities(eventId).pipe(
+      finalize(() => this.activitiesLoading.set(false)),
+    ).subscribe({
+      next: (activities) => {
+        this.activities.set(activities);
+        this.ensureActiveActivityDay();
+      },
       // A atividade recém-criada continua visível caso a listagem falhe pontualmente.
-      error: () => undefined,
+      error: (error: unknown) => {
+        this.activitiesError.set(this.getErrorMessage(error, 'Não foi possível atualizar a programação.'));
+      },
     });
   }
 
@@ -678,10 +954,11 @@ export class EventEditorComponent implements OnInit {
       content: event.content ?? presentation?.content ?? null,
       cover_image_url: event.cover_image_url ?? presentation?.cover_image_url ?? null,
       description: event.content ?? presentation?.content ?? event.description ?? event.summary ?? presentation?.summary ?? null,
-      activities: event.activities ?? [],
+      activities: currentEvent?.id === event.id ? this.activities() : event.activities ?? [],
     };
     this.event.set(enrichedEvent);
     this.activities.set(enrichedEvent.activities ?? []);
+    this.ensureActiveActivityDay();
     this.form.reset({
       title: enrichedEvent.title ?? '',
       category: enrichedEvent.category ?? 'ACADEMIC_EDUCATIONAL',
@@ -704,6 +981,41 @@ export class EventEditorComponent implements OnInit {
     const start = this.form.controls.start_date.value;
     const end = this.form.controls.end_date.value;
     return Boolean(start && end && new Date(start).getTime() <= new Date(end).getTime());
+  }
+
+  private resetActivityForm(): void {
+    this.activityForm.reset({
+      title: '',
+      description: '',
+      type: 'LECTURE',
+      location: '',
+      start_date: '',
+      end_date: '',
+      registration_policy: 'ACTIVITY_REGISTRANTS_ONLY',
+    });
+  }
+
+  private ensureActiveActivityDay(): void {
+    const schedule = this.activitySchedule();
+    if (!schedule.some((day) => day.key === this.activeActivityDay())) {
+      this.activeActivityDay.set(schedule[0]?.key ?? null);
+    }
+  }
+
+  private activityResponseMatchesPayload(activity: EventActivity, payload: ActivityPayload): boolean {
+    const sameDate = (left: string | null | undefined, right: string): boolean => {
+      if (!left) return false;
+      const leftTimestamp = new Date(left).getTime();
+      const rightTimestamp = new Date(right).getTime();
+      return Number.isFinite(leftTimestamp) && Number.isFinite(rightTimestamp)
+        ? leftTimestamp === rightTimestamp
+        : left === right;
+    };
+    return activity.type === payload.type
+      && activity.location?.trim() === payload.location
+      && sameDate(activity.start_date, payload.start_date)
+      && sameDate(activity.end_date, payload.end_date)
+      && activity.registration_policy === payload.registration_policy;
   }
 
   enrollmentDatesError(): string | null {
@@ -742,7 +1054,13 @@ export class EventEditorComponent implements OnInit {
   }
 
   private toLocalInput(value: string | null): string {
-    return value ? value.slice(0, 16) : '';
+    if (!value) return '';
+    if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) return value.slice(0, 16);
+
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return value.slice(0, 16);
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+    return localDate.toISOString().slice(0, 16);
   }
 
   private getErrorMessage(error: unknown, fallback: string): string {

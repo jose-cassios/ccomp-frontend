@@ -4,7 +4,9 @@ import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../auth/services/auth.service';
 import { EventDetails, EventEditor } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
+import { StorageService } from '../../../../core/storage/storage.service';
 import { EventEditorComponent } from './event-editor.component';
+import { EventGuestsService } from '../../services/event-guests.service';
 
 describe('EventEditorComponent', () => {
   let component: EventEditorComponent;
@@ -22,6 +24,15 @@ describe('EventEditorComponent', () => {
     end_date: '2026-09-10T18:00:00',
     activities: [],
   };
+  const activityPayload = {
+    title: 'Abertura',
+    description: '',
+    type: 'LECTURE' as const,
+    location: 'Auditório principal',
+    start_date: '2026-09-10T08:00',
+    end_date: '2026-09-10T09:00',
+    registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const,
+  };
   const eventsService = {
     create: vi.fn(() => of(createdEvent)),
     update: vi.fn((_eventId: number, payload: { enrollment_start_date?: string; enrollment_end_date?: string; enrollment_paused?: boolean }) => of({
@@ -32,14 +43,27 @@ describe('EventEditorComponent', () => {
     })),
     publish: vi.fn(() => of({ ...createdEvent, status: 'PUBLISHED' as const })),
     getById: vi.fn(() => of(createdEvent)),
-    getActivities: vi.fn(() => of({ content: [], next_cursor: null })),
+    getAllActivities: vi.fn(() => of([])),
     getEditors: vi.fn(() => of({ content: [] as EventEditor[], next_cursor: null })),
     deleteEvent: vi.fn(() => of(void 0)),
-    createActivity: vi.fn(() => of({ id: 21, event_id: createdEvent.id, title: 'Abertura', description: null })),
-    updateActivity: vi.fn(() => of({ id: 21, event_id: createdEvent.id, title: 'Abertura atualizada', description: 'Boas-vindas' })),
+    createActivity: vi.fn(() => of({ id: 21, event_id: createdEvent.id, ...activityPayload })),
+    updateActivity: vi.fn((_id: number, payload: object) => of({
+      id: 21,
+      event_id: createdEvent.id,
+      title: 'Abertura atualizada',
+      description: 'Boas-vindas',
+      type: 'WORKSHOP' as const,
+      location: 'Laboratório 04',
+      start_date: '2026-09-10T10:00',
+      end_date: '2026-09-10T11:30',
+      ...payload,
+    })),
     deleteActivity: vi.fn(),
     addEditor: vi.fn(() => of({ message: 'Editor adicionado.' })),
     removeEditor: vi.fn(),
+  };
+  const storageService = {
+    upload: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -51,6 +75,8 @@ describe('EventEditorComponent', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({}) } } },
         { provide: AuthService, useValue: { hasAnyRole: () => false, currentUserState: () => ({ id: 'event-owner' }) } },
         { provide: EventsService, useValue: eventsService },
+        { provide: StorageService, useValue: storageService },
+        { provide: EventGuestsService, useValue: { guests: () => of({ content: [], next_cursor: null }), invitations: () => of({ content: [], next_cursor: null }) } },
       ],
     }).compileComponents();
 
@@ -59,6 +85,10 @@ describe('EventEditorComponent', () => {
     router = TestBed.inject(Router);
     vi.spyOn(router, 'navigate').mockResolvedValue(true);
     fixture.detectChanges();
+    // jsdom does not implement the native dialog top layer; emulate only its open state.
+    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+    dialog.showModal = vi.fn(() => dialog.setAttribute('open', ''));
+    dialog.close = vi.fn(() => dialog.removeAttribute('open'));
   });
 
   it('should create the event with only the required API fields and advance to the presentation step', () => {
@@ -149,6 +179,32 @@ describe('EventEditorComponent', () => {
     });
   });
 
+  it('uploads a local event cover and stores the returned URL in the form', () => {
+    const image = new File(['cover'], 'capa.png', { type: 'image/png' });
+    const input = { files: [image], value: 'capa.png' } as unknown as HTMLInputElement;
+    storageService.upload.mockReturnValueOnce(of({
+      url: 'https://storage.example.com/capa.png',
+      file_name: 'capa.png',
+    }));
+
+    component.uploadCover({ target: input } as unknown as Event);
+
+    expect(storageService.upload).toHaveBeenCalledWith(image);
+    expect(component.presentationForm.controls.cover_image_url.value).toBe('https://storage.example.com/capa.png');
+    expect(component.successMessage()).toContain('Imagem enviada');
+    expect(component.uploadingCover()).toBe(false);
+  });
+
+  it('does not upload a non-image as an event cover', () => {
+    const file = new File(['text'], 'notas.txt', { type: 'text/plain' });
+    const input = { files: [file], value: 'notas.txt' } as unknown as HTMLInputElement;
+
+    component.uploadCover({ target: input } as unknown as Event);
+
+    expect(storageService.upload).not.toHaveBeenCalled();
+    expect(component.errorMessage()).toContain('arquivo de imagem');
+  });
+
   it('should accept registrations before the event, but not after it ends', () => {
     component.form.setValue({
       title: createdEvent.title,
@@ -182,12 +238,55 @@ describe('EventEditorComponent', () => {
       enrollment_paused: false,
     });
     component.save();
-    component.activityForm.setValue({ title: 'Abertura', description: '' });
+    component.activityForm.setValue({
+      title: activityPayload.title,
+      description: activityPayload.description,
+      type: activityPayload.type,
+      location: activityPayload.location,
+      start_date: activityPayload.start_date,
+      end_date: activityPayload.end_date,
+      registration_policy: activityPayload.registration_policy,
+    });
 
     component.saveActivity();
 
-    expect(eventsService.createActivity).toHaveBeenCalledWith(createdEvent.id, { title: 'Abertura', description: '' });
-    expect(eventsService.getActivities).toHaveBeenCalledWith(createdEvent.id);
+    expect(eventsService.createActivity).toHaveBeenCalledWith(createdEvent.id, {
+      title: activityPayload.title, description: activityPayload.description,
+    });
+    expect(eventsService.updateActivity).toHaveBeenCalledWith(21, activityPayload);
+    expect(eventsService.getAllActivities).toHaveBeenCalledWith(createdEvent.id);
+    expect(component.successMessage()).toContain('adicionada');
+  });
+
+  it('should retain the created ID and form when PATCH fails, without creating duplicates on retry', () => {
+    eventsService.updateActivity.mockReturnValueOnce(throwError(() => new Error('Network error')));
+    eventsService.createActivity.mockReturnValueOnce(of({
+      id: 22,
+      event_id: createdEvent.id,
+      title: activityPayload.title,
+      description: activityPayload.description,
+    }) as never);
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.ownedEventIds.set(new Set([createdEvent.id]));
+    component.activityForm.setValue({
+      title: activityPayload.title,
+      description: activityPayload.description,
+      type: activityPayload.type,
+      location: activityPayload.location,
+      start_date: activityPayload.start_date,
+      end_date: activityPayload.end_date,
+      registration_policy: activityPayload.registration_policy,
+    });
+
+    component.saveActivity();
+
+    expect(component.successMessage()).toBeNull();
+    expect(component.errorMessage()).toBeTruthy();
+    expect(component.editingActivityId()).toBe(22);
+    expect(component.activityForm.getRawValue()).toEqual(activityPayload);
+    component.saveActivity();
+    expect(eventsService.createActivity).toHaveBeenCalledTimes(1);
+    expect(eventsService.updateActivity).toHaveBeenLastCalledWith(22, activityPayload);
   });
 
   it('should update an existing activity through the activity PATCH route', () => {
@@ -208,13 +307,26 @@ describe('EventEditorComponent', () => {
       title: 'Abertura',
       description: null,
     });
-    component.activityForm.setValue({ title: 'Abertura atualizada', description: 'Boas-vindas' });
+    component.activityForm.setValue({
+      title: 'Abertura atualizada',
+      description: 'Boas-vindas',
+      type: 'WORKSHOP',
+      location: 'Laboratório 04',
+      start_date: '2026-09-10T10:00',
+      end_date: '2026-09-10T11:30',
+      registration_policy: 'ACTIVITY_REGISTRANTS_ONLY',
+    });
 
     component.saveActivity();
 
     expect(eventsService.updateActivity).toHaveBeenCalledWith(21, {
       title: 'Abertura atualizada',
       description: 'Boas-vindas',
+      type: 'WORKSHOP',
+      location: 'Laboratório 04',
+      start_date: '2026-09-10T10:00',
+      end_date: '2026-09-10T11:30',
+      registration_policy: 'ACTIVITY_REGISTRANTS_ONLY',
     });
     expect(component.editingActivityId()).toBeNull();
   });
@@ -293,5 +405,107 @@ describe('EventEditorComponent', () => {
 
     expect(component.activeStep()).toBe('details');
     expect(component.errorMessage()).toContain('Avance pelas etapas');
+  });
+
+  it('uses the private event-and-activity flow by default and exposes clear participation choices', () => {
+    expect(component.activityForm.controls.registration_policy.value).toBe('ACTIVITY_REGISTRANTS_ONLY');
+    component.openActivityDialog();
+    component.toggleActivityPolicyMenu();
+    fixture.detectChanges();
+    const options = Array.from(fixture.nativeElement.querySelectorAll('[role="option"]')) as HTMLElement[];
+    expect(options.map((option) => option.textContent)).toEqual(expect.arrayContaining([
+      expect.stringContaining('Participação livre'),
+      expect.stringContaining('Inscrição no evento e na atividade'),
+      expect.stringContaining('Programação incluída no evento'),
+    ]));
+    expect(fixture.nativeElement.querySelector('select[formControlName="registration_policy"]')).toBeNull();
+    options[2].click();
+    expect(component.activityForm.controls.registration_policy.value).toBe('INHERITED_FROM_EVENT');
+    expect(component.activityPolicyMenuOpen()).toBe(false);
+  });
+
+  it('shows every event day, including empty days, and opens a time-only modal on the selected day', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner', end_date: '2026-09-12T18:00:00' });
+    component.activeStep.set('schedule');
+    component.selectActivityDay('2026-09-11');
+    fixture.detectChanges();
+    expect(component.activitySchedule().map((day) => day.key)).toEqual(['2026-09-10', '2026-09-11', '2026-09-12']);
+    expect(fixture.nativeElement.querySelector('.editor-card .activity-editor-form')).toBeNull();
+    const button = fixture.nativeElement.querySelector('.schedule-day-toolbar button') as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+    expect(dialog.open).toBe(true);
+    expect(component.activityDialogDay()).toBe('2026-09-11');
+    expect(dialog.querySelectorAll('input[type="time"]')).toHaveLength(2);
+    expect(dialog.querySelector('input[type="datetime-local"]')).toBeNull();
+    expect(component.activityTimeBounds('2026-09-10')).toEqual({ min: '08:00', max: '23:59' });
+    expect(component.activityTimeBounds('2026-09-11')).toEqual({ min: '00:00', max: '23:59' });
+    expect(component.activityTimeBounds('2026-09-12')).toEqual({ min: '00:00', max: '18:00' });
+  });
+
+  it('combines the chosen day with time inputs and closes only after successful persistence', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.openActivityDialog();
+    component.activityForm.patchValue({ title: 'Oficina', location: 'Lab 1' });
+    const setTime = (field: 'start_date' | 'end_date', value: string) => {
+      const input = document.createElement('input');
+      input.value = value;
+      component.setActivityTime(field, { target: input } as unknown as Event);
+    };
+    setTime('start_date', '07:00');
+    setTime('end_date', '09:00');
+    component.saveActivity();
+    expect(eventsService.createActivity).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('dialog').open).toBe(true);
+    setTime('start_date', '08:00');
+    component.saveActivity();
+    expect(eventsService.updateActivity).toHaveBeenCalledWith(21, expect.objectContaining({
+      start_date: '2026-09-10T08:00', end_date: '2026-09-10T09:00',
+    }));
+    expect(fixture.nativeElement.querySelector('dialog').open).toBe(false);
+  });
+
+  it('keeps the modal open and displays errors when saving fails', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.openActivityDialog();
+    component.activityForm.setValue(activityPayload);
+    eventsService.updateActivity.mockReturnValueOnce(throwError(() => new Error('Network error')));
+    component.saveActivity();
+    fixture.detectChanges();
+    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+    expect(dialog.open).toBe(true);
+    expect(dialog.querySelector('[role="alert"]')?.textContent).toContain('Não foi possível');
+    expect(component.activityForm.getRawValue()).toEqual(activityPayload);
+  });
+
+  it('counts simultaneous activities individually and preserves multi-day activities when editing', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner', end_date: '2026-09-12T18:00:00' });
+    const first = { id: 1, event_id: 14, ...activityPayload, end_date: '2026-09-11T09:00' };
+    component.activities.set([first, { ...first, id: 2 }]);
+    expect(component.activitySchedule()[0].count).toBe(2);
+    component.editActivity(first);
+    expect(component.activityDialogDay()).toBe('2026-09-10');
+    expect(component.activityDialogEndDay()).toBe('2026-09-11');
+    expect(component.activityForm.controls.end_date.value).toBe('2026-09-11T09:00');
+  });
+
+  it('does not open the activity modal for viewers or days outside the event', () => {
+    component.event.set(createdEvent);
+    component.openActivityDialog();
+    expect(fixture.nativeElement.querySelector('dialog').open).toBe(false);
+    expect(component.canAddActivityOnDay('2026-09-09')).toBe(false);
+    expect(component.canAddActivityOnDay('2026-09-11')).toBe(false);
+  });
+
+  it('ends the loading screen when loading an existing event fails', () => {
+    Object.assign(TestBed.inject(ActivatedRoute).snapshot, { paramMap: convertToParamMap({ id: 14 }) });
+    eventsService.getById.mockReturnValueOnce(throwError(() => new Error('Network failure')));
+    component.ngOnInit();
+    fixture.detectChanges();
+    expect(component.operation()).toBe('idle');
+    expect(component.editorAccessResolved()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Tentar novamente');
+    expect(fixture.nativeElement.textContent).not.toContain('Carregando informações do evento');
   });
 });

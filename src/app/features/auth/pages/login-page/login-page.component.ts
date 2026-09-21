@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { LoginFormComponent } from './components/login-form/login-form.component';
 import { apiErrorMessage } from '../../../../core/api/api-error';
@@ -30,6 +31,7 @@ import { apiErrorMessage } from '../../../../core/api/api-error';
 })
 export class LoginPageComponent {
   readonly errorMessage = signal<string | null>(null);
+  readonly isSubmitting = signal(false);
 
   constructor(
     private authService: AuthService,
@@ -38,8 +40,13 @@ export class LoginPageComponent {
   ) {}
 
   onLogin(credentials: { email: string; password: string }): void {
+    if (this.isSubmitting()) return;
+
+    this.isSubmitting.set(true);
     this.errorMessage.set(null);
-    this.authService.login(credentials).subscribe({
+    this.authService.login(credentials).pipe(
+      finalize(() => this.isSubmitting.set(false)),
+    ).subscribe({
       next: () => {
         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
         this.router.navigateByUrl(returnUrl?.startsWith('/') ? returnUrl : '/');

@@ -1,0 +1,48 @@
+:host {
+  position: fixed;
+  z-index: 3000;
+  inset: 0;
+  pointer-events: none;
+}
+
+.loading-overlay {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(16, 45, 32, 0.18);
+  backdrop-filter: blur(2px);
+  pointer-events: all;
+}
+
+.loading-overlay__content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 4rem;
+  padding: 0.9rem 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 1rem;
+  color: var(--brand-800);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 1rem 2.5rem rgba(8, 45, 25, 0.2);
+  font-weight: 750;
+}
+
+.loading-overlay__spinner {
+  width: 1.45rem;
+  height: 1.45rem;
+  border: 3px solid var(--brand-100);
+  border-top-color: var(--brand-600);
+  border-radius: 50%;
+  animation: loading-spin 0.7s linear infinite;
+}
+
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-overlay__spinner { animation-duration: 1.8s; }
+}

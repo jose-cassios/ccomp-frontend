@@ -1,5 +1,5 @@
 .footer {
-  background: #1d2923;
+  background: var(--brand-900);
   color: var(--white);
   padding: 4rem 1rem 1.5rem;
   font-family: 'Inter', sans-serif;
@@ -83,7 +83,7 @@
 
 .footer .footer-group ul li a:hover {
   opacity: 1;
-  color: #d9e2dc;
+  color: var(--brand-accent);
 }
 
 /* ADDRESS */
@@ -121,9 +121,14 @@
   }
 }
 
-.footer .footer-institutional .ifma-logo {
+.footer .footer-institutional .ccomp-logo {
   max-width: 180px;
   filter: brightness(0) invert(1);
+  opacity: 0.9;
+}
+
+.footer .footer-institutional .ifma-logo {
+  max-width: 180px;
   opacity: 0.9;
 }
 
@@ -140,7 +145,7 @@
 
 .footer .footer-institutional .legal-links a:hover {
   text-decoration: underline;
-  color: #d9e2dc;
+  color: var(--brand-accent);
 }
 
 .footer .footer-institutional .legal-links .divider {

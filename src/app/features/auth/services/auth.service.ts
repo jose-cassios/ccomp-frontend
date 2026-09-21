@@ -26,23 +26,16 @@ export class AuthService {
   private readonly currentUser = signal<User | null>(null);
   private readonly isAuthenticated = signal(false);
   private sessionRestore$: Observable<boolean> | null = null;
+  private refreshRequest$: Observable<AuthResponse> | null = null;
   readonly currentUserState = this.currentUser.asReadonly();
   readonly isAuthenticatedState = this.isAuthenticated.asReadonly();
 
   constructor(
     private api: ApiService
-  ) {
-    if (this.isBrowser()) {
-      this.loadFromStorage();
-    }
-  }
+  ) {}
 
   private isBrowser(): boolean {
     return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
-  }
-
-  private loadFromStorage(): void {
-    this.restoreSession().subscribe();
   }
 
   /**
@@ -123,18 +116,22 @@ export class AuthService {
   
   // /api/auth/refresh
   refreshToken(): Observable<AuthResponse> {
+    if (this.refreshRequest$) return this.refreshRequest$;
     const refreshToken = this.getRefreshToken();
     if (!refreshToken) {
       return throwError(() => new Error('Refresh token não disponível.'));
     }
 
-    return this.api.post<AuthResponse>('/auth/refresh', { refresh_token: refreshToken }).pipe(
+    this.refreshRequest$ = this.api.post<AuthResponse>('/auth/refresh', { refresh_token: refreshToken }).pipe(
       tap((response) => this.handleAuthSuccess(response)),
       catchError((error) => {
         this.logout();
         throw error;
-      })
+      }),
+      finalize(() => this.refreshRequest$ = null),
+      shareReplay({ bufferSize: 1, refCount: false }),
     );
+    return this.refreshRequest$;
   }
 
   // /api/auth/logout 
@@ -213,6 +210,18 @@ export class AuthService {
       }),
       tap((user) => this.persistUser(user)),
     );
+  }
+
+  updateProfile(name: string): Observable<User> {
+    return this.api.patch<CurrentUserResponse>('/users', { name: name.trim() }).pipe(
+      map((response) => ({ ...this.currentUser()!, id: response.id, name: response.name,
+        email: response.email_address, email_address: response.email_address })),
+      tap((user) => this.persistUser(user)),
+    );
+  }
+
+  deactivateAccount(): Observable<AuthMessageResponse> {
+    return this.api.delete<AuthMessageResponse>('/users').pipe(tap(() => this.clearSession()));
   }
 
   private handleAuthSuccess(response: AuthResponse): void {
