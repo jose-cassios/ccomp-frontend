@@ -13,6 +13,8 @@ export type EventExecutionStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'FINISHED';
 export type EventEnrollmentStatus = 'UPCOMING' | 'OPEN' | 'PAUSED' | 'SOLD_OUT' | 'CLOSED';
 export type EventEnrollmentState = 'CONFIRMED' | 'CHECKED_IN' | 'CANCELED';
 export type EventEditorStatus = 'PENDING' | 'ACTIVE' | 'REVOKED';
+/** Escolha de UX do editor. A API atual a representa pelo período de inscrições. */
+export type EventRegistrationPolicy = 'REGISTRATION_REQUIRED' | 'OPEN_ACCESS';
 
 export type EventActivityType =
   | 'LECTURE'
@@ -192,7 +194,7 @@ export interface CreateActivityPayload {
 
 export interface ActivityPayload extends CreateActivityPayload {
   type: EventActivityType;
-  location: string;
+  location?: string;
   start_date: string;
   end_date: string;
   registration_policy: ActivityRegistrationPolicy;
@@ -274,8 +276,8 @@ export interface ActivityRegistrationPolicyOption {
 export const ACTIVITY_REGISTRATION_POLICY_OPTIONS: ReadonlyArray<ActivityRegistrationPolicyOption> = [
   {
     value: 'PUBLIC',
-    label: 'Participação livre',
-    description: 'A atividade é apenas divulgada: não há inscrição no evento nem nesta atividade.',
+    label: 'Atividade aberta, sem inscrição',
+    description: 'A atividade fica disponível na programação sem exigir uma reserva individual.',
   },
   {
     value: 'ACTIVITY_REGISTRANTS_ONLY',

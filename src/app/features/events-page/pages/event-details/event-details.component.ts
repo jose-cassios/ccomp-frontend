@@ -165,9 +165,7 @@ export class EventDetailsComponent implements OnInit {
       return 'Participação livre — sem inscrição.';
     }
     if (this.activityIsIncludedWithEvent(activity)) {
-      return this.subscribed()
-        ? 'Incluída na sua inscrição no evento.'
-        : 'Incluída automaticamente ao se inscrever no evento.';
+      return '';
     }
     return 'Inscrição individual necessária após a inscrição no evento.';
   }

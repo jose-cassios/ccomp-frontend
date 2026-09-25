@@ -202,13 +202,15 @@ describe('EventDetailsComponent', () => {
     component.event.set({ ...event, enrollment_status: 'OPEN', activities: [activity] });
     component.subscribed.set(false);
     expect(component.activityRequiresRegistration(activity)).toBe(false);
-    expect(component.activityParticipationMessage(activity)).toContain('automaticamente');
+    expect(component.activityParticipationMessage(activity)).toBe('');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.free-access')).toBeNull();
     component.toggleActivitySubscription(activity);
     expect(eventsService.subscribeActivity).not.toHaveBeenCalled();
     component.toggleSubscription();
     expect(eventsService.subscribe).toHaveBeenCalledWith(event.id);
     expect(component.event()?.activities?.[0].subscribed).toBe(true);
-    expect(component.activityParticipationMessage(activity)).toContain('sua inscrição');
+    expect(component.activityParticipationMessage(activity)).toBe('');
   });
 
   it('requires event registration for nonpublic policies as enforced by the current API', () => {
