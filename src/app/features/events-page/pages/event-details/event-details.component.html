@@ -174,10 +174,6 @@
                               @if (activityRegistrationHint(activity); as hint) {
                                 <small [class.activity-conflict]="activityConflict(activity)">{{ hint }}</small>
                               }
-                            } @else if (!activityIsIncludedWithEvent(activity)) {
-                              <span class="free-access">
-                                {{ activityParticipationMessage(activity) }}
-                              </span>
                             }
                           </div>
                         </article>

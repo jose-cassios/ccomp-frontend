@@ -22,6 +22,7 @@ import {
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
+import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
 import { EventGuestsComponent } from '../../components/event-guests/event-guests.component';
 import { ActivityPeopleComponent } from '../../components/activity-people/activity-people.component';
 
@@ -52,6 +53,11 @@ export class EventDetailsComponent implements OnInit {
   readonly activeActivityDay = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
+  private readonly feedbackAutoDismiss = autoDismissFeedback(
+    this.errorMessage,
+    this.successMessage,
+    () => this.dismissFeedback(),
+  );
   readonly editableEventIds = signal<ReadonlySet<number>>(new Set());
   readonly isAuthenticated = this.authService.isAuthenticatedState;
   readonly canEdit = computed(() => {
@@ -156,18 +162,6 @@ export class EventDetailsComponent implements OnInit {
 
   activityIsIncludedWithEvent(activity: EventActivity): boolean {
     return activity.registration_policy === 'INHERITED_FROM_EVENT';
-  }
-
-  activityParticipationMessage(activity: EventActivity): string {
-    if (activity.registration_policy === 'PUBLIC'
-      || (!activity.registration_policy && (activity.registration_mode === 'NONE'
-        || activity.access_requirement === 'PUBLIC'))) {
-      return 'Participação livre — sem inscrição.';
-    }
-    if (this.activityIsIncludedWithEvent(activity)) {
-      return '';
-    }
-    return 'Inscrição individual necessária após a inscrição no evento.';
   }
 
   activityRegistrationBlocked(activity: EventActivity): boolean {

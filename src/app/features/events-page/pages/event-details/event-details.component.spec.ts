@@ -116,7 +116,7 @@ describe('EventDetailsComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Abertura');
     expect(fixture.nativeElement.textContent).toContain('Auditório');
     expect(fixture.nativeElement.textContent).toContain('Ana Silva');
-    expect(fixture.nativeElement.textContent).toContain('Participação livre');
+    expect(fixture.nativeElement.querySelector('.free-access')).toBeNull();
   });
 
   it('should subscribe to an activity independently from the event subscription', () => {
@@ -202,7 +202,6 @@ describe('EventDetailsComponent', () => {
     component.event.set({ ...event, enrollment_status: 'OPEN', activities: [activity] });
     component.subscribed.set(false);
     expect(component.activityRequiresRegistration(activity)).toBe(false);
-    expect(component.activityParticipationMessage(activity)).toBe('');
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.free-access')).toBeNull();
     component.toggleActivitySubscription(activity);
@@ -210,7 +209,6 @@ describe('EventDetailsComponent', () => {
     component.toggleSubscription();
     expect(eventsService.subscribe).toHaveBeenCalledWith(event.id);
     expect(component.event()?.activities?.[0].subscribed).toBe(true);
-    expect(component.activityParticipationMessage(activity)).toBe('');
   });
 
   it('requires event registration for nonpublic policies as enforced by the current API', () => {

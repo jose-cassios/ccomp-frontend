@@ -8,6 +8,7 @@ import { catchError, finalize, map, Observable, of, switchMap } from 'rxjs';
 import { ADMINISTRATION_ROLES, CONTENT_MANAGEMENT_ROLES } from '../../../auth/config/auth.config';
 import { AuthService } from '../../../auth/services/auth.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
+import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
 import { StorageService } from '../../../../core/storage/storage.service';
 import {
   ActivityPayload,
@@ -123,6 +124,11 @@ export class EventEditorComponent implements OnInit {
   readonly uploadingCover = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
+  private readonly feedbackAutoDismiss = autoDismissFeedback(
+    this.errorMessage,
+    this.successMessage,
+    () => this.dismissFeedback(),
+  );
   readonly hasUnsavedChanges = signal(false);
   readonly categories = EVENT_CATEGORY_OPTIONS;
   readonly formats = EVENT_FORMAT_OPTIONS;

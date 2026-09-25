@@ -1,6 +1,7 @@
 import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { apiErrorMessage } from '../../../../core/api/api-error';
+import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -62,6 +63,11 @@ export class NewsEditorComponent implements OnInit {
   readonly activeView = signal<EditorView>('edit');
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
+  private readonly feedbackAutoDismiss = autoDismissFeedback(
+    this.errorMessage,
+    this.successMessage,
+    () => this.dismissFeedback(),
+  );
   readonly hasUnsavedChanges = signal(false);
   readonly formValue = signal<EditorFormValue>(EMPTY_FORM);
   readonly formIsValid = signal(false);

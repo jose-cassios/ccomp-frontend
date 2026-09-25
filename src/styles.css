@@ -19,6 +19,42 @@ body {
   color: var(--text-strong);
 }
 
+/* Controles de seleção nativos: uma linguagem visual única, discreta e clara. */
+select:not([multiple]) {
+  appearance: none;
+  min-height: 2.5rem;
+  padding-right: 2.5rem;
+  border-color: var(--border-primary);
+  background-color: var(--white);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m4 6 4 4 4-4' stroke='%23566a7d' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  background-size: 1rem;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+select:not([multiple]):hover:not(:disabled) {
+  border-color: var(--brand-400);
+  background-color: var(--brand-50);
+}
+
+select:not([multiple]):focus-visible {
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-500) 15%, transparent);
+  outline: none;
+}
+
+select:not([multiple]):open {
+  border-color: var(--brand-500);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m4 10 4-4 4 4' stroke='%23306f9f' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+select:not([multiple]):disabled {
+  cursor: not-allowed;
+  opacity: .6;
+}
+
 /* ===== Cabeçalho de seção ===== */
 .section-header {
   display: flex;
@@ -386,15 +422,6 @@ body {
   color: #8a5d16;
   font-size: .66rem;
   line-height: 1.35;
-  text-align: center;
-}
-.details-page .free-access {
-  border-radius: 8px;
-  padding: 8px 10px;
-  background: var(--brand-tint);
-  color: var(--brand-700);
-  font-size: .72rem;
-  font-weight: 800;
   text-align: center;
 }
 .mini-spinner {
