@@ -25,11 +25,12 @@ import { apiErrorMessage } from '../../../../core/api/api-error';
 import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
 import { EventGuestsComponent } from '../../components/event-guests/event-guests.component';
 import { ActivityPeopleComponent } from '../../components/activity-people/activity-people.component';
+import { EventCoverDirective } from '../../components/event-cover.directive';
 
 @Component({
   selector: 'app-event-details',
   standalone: true,
-  imports: [DatePipe, RouterLink, EventGuestsComponent, ActivityPeopleComponent],
+  imports: [DatePipe, RouterLink, EventGuestsComponent, ActivityPeopleComponent, EventCoverDirective],
   templateUrl: './event-details.component.html',
   styleUrl: './event-details.component.css',
 })

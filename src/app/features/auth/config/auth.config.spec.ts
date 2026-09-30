@@ -6,6 +6,6 @@ describe('role access configuration', () => {
   });
 
   it('allows administrators and moderators to manage news', () => {
-    expect(NEWS_MANAGEMENT_ROLES).toEqual(['ADM', 'MODERATOR']);
+    expect(NEWS_MANAGEMENT_ROLES).toEqual(['ADM', 'MODERATOR', 'STAFF']);
   });
 });

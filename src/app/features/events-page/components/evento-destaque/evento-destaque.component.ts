@@ -1,11 +1,12 @@
 import { DatePipe } from '@angular/common';
+import { EventCoverDirective } from '../event-cover.directive';
 import { Component, input, output } from '@angular/core';
 import { EventListItem, eventCategoryLabel, eventFormatLabel } from '../../models/event.model';
 
 @Component({
   selector: 'app-evento-destaque',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, EventCoverDirective],
   templateUrl: './evento-destaque.component.html',
   styleUrl: './evento-destaque.component.css',
 })

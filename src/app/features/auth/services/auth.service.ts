@@ -314,12 +314,9 @@ export class AuthService {
 
   private normalizeRole(role: string): string {
     const apiRole = role.replace(/^ROLE_/i, '').toUpperCase();
-    // The API names these profiles ADMIN/STAFF; the product calls them ADM/MODERATOR.
+    // Keep STAFF distinct from MODERATOR: only the latter has moderation privileges.
     if (apiRole === 'ADMIN') {
       return 'ADM';
-    }
-    if (apiRole === 'STAFF') {
-      return 'MODERATOR';
     }
     return apiRole;
   }

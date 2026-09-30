@@ -1,4 +1,5 @@
 import { DatePipe } from '@angular/common';
+import { EventCoverDirective } from '../../../events-page/components/event-cover.directive';
 import { Component, DestroyRef, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
@@ -12,7 +13,7 @@ const INTERVALO_AUTOPLAY = 6000;
 @Component({
   selector: 'app-eventos-andamento',
   standalone: true,
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, EventCoverDirective],
   templateUrl: './eventos-andamento.component.html',
   styleUrl: './eventos-andamento.component.css',
 })

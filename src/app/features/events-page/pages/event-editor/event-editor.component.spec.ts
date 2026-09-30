@@ -4,7 +4,6 @@ import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../auth/services/auth.service';
 import { EventDetails, EventEditor } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
-import { StorageService } from '../../../../core/storage/storage.service';
 import { EventEditorComponent } from './event-editor.component';
 import { EventGuestsService } from '../../services/event-guests.service';
 
@@ -34,6 +33,9 @@ describe('EventEditorComponent', () => {
     registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const,
   };
   const eventsService = {
+    uploadCover: vi.fn(() => of({ message: 'Enviada' })),
+    removeCover: vi.fn(() => of(void 0)),
+    coverUrl: (id: number) => `http://localhost:8080/api/events/${id}/images/cover`,
     create: vi.fn(() => of(createdEvent)),
     update: vi.fn((_eventId: number, payload: { enrollment_start_date?: string; enrollment_end_date?: string; enrollment_paused?: boolean }) => of({
       ...createdEvent,
@@ -62,9 +64,6 @@ describe('EventEditorComponent', () => {
     addEditor: vi.fn(() => of({ message: 'Editor adicionado.' })),
     removeEditor: vi.fn(),
   };
-  const storageService = {
-    upload: vi.fn(),
-  };
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -75,7 +74,6 @@ describe('EventEditorComponent', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({}) } } },
         { provide: AuthService, useValue: { hasAnyRole: () => false, currentUserState: () => ({ id: 'event-owner' }) } },
         { provide: EventsService, useValue: eventsService },
-        { provide: StorageService, useValue: storageService },
         { provide: EventGuestsService, useValue: { guests: () => of({ content: [], next_cursor: null }), invitations: () => of({ content: [], next_cursor: null }) } },
       ],
     }).compileComponents();
@@ -170,7 +168,6 @@ describe('EventEditorComponent', () => {
       title: createdEvent.title,
       summary: 'Palestras e oficinas para a comunidade.',
       content: 'Uma programação completa com atividades para estudantes.',
-      cover_image_url: 'https://example.com/capa.jpg',
       category: createdEvent.category,
       format: createdEvent.format,
       start_date: '2026-09-10T08:00',
@@ -181,18 +178,15 @@ describe('EventEditorComponent', () => {
     });
   });
 
-  it('uploads a local event cover and stores the returned URL in the form', () => {
+  it('uploads and associates a cover using the event endpoint', () => {
     const image = new File(['cover'], 'capa.png', { type: 'image/png' });
     const input = { files: [image], value: 'capa.png' } as unknown as HTMLInputElement;
-    storageService.upload.mockReturnValueOnce(of({
-      url: 'https://storage.example.com/capa.png',
-      file_name: 'capa.png',
-    }));
+    component.event.set(createdEvent);
 
     component.uploadCover({ target: input } as unknown as Event);
 
-    expect(storageService.upload).toHaveBeenCalledWith(image);
-    expect(component.presentationForm.controls.cover_image_url.value).toBe('https://storage.example.com/capa.png');
+    expect(eventsService.uploadCover).toHaveBeenCalledWith(createdEvent.id, image);
+    expect(component.presentationForm.controls.cover_image_url.value).toContain('/events/14/images/cover?v=');
     expect(component.successMessage()).toContain('Imagem enviada');
     expect(component.uploadingCover()).toBe(false);
   });
@@ -203,7 +197,7 @@ describe('EventEditorComponent', () => {
 
     component.uploadCover({ target: input } as unknown as Event);
 
-    expect(storageService.upload).not.toHaveBeenCalled();
+    expect(eventsService.uploadCover).not.toHaveBeenCalled();
     expect(component.errorMessage()).toContain('arquivo de imagem');
   });
 

@@ -23,10 +23,10 @@ describe('ProximosEventosComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should expose format and category filters without restricting dates', () => {
-    expect(fixture.nativeElement.querySelectorAll('select')).toHaveLength(2);
+  it('exposes period, format and category filters, defaulting to all periods', () => {
+    expect(fixture.nativeElement.querySelectorAll('select')).toHaveLength(3);
     expect(fixture.nativeElement.textContent).toContain('Todos os eventos');
-    expect(fixture.nativeElement.textContent).not.toContain('Período');
+    expect(fixture.nativeElement.querySelector('select').value).toBe('');
   });
 
   it('should render a cover image in an event card', () => {

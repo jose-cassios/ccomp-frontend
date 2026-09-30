@@ -9,7 +9,7 @@ import { ADMINISTRATION_ROLES, CONTENT_MANAGEMENT_ROLES } from '../../../auth/co
 import { AuthService } from '../../../auth/services/auth.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
 import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
-import { StorageService } from '../../../../core/storage/storage.service';
+import { EventCoverDirective } from '../../components/event-cover.directive';
 import {
   ActivityPayload,
   ACTIVITY_REGISTRATION_POLICY_OPTIONS,
@@ -57,7 +57,7 @@ const EDITOR_STEPS: ReadonlyArray<{ value: EventEditorStep; label: string }> = [
 @Component({
   selector: 'app-event-editor',
   standalone: true,
-  imports: [DatePipe, ReactiveFormsModule, RouterLink, ActivityPeopleComponent],
+  imports: [DatePipe, ReactiveFormsModule, RouterLink, ActivityPeopleComponent, EventCoverDirective],
   templateUrl: './event-editor.component.html',
   styleUrls: ['./event-editor.component.css', './event-activity-dialog.css'],
 })
@@ -70,7 +70,6 @@ export class EventEditorComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly eventsService = inject(EventsService);
-  private readonly storageService = inject(StorageService);
   private readonly authService = inject(AuthService);
 
   readonly form = this.fb.nonNullable.group({
@@ -627,34 +626,58 @@ export class EventEditorComponent implements OnInit {
     this.activityDialog?.nativeElement.showModal();
   }
 
-  /** Sends a local cover image to storage and keeps the resulting public URL in the form. */
+  /** The dedicated endpoint associates the image immediately, including for assigned editors. */
   uploadCover(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file || this.uploadingCover() || this.isBusy()) return;
 
-    if (!file.type.startsWith('image/')) {
-      this.errorMessage.set('Selecione um arquivo de imagem válido.');
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      this.errorMessage.set('Selecione um arquivo de imagem PNG, JPEG ou WebP.');
       input.value = '';
       return;
     }
 
+    const currentEvent = this.event();
+    if (!currentEvent) {
+      this.errorMessage.set('Conclua as informações iniciais do evento antes de enviar a capa.');
+      input.value = '';
+      return;
+    }
     this.uploadingCover.set(true);
     this.errorMessage.set(null);
-    this.storageService.upload(file).pipe(
+    this.eventsService.uploadCover(currentEvent.id, file).pipe(
       finalize(() => {
         this.uploadingCover.set(false);
         input.value = '';
       }),
     ).subscribe({
-      next: (response) => {
-        this.presentationForm.controls.cover_image_url.setValue(response.url);
+      next: () => {
+        const url = this.eventsService.coverUrl(currentEvent.id) + '?v=' + Date.now();
+        this.event.update(event => event ? { ...event, cover_image_url: url } : event);
+        this.presentationForm.controls.cover_image_url.setValue(url, { emitEvent: false });
         this.presentationForm.controls.cover_image_url.markAsTouched();
-        this.successMessage.set('Imagem enviada. Ela será aplicada ao avançar ou salvar o evento.');
+        this.successMessage.set('Imagem enviada e vinculada ao evento.');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível enviar a imagem.'));
       },
+    });
+  }
+
+  removeCover(): void {
+    const event = this.event();
+    if (!event || this.uploadingCover() || this.isBusy()) return;
+    if (!window.confirm('Remover a imagem de capa deste evento?')) return;
+    this.uploadingCover.set(true);
+    this.errorMessage.set(null);
+    this.eventsService.removeCover(event.id).pipe(finalize(() => this.uploadingCover.set(false))).subscribe({
+      next: () => {
+        this.event.update(current => current ? { ...current, cover_image_url: null } : current);
+        this.presentationForm.controls.cover_image_url.setValue('', { emitEvent: false });
+        this.successMessage.set('Imagem de capa removida.');
+      },
+      error: (error: unknown) => this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível remover a capa.')),
     });
   }
 
@@ -972,7 +995,6 @@ export class EventEditorComponent implements OnInit {
       ...this.buildBasicUpdatePayload(),
       ...(presentation.summary.trim() ? { summary: presentation.summary.trim() } : {}),
       ...(presentation.content.trim() ? { content: presentation.content.trim() } : {}),
-      ...(presentation.cover_image_url.trim() ? { cover_image_url: presentation.cover_image_url.trim() } : {}),
     };
   }
 

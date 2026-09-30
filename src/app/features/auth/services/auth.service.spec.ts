@@ -23,7 +23,7 @@ describe('AuthService roles', () => {
 
   afterEach(() => localStorage.clear());
 
-  it('should map the API STAFF role to the MODERATOR product role', () => {
+  it('keeps STAFF separate from moderation privileges', () => {
     const payload = btoa(JSON.stringify({
       sub: 'd2bfffb6-3ff6-46a6-884a-38e0db08c387',
       roles: ['ROLE_STAFF'],
@@ -39,7 +39,8 @@ describe('AuthService roles', () => {
     const service = TestBed.inject(AuthService);
     service.login({ email: 'staff@example.com', password: 'secret' }).subscribe();
 
-    expect(service.hasAnyRole(['MODERATOR'])).toBe(true);
+    expect(service.hasAnyRole(['STAFF'])).toBe(true);
+    expect(service.hasAnyRole(['MODERATOR'])).toBe(false);
     expect(service.hasAnyRole(['ADM'])).toBe(false);
   });
 
@@ -66,7 +67,7 @@ describe('AuthService roles', () => {
     service.login({ email: 'pessoa@example.com', password: 'secret' }).subscribe();
     service.refreshToken().subscribe();
 
-    expect(service.hasAnyRole(['MODERATOR'])).toBe(true);
+    expect(service.hasAnyRole(['STAFF'])).toBe(true);
     expect(service.getCurrentUser()).toMatchObject({
       id: userId,
       name: 'Pessoa Usuária',

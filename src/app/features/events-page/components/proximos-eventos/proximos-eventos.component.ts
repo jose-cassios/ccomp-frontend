@@ -1,4 +1,5 @@
 import { DatePipe } from '@angular/common';
+import { EventCoverDirective } from '../event-cover.directive';
 import { Component, input, output } from '@angular/core';
 import {
   EVENT_CATEGORY_OPTIONS,
@@ -16,7 +17,7 @@ import {
 @Component({
   selector: 'app-proximos-eventos',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, EventCoverDirective],
   templateUrl: './proximos-eventos.component.html',
   styleUrls: ['./proximos-eventos.component.css', './proximos-eventos-agenda.css'],
 })

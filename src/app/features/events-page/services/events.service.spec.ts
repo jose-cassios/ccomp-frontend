@@ -249,7 +249,7 @@ describe('EventsService', () => {
     });
     expect(api.delete).toHaveBeenCalledWith('/events/activities/7');
     expect(api.post).toHaveBeenCalledWith('/events/activities/7/subscribe', null);
-    expect(api.delete).toHaveBeenCalledWith('/events/activities/7/subscribe');
+    expect(api.delete).toHaveBeenCalledWith('/events/activities/7/unsubscribe');
     expect(api.get).toHaveBeenCalledWith('/events/12/enrollments', { params: expect.any(HttpParams) });
   });
 
