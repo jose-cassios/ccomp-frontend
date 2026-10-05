@@ -22,9 +22,9 @@ describe('ActivityCheckInPageComponent', () => {
     return { fixture, component: fixture.componentInstance, service, result };
   }
 
-  it('requires explicit confirmation and prevents double submission', () => {
+  it('confirms automatically on arrival and prevents duplicate submissions', () => {
     const { component, service, result, fixture } = setup();
-    expect(service.confirm).not.toHaveBeenCalled();
+    expect(service.confirm).toHaveBeenCalledExactlyOnceWith(7, code);
     component.confirm();
     component.confirm();
     expect(service.confirm).toHaveBeenCalledExactlyOnceWith(7, code);

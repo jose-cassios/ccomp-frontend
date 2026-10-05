@@ -17,7 +17,7 @@ import { EventCheckInService } from '../../services/event-check-in.service';
       @if (qrUrl(); as url) {
         <figure>
           <img [src]="url" alt="QR Code para confirmar presença nesta atividade" width="240" height="240" />
-          <figcaption>Apresente este código aos participantes durante a atividade. Cada pessoa deve abrir o link com sua conta e confirmar a presença.</figcaption>
+          <figcaption>Apresente este código durante a atividade. Ao ler o QR Code e entrar na conta usada na inscrição, a presença será confirmada automaticamente.</figcaption>
           <a [href]="url" [download]="'presenca-atividade-' + activityId + '.png'">Baixar QR Code</a>
           <button type="button" (click)="close()">Ocultar</button>
         </figure>

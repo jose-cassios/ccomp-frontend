@@ -1,5 +1,5 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -12,7 +12,7 @@ import { AuthService } from '../../../auth/services/auth.service';
   template: `
     <main>
       <span class="eyebrow">Credenciamento</span>
-      <h1>Confirme sua presença</h1>
+      <h1>Confirmação de presença</h1>
       @if (!valid) {
         <p role="alert">Este link está incompleto ou inválido. Leia novamente o QR Code apresentado pela organização.</p>
       } @else if (done()) {
@@ -21,11 +21,17 @@ import { AuthService } from '../../../auth/services/auth.service';
       } @else {
         <p>Você está confirmando a presença na atividade #{{ activityId }} como <strong>{{ user()?.name || user()?.email }}</strong>.</p>
         <p>É necessário estar inscrito na atividade e confirmar durante o horário em que ela acontece.</p>
-        @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
-        <button type="button" [disabled]="busy()" (click)="confirm()">
-          @if (busy()) { <span class="mini-spinner" aria-hidden="true"></span> }
-          {{ busy() ? 'Confirmando presença…' : 'Confirmar minha presença' }}
-        </button>
+        @if (busy()) {
+          <p role="status"><span class="mini-spinner" aria-hidden="true"></span> Confirmando sua presença…</p>
+        }
+        @if (error()) {
+          <p class="error" role="alert">{{ error() }}</p>
+          @if (sessionExpired()) {
+            <button type="button" (click)="signInAgain()">Entrar para concluir o credenciamento</button>
+          } @else {
+            <button type="button" [disabled]="busy()" (click)="confirm()">Tentar novamente</button>
+          }
+        }
       }
       <a routerLink="/eventos">Voltar aos eventos</a>
     </main>
@@ -41,11 +47,13 @@ import { AuthService } from '../../../auth/services/auth.service';
     .success { font-weight:700; color:var(--brand-700); background:var(--brand-50); padding:.75rem; border-radius:.5rem }
   `,
 })
-export class ActivityCheckInPageComponent {
+export class ActivityCheckInPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(EventCheckInService);
   private readonly destroyRef = inject(DestroyRef);
-  readonly user = inject(AuthService).currentUserState;
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  readonly user = this.auth.currentUserState;
   readonly code = this.route.snapshot.queryParamMap.get('code')?.trim() ?? '';
   private readonly rawActivityId = this.route.snapshot.queryParamMap.get('activity_id') ?? '';
   readonly activityId = Number(this.rawActivityId);
@@ -54,11 +62,25 @@ export class ActivityCheckInPageComponent {
   readonly busy = signal(false);
   readonly done = signal(false);
   readonly error = signal('');
+  readonly sessionExpired = signal(false);
+  readonly returnUrl = '/check-in?activity_id=' + encodeURIComponent(this.rawActivityId)
+    + '&code=' + encodeURIComponent(this.code);
+
+  ngOnInit(): void {
+    // This client-only route is activated only after authGuard restores the session.
+    if (typeof window !== 'undefined') this.confirm();
+  }
+
+  signInAgain(): void {
+    this.auth.logout();
+    void this.router.navigate(['/login'], { queryParams: { returnUrl: this.returnUrl } });
+  }
 
   confirm(): void {
     if (!this.valid || this.busy() || this.done()) return;
     this.busy.set(true);
     this.error.set('');
+    this.sessionExpired.set(false);
     this.service.confirm(this.activityId, this.code).pipe(
       takeUntilDestroyed(this.destroyRef),
       finalize(() => this.busy.set(false)),
@@ -66,6 +88,7 @@ export class ActivityCheckInPageComponent {
       next: () => this.done.set(true),
       error: (error: unknown) => {
         const status = error instanceof HttpErrorResponse ? error.status : 0;
+        this.sessionExpired.set(status === 401);
         this.error.set(status === 400 || status === 404
           ? 'Não foi possível confirmar. Verifique se você está inscrito nesta atividade, se ela está em andamento e se o QR Code é o atual.'
           : status === 401 || status === 403
