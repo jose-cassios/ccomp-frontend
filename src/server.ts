@@ -10,7 +10,15 @@ import { join } from 'node:path';
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
-const angularApp = new AngularNodeAppEngine();
+const angularApp = new AngularNodeAppEngine(process.env['VERCEL'] === '1' ? {
+  // Vercel supplies these hostnames for production, branch and preview deployments.
+  allowedHosts: [
+    process.env['VERCEL_URL'],
+    process.env['VERCEL_BRANCH_URL'],
+    process.env['VERCEL_PROJECT_PRODUCTION_URL'],
+  ].filter((host): host is string => Boolean(host)),
+  trustProxyHeaders: ['x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port', 'x-forwarded-for'],
+} : undefined);
 
 /**
  * Example Express Rest API endpoints can be defined here.

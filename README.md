@@ -6,6 +6,12 @@ This project was generated using [Angular CLI](https://github.com/angular/angula
 
 Configure `API_URL` no arquivo `.env` (use `.env.example` como modelo).
 Depois de trocar a URL, reinicie `npm start`. Nenhum arquivo de ambiente é gerado.
+`ng serve`, `ng build` e os comandos npm usam `process.env.API_URL` quando definida;
+caso contrário, usam `API_URL` do `.env`. Nenhum arquivo é gerado para configurar o ambiente.
+Reinicie o comando após alterar a URL. Os testes usam `/api` relativo.
+
+Para deploy e testes de produção, consulte [o roteiro da Vercel](docs/vercel-deployment.md).
+
 `npm run build` usa a mesma URL do `.env`; para publicar, configure-a antes do build.
 `ng serve`, `ng build` e os comandos npm carregam o `.env` diretamente.
 Reinicie o comando após alterar a URL. Os testes usam `/api` relativo.

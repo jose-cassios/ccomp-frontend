@@ -1,3 +1,9 @@
+const { createBuilder } = require('@angular-devkit/architect');
+const { buildApplication, executeDevServerBuilder } = require('@angular/build');
+const { resolveApiUrl } = require('./api-url.cjs');
+
+module.exports = createBuilder(async function* (options, context) {
+  const apiUrl = resolveApiUrl(context.workspaceRoot);
 const { readFileSync } = require('node:fs');
 const { resolve } = require('node:path');
 const { parseEnv } = require('node:util');
@@ -20,7 +26,7 @@ module.exports = createBuilder(async function* (options, context) {
     ...options,
     define: { ...options.define, API_URL: JSON.stringify(apiUrl) },
   };
-  context.logger.info('API_URL carregada do .env. Reinicie o comando após alterar a URL.');
+  context.logger.info(`API_URL carregada ${process.env.API_URL !== undefined ? 'do ambiente' : 'do .env'}.`);
   const execute = options.buildTarget ? executeDevServerBuilder : buildApplication;
   yield* execute(configuredOptions, context);
 });
