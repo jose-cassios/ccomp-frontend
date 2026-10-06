@@ -2,6 +2,10 @@ import { RenderMode, ServerRoute } from '@angular/ssr';
 
 export const serverRoutes: ServerRoute[] = [
   {
+    path: 'check-in',
+    renderMode: RenderMode.Client,
+  },
+  {
     path: 'eventos/slug/:slug',
     renderMode: RenderMode.Server,
   },

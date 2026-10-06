@@ -88,27 +88,49 @@
             </label>
 
             <fieldset class="enrollment-settings field--wide">
-              <legend>Período de inscrições</legend>
-              <p>As datas acima definem quando o evento acontece. Configure aqui, separadamente, quando as pessoas poderão se inscrever.</p>
-              <div class="form-grid">
-                <label class="field">
-                  <span>Abertura das inscrições</span>
-                  <input type="datetime-local" formControlName="enrollment_start_date" />
-                </label>
-                <label class="field">
-                  <span>Encerramento das inscrições</span>
-                  <input type="datetime-local" formControlName="enrollment_end_date" />
-                </label>
-                <label class="toggle-field field--wide">
-                  <input type="checkbox" formControlName="enrollment_paused" />
-                  <span>
-                    <strong>Pausar inscrições</strong>
-                    <small>Use quando precisar interromper temporariamente novas inscrições.</small>
-                  </span>
-                </label>
+              <legend>Participação no evento</legend>
+              <p>Defina primeiro se a inscrição no evento será necessária. A publicação continua sendo controlada ao concluir a criação.</p>
+              <div class="event-registration-options" role="radiogroup" aria-label="Regra de inscrição no evento">
+                @for (option of eventRegistrationOptions; track option.value) {
+                  <label class="event-registration-option" [class.selected]="eventRegistrationPolicy() === option.value">
+                    <input
+                      type="radio"
+                      name="event-registration-policy"
+                      [value]="option.value"
+                      [checked]="eventRegistrationPolicy() === option.value"
+                      (change)="selectEventRegistrationPolicy(option.value)"
+                    />
+                    <span>
+                      <strong>{{ option.label }}</strong>
+                      <small>{{ option.description }}</small>
+                    </span>
+                  </label>
+                }
               </div>
-              @if (enrollmentDatesError(); as error) {
-                <strong class="field-error">{{ error }}</strong>
+
+              @if (eventRegistrationRequired()) {
+                <div class="form-grid enrollment-settings__dates">
+                  <label class="field">
+                    <span>Abertura das inscrições *</span>
+                    <input type="datetime-local" formControlName="enrollment_start_date" />
+                  </label>
+                  <label class="field">
+                    <span>Encerramento das inscrições *</span>
+                    <input type="datetime-local" formControlName="enrollment_end_date" />
+                  </label>
+                  <label class="toggle-field field--wide">
+                    <input type="checkbox" formControlName="enrollment_paused" />
+                    <span>
+                      <strong>Pausar inscrições</strong>
+                      <small>Use quando precisar interromper temporariamente novas inscrições.</small>
+                    </span>
+                  </label>
+                </div>
+                @if (enrollmentDatesError(); as error) {
+                  <strong class="field-error">{{ error }}</strong>
+                }
+              } @else {
+                <p class="enrollment-settings__open-note">Não haverá inscrição no evento. Para manter o mesmo fluxo, atividades novas serão abertas e sem reserva individual.</p>
               }
             </fieldset>
 
@@ -153,19 +175,21 @@
             </label>
 
             <div class="field field--wide">
-              <label for="event-cover-url">Imagem de capa</label>
-              <input id="event-cover-url" type="url" formControlName="cover_image_url" placeholder="https://exemplo.com/imagem-do-evento.jpg" />
+              <span>Imagem de capa</span>
               <div class="cover-upload-actions">
                 <label class="cover-upload-button">
                   {{ uploadingCover() ? 'Enviando imagem...' : 'Escolher imagem do computador' }}
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/webp"
                     [disabled]="uploadingCover() || isBusy()"
                     (change)="uploadCover($event)"
                   />
                 </label>
-                <small>Envie uma imagem local ou cole uma URL pública. O envio preenche este campo automaticamente.</small>
+                <small>PNG, JPEG ou WebP. A imagem é salva ao finalizar o envio.</small>
+                @if (presentationForm.controls.cover_image_url.value) {
+                  <button type="button" class="text-button text-button--danger" [disabled]="uploadingCover() || isBusy()" (click)="removeCover()">Remover capa</button>
+                }
               </div>
               @if (presentationForm.controls.cover_image_url.touched && presentationForm.controls.cover_image_url.invalid) {
                 <strong>Informe uma URL válida para a imagem.</strong>
@@ -174,7 +198,7 @@
 
             @if (presentationForm.controls.cover_image_url.value; as coverUrl) {
               <figure class="cover-preview field--wide">
-                <img [src]="coverUrl" [alt]="'Prévia da capa de ' + form.controls.title.value" />
+                <img [eventCover]="coverUrl" [alt]="'Prévia da capa de ' + form.controls.title.value" />
                 <figcaption>Prévia da imagem de capa</figcaption>
               </figure>
             }
@@ -201,14 +225,13 @@
             <div class="inline-form">
               <label class="field field--grow"><span>Inscrições em horários simultâneos</span>
                 <select [formControl]="conflictPolicy">
-                  <option value="">Manter configuração atual (não informada pela API)</option>
                   <option value="PREVENT">Impedir inscrições com conflito</option>
                   <option value="ALLOW">Permitir inscrições com conflito</option>
                 </select>
               </label>
-              <button type="button" class="button button--outline" [disabled]="isBusy() || !conflictPolicy.value" (click)="saveConflictPolicy()">Aplicar regra</button>
+              <button type="button" class="button button--outline" [disabled]="isBusy()" (click)="saveConflictPolicy()">Aplicar regra</button>
             </div>
-            <p class="card-copy">Enquanto a API não retornar a regra salva, o site mantém o bloqueio preventivo ao participante.</p>
+            <p class="card-copy">O bloqueio de conflito é o padrão. Permita conflitos apenas quando uma mesma pessoa puder acompanhar atividades simultâneas.</p>
           }
 
           @if (!canManageActivities()) {
@@ -327,10 +350,6 @@
             </div>
           </div>
           <p class="card-copy">Inclua moderadores que poderão editar as informações e a programação.</p>
-          @if (event(); as currentEvent) {
-            <app-event-guests [eventId]="currentEvent.id" [manage]="canManageActivities()" />
-          }
-
           @if (canManageTeam()) {
             <form class="inline-form" [formGroup]="editorForm" (ngSubmit)="addEditor()">
               <label class="field field--grow">
@@ -388,7 +407,7 @@
             <div><dt>Início</dt><dd>{{ form.controls.start_date.value || 'Não informado' }}</dd></div>
             <div><dt>Publicação</dt><dd>{{ publicationStatusLabel(event()?.status) }}</dd></div>
             <div><dt>Execução</dt><dd>{{ executionStatusLabel(event()?.execution_status) }}</dd></div>
-            <div><dt>Inscrições</dt><dd>{{ form.controls.enrollment_start_date.value ? 'Configuradas' : 'Ainda fechadas' }}</dd></div>
+            <div><dt>Participação</dt><dd>{{ eventRegistrationRequired() ? 'Inscrição obrigatória' : 'Acesso livre, sem inscrição' }}</dd></div>
             <div><dt>Atividades</dt><dd>{{ activities().length }} cadastrada(s)</dd></div>
           </dl>
 
@@ -507,11 +526,8 @@
                 </label>
 
                 <label class="field">
-                  <span>Local *</span>
+                  <span>Local <small>Opcional</small></span>
                   <input type="text" formControlName="location" maxlength="255" placeholder="Ex.: Laboratório 04" />
-                  @if (activityForm.controls.location.touched && activityForm.controls.location.invalid) {
-                    <strong>Informe onde a atividade acontecerá.</strong>
-                  }
                 </label>
 
                 <label class="field">
@@ -582,12 +598,12 @@
                       }
                     </div>
                   </div>
-                  <p>Escolha o fluxo de participação adequado. Passe o mouse ou use o teclado nas opções para consultar a explicação antes de selecionar.</p>
+                  <p>Essa regra controla apenas a reserva desta atividade. A necessidade de inscrição no evento é definida na etapa Informações.</p>
                 </fieldset>
 
                 <fieldset class="activity-settings field--wide" disabled>
                   <legend>Convidado externo <small>Opcional</small></legend>
-                  <p>Convide pessoas na etapa Equipe. O vínculo com uma atividade e o cadastro de nome/foto ainda dependem de novas rotas da API.</p>
+                  <p>Convidados pertencem a esta atividade, não à equipe organizadora. O vínculo de nome/foto ainda depende das rotas específicas da API.</p>
                   <div class="activity-form-grid">
                     <label class="field">
                       <span>Nome</span>

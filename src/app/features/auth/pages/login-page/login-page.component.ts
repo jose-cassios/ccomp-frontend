@@ -58,6 +58,12 @@ export class LoginPageComponent {
     });
   }
 
+  onGoogleLogin(): void {
+    this.errorMessage.set(
+      'O login com Google ainda está sendo configurado pela API. Use seu e-mail e senha para continuar.',
+    );
+  }
+
   navigateToRegister(): void {
     const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
     this.router.navigate(['/register'], {

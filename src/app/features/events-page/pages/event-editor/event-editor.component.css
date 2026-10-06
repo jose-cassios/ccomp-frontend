@@ -30,7 +30,8 @@ h1 { margin: 5px 0 6px; color: var(--text-strong); font-size: clamp(1.75rem, 4vw
 .field { display: flex; flex-direction: column; gap: 7px; min-width: 0; color: #334155; font-size: .84rem; font-weight: 700; }
 .field--wide { grid-column: 1 / -1; }
 .field--grow { flex: 1; }
-.field input, .field textarea, .field select { box-sizing: border-box; width: 100%; border: 1px solid #cbd5d2; border-radius: 8px; padding: 11px 12px; background: #fff; color: #24332b; font: inherit; font-weight: 400; outline: none; }
+.field input, .field textarea, .field select { box-sizing: border-box; width: 100%; border: 1px solid #cbd5d2; border-radius: 8px; padding: 11px 12px; background-color: #fff; color: #24332b; font: inherit; font-weight: 400; outline: none; }
+.field select { padding-right: 2.5rem; }
 .field textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
 .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--brand-500); box-shadow: 0 0 0 3px rgba(50,160,65,.12); }
 .field small { color: #8a5d16; font-size: .74rem; font-weight: 500; line-height: 1.35; }

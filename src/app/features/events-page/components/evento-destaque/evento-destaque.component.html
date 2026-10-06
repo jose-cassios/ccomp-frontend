@@ -23,7 +23,7 @@
   </div>
   <div class="featured__media">
     @if (evento().cover_image_url; as coverImageUrl) {
-      <img [src]="coverImageUrl" [alt]="'Capa do evento ' + evento().title" />
+      <img [eventCover]="coverImageUrl" [alt]="'Capa do evento ' + evento().title" />
     } @else {
       <div class="featured__mark" aria-hidden="true">
         <span>{{ evento().title.slice(0, 2).toUpperCase() }}</span>

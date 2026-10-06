@@ -129,7 +129,7 @@ describe('NewsEditorComponent', () => {
     expect(component.hasUnsavedChanges()).toBe(false);
   });
 
-  it('should keep success and error feedback visible until dismissed', () => {
+  it('should show feedback and allow it to be dismissed', () => {
     component.successMessage.set('Notícia salva com sucesso.');
     fixture.detectChanges();
 

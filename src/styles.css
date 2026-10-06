@@ -19,6 +19,42 @@ body {
   color: var(--text-strong);
 }
 
+/* Controles de seleção nativos: uma linguagem visual única, discreta e clara. */
+select:not([multiple]) {
+  appearance: none;
+  min-height: 2.5rem;
+  padding-right: 2.5rem;
+  border-color: var(--border-primary);
+  background-color: var(--white);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m4 6 4 4 4-4' stroke='%23566a7d' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  background-size: 1rem;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+select:not([multiple]):hover:not(:disabled) {
+  border-color: var(--brand-400);
+  background-color: var(--brand-50);
+}
+
+select:not([multiple]):focus-visible {
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-500) 15%, transparent);
+  outline: none;
+}
+
+select:not([multiple]):open {
+  border-color: var(--brand-500);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m4 10 4-4 4 4' stroke='%23306f9f' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+select:not([multiple]):disabled {
+  cursor: not-allowed;
+  opacity: .6;
+}
+
 /* ===== Cabeçalho de seção ===== */
 .section-header {
   display: flex;
@@ -388,15 +424,6 @@ body {
   line-height: 1.35;
   text-align: center;
 }
-.details-page .free-access {
-  border-radius: 8px;
-  padding: 8px 10px;
-  background: var(--brand-tint);
-  color: var(--brand-700);
-  font-size: .72rem;
-  font-weight: 800;
-  text-align: center;
-}
 .mini-spinner {
   display: inline-block;
   width: 14px;
@@ -415,6 +442,20 @@ body {
 .event-editor-page .cover-upload-button { position: relative; display: inline-flex; min-height: 40px; align-items: center; justify-content: center; border: 1px solid var(--border-secondary); border-radius: 8px; padding: 0 14px; background: #f6f8f7; color: #405048; cursor: pointer; font-size: .82rem; font-weight: 750; }
 .event-editor-page .cover-upload-button:has(input:disabled) { cursor: wait; opacity: .6; }
 .event-editor-page .cover-upload-button input { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
+.event-editor-page .enrollment-settings { padding: 16px; }
+.event-editor-page .event-registration-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.event-editor-page .event-registration-option { display: flex; align-items: flex-start; gap: 10px; min-width: 0; border: 1px solid #d5dfda; border-radius: 9px; padding: 12px; cursor: pointer; transition: border-color .16s ease, background .16s ease; }
+.event-editor-page .event-registration-option:hover { border-color: var(--brand-500); background: var(--brand-50); }
+.event-editor-page .event-registration-option.selected { border-color: var(--brand-600); background: var(--brand-tint); box-shadow: inset 0 0 0 1px var(--brand-600); }
+.event-editor-page .event-registration-option input { width: auto; margin: 3px 0 0; accent-color: var(--brand-600); }
+.event-editor-page .event-registration-option span { display: grid; gap: 3px; }
+.event-editor-page .event-registration-option strong { color: var(--text-primary); font-size: .82rem; }
+.event-editor-page .event-registration-option small,
+.event-editor-page .enrollment-settings__open-note { color: #64748b; font-size: .76rem; font-weight: 500; line-height: 1.4; }
+.event-editor-page .enrollment-settings__dates { margin-top: 16px; }
+.event-editor-page .enrollment-settings__open-note { margin: 16px 0 0; border-radius: 7px; padding: 10px; background: var(--surface-subtle); }
+.event-editor-page .enrollment-settings .field-error { display: block; margin-top: 10px; }
+@media (max-width: 760px) { .event-editor-page .event-registration-options { grid-template-columns: 1fr; } }
 
 @media (max-width: 760px) {
   .event-editor-page .activity-form-grid { grid-template-columns: 1fr; }

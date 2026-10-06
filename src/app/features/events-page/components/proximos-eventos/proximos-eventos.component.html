@@ -76,7 +76,7 @@
         @if (!compactMode()) {
           <div class="event-card__media">
             @if (event.cover_image_url; as coverImageUrl) {
-              <img class="event-card__cover" [src]="coverImageUrl" [alt]="'Capa do evento ' + event.title" />
+              <img class="event-card__cover" [eventCover]="coverImageUrl" [alt]="'Capa do evento ' + event.title" />
             } @else {
               <span class="event-card__placeholder" aria-hidden="true">
                 {{ event.title.slice(0, 1).toUpperCase() }}

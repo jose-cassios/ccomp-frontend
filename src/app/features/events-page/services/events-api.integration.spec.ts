@@ -17,6 +17,33 @@ describe('Updated events API contracts', () => {
   });
   afterEach(() => http.verify());
 
+  it('uploads and removes covers through the event-specific multipart endpoint', () => {
+    const file = new File(['png'], 'cover.png', { type: 'image/png' });
+    events.uploadCover(7, file).subscribe();
+    const upload = http.expectOne(r => r.url.endsWith('/events/7/images/cover'));
+    expect(upload.request.method).toBe('POST');
+    expect(upload.request.body.get('file')).toBe(file);
+    upload.flush({ response: 'Imagem atualizada' });
+    events.removeCover(7).subscribe();
+    const removal = http.expectOne(r => r.url.endsWith('/events/7/images/cover'));
+    expect(removal.request.method).toBe('DELETE');
+    removal.flush(null, { status: 204, statusText: 'No Content' });
+  });
+
+  it('maps storage keys from details and legacy list fields to the image proxy', () => {
+    events.getById(7).subscribe(event => expect(event.cover_image_url).toBe(events.coverUrl(7)));
+    http.expectOne(r => r.url.endsWith('/events/7')).flush({ id: 7, coverImageKey: 'events/7/cover/image.png' });
+    events.search().subscribe(page => expect(page.content[0].cover_image_url).toBe(events.coverUrl(7)));
+    http.expectOne(r => r.url.endsWith('/events/search')).flush({ content: [{ id: 7, coverImageUrl: 'events/7/cover/image.png' }] });
+  });
+
+  it('cancels activity registration at unsubscribe, independently of event registration', () => {
+    events.unsubscribeActivity(7).subscribe();
+    const request = http.expectOne(r => r.url.endsWith('/events/activities/7/unsubscribe'));
+    expect(request.request.method).toBe('DELETE');
+    request.flush({ response: 'Cancelada' });
+  });
+
   it('collects every subscription page and normalizes dates', () => {
     let result: EventActivity[] = [];
     events.getMyActivitySubscriptions(7).subscribe(items => result = items);

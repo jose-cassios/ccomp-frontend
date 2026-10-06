@@ -57,7 +57,7 @@
 
           <div class="promo-image">
             @if (evento.cover_image_url; as coverImageUrl) {
-              <img class="event-cover" [src]="coverImageUrl" [alt]="'Capa do evento ' + evento.title" />
+              <img class="event-cover" [eventCover]="coverImageUrl" [alt]="'Capa do evento ' + evento.title" />
             } @else {
               <div class="event-visual" aria-hidden="true">
                 <span>{{ evento.start_date | date: 'dd' }}</span>

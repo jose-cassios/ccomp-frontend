@@ -23,7 +23,8 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .metric-card strong { display: block; font-size: 1.15rem; margin-top: .45rem; }
 .users-card, .operations-card, .audit-card { padding: 1.25rem; margin-top: 1.25rem; }
 .section-heading p { margin: .35rem 0 0; }
-.search-field input, select, .audit-filters input { border: 1px solid #b8c5cb; border-radius: .4rem; padding: .65rem .75rem; background: #fff; box-sizing: border-box; }
+.search-field input, select, .audit-filters input { border: 1px solid #b8c5cb; border-radius: .4rem; padding: .65rem .75rem; background-color: #fff; box-sizing: border-box; }
+select { padding-right: 2.5rem; }
 .search-field input { min-width: 190px; }
 .filters { gap: .5rem; flex-wrap: wrap; justify-content: flex-end; }
 .api-note { background: #f1f7fa; border-left: 3px solid var(--brand-500); font-size: .9rem; margin: 1.25rem 0 .5rem; padding: .75rem; }

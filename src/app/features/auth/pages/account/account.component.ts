@@ -18,7 +18,7 @@ import { apiErrorMessage } from '../../../../core/api/api-error';
       } @else {
       <h1>Minha conta</h1>
       <p>{{ auth.getCurrentUser()?.email_address || auth.getCurrentUser()?.email }}</p>
-      @if (auth.hasAnyRole(['ADMIN', 'STAFF'])) { <a routerLink="/admin/arquivos">Gerenciar arquivos da plataforma</a> }
+      @if (auth.hasAnyRole(['ADM', 'MODERATOR'])) { <a routerLink="/admin/arquivos">Gerenciar arquivos da plataforma</a> }
       @if (error()) { <p role="alert">{{ error() }}</p> }
       @if (message()) { <p role="status">{{ message() }}</p> }
       <form [formGroup]="form" (ngSubmit)="save()">

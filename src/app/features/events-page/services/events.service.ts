@@ -2,6 +2,7 @@ import { HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { EMPTY, Observable, defer, expand, map, reduce, switchMap, throwError } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
+import { ApiConfig } from '../../../core/api/api.config';
 import {
   CreateActivityPayload,
   ApiMessage,
@@ -35,6 +36,8 @@ interface ApiEvent {
   content?: string | null;
   coverImageUrl?: string | null;
   cover_image_url?: string | null;
+  coverImageKey?: string | null;
+  cover_image_key?: string | null;
   format: EventListItem['format'];
   category: EventListItem['category'];
   startDate?: string | null;
@@ -158,6 +161,21 @@ interface ApiEnrollmentsPage {
 @Injectable({ providedIn: 'root' })
 export class EventsService {
   private readonly api = inject(ApiService);
+  private readonly config = inject(ApiConfig);
+
+  coverUrl(id: number | string): string {
+    return this.config.buildUrl(`/events/${encodeURIComponent(id)}/images/cover`);
+  }
+
+  uploadCover(id: number, file: File): Observable<ApiMessage> {
+    const body = new FormData();
+    body.append('file', file);
+    return this.api.post<ApiMessage>(`/events/${id}/images/cover`, body);
+  }
+
+  removeCover(id: number): Observable<void> {
+    return this.api.delete<void>(`/events/${id}/images/cover`);
+  }
 
   search(
     filter: EventsFilter = {},
@@ -429,7 +447,7 @@ export class EventsService {
 
   unsubscribeActivity(activityId: number | string): Observable<ApiMessage> {
     return this.api.delete<ApiMessage>(
-      `/events/activities/${encodeURIComponent(activityId)}/subscribe`,
+      `/events/activities/${encodeURIComponent(activityId)}/unsubscribe`,
     );
   }
 
@@ -440,7 +458,7 @@ export class EventsService {
       slug: event.slug,
       description: event.summary ?? event.description ?? null,
       content: event.content ?? null,
-      cover_image_url: event.coverImageUrl ?? event.cover_image_url ?? null,
+      cover_image_url: this.resolveCover(event),
       format: event.format,
       category: event.category,
       start_date: event.startDate ?? event.start_date ?? null,
@@ -470,6 +488,13 @@ export class EventsService {
       enrollment_status: event.enrollmentStatus ?? event.enrollment_status ?? null,
       activities: event.activities?.map((activity) => this.toActivity(activity)) ?? [],
     };
+  }
+
+  private resolveCover(event: ApiEvent): string | null {
+    const cover = event.coverImageKey ?? event.cover_image_key ?? event.coverImageUrl ?? event.cover_image_url;
+    if (!cover) return null;
+    // The list DTO still calls the storage key coverImageUrl; never use an S3 key as an image URL.
+    return /^https?:\/\//i.test(cover) ? cover : this.coverUrl(event.id);
   }
 
   private toActivity(activity: ApiEventActivity, fallbackEventId: number | string = 0): EventActivity {

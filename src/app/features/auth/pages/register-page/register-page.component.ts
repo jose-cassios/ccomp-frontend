@@ -59,8 +59,9 @@ export class RegisterPageComponent {
   }
 
   onGoogleLogin(): void {
-    console.log('Google login clicked');
-    // TODO: Implement Google OAuth
+    this.errorMessage.set(
+      'O cadastro com Google ainda está sendo configurado pela API. Crie sua conta com e-mail e senha.',
+    );
   }
 
   navigateToLogin(): void {

@@ -4,7 +4,6 @@ import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../auth/services/auth.service';
 import { EventDetails, EventEditor } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
-import { StorageService } from '../../../../core/storage/storage.service';
 import { EventEditorComponent } from './event-editor.component';
 import { EventGuestsService } from '../../services/event-guests.service';
 
@@ -34,6 +33,9 @@ describe('EventEditorComponent', () => {
     registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const,
   };
   const eventsService = {
+    uploadCover: vi.fn(() => of({ message: 'Enviada' })),
+    removeCover: vi.fn(() => of(void 0)),
+    coverUrl: (id: number) => `http://localhost:8080/api/events/${id}/images/cover`,
     create: vi.fn(() => of(createdEvent)),
     update: vi.fn((_eventId: number, payload: { enrollment_start_date?: string; enrollment_end_date?: string; enrollment_paused?: boolean }) => of({
       ...createdEvent,
@@ -62,9 +64,6 @@ describe('EventEditorComponent', () => {
     addEditor: vi.fn(() => of({ message: 'Editor adicionado.' })),
     removeEditor: vi.fn(),
   };
-  const storageService = {
-    upload: vi.fn(),
-  };
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -75,7 +74,6 @@ describe('EventEditorComponent', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({}) } } },
         { provide: AuthService, useValue: { hasAnyRole: () => false, currentUserState: () => ({ id: 'event-owner' }) } },
         { provide: EventsService, useValue: eventsService },
-        { provide: StorageService, useValue: storageService },
         { provide: EventGuestsService, useValue: { guests: () => of({ content: [], next_cursor: null }), invitations: () => of({ content: [], next_cursor: null }) } },
       ],
     }).compileComponents();
@@ -102,6 +100,7 @@ describe('EventEditorComponent', () => {
       enrollment_end_date: '',
       enrollment_paused: false,
     });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS');
 
     component.save();
 
@@ -136,6 +135,7 @@ describe('EventEditorComponent', () => {
       enrollment_end_date: '',
       enrollment_paused: false,
     });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS');
 
     component.save();
 
@@ -168,7 +168,6 @@ describe('EventEditorComponent', () => {
       title: createdEvent.title,
       summary: 'Palestras e oficinas para a comunidade.',
       content: 'Uma programação completa com atividades para estudantes.',
-      cover_image_url: 'https://example.com/capa.jpg',
       category: createdEvent.category,
       format: createdEvent.format,
       start_date: '2026-09-10T08:00',
@@ -179,18 +178,15 @@ describe('EventEditorComponent', () => {
     });
   });
 
-  it('uploads a local event cover and stores the returned URL in the form', () => {
+  it('uploads and associates a cover using the event endpoint', () => {
     const image = new File(['cover'], 'capa.png', { type: 'image/png' });
     const input = { files: [image], value: 'capa.png' } as unknown as HTMLInputElement;
-    storageService.upload.mockReturnValueOnce(of({
-      url: 'https://storage.example.com/capa.png',
-      file_name: 'capa.png',
-    }));
+    component.event.set(createdEvent);
 
     component.uploadCover({ target: input } as unknown as Event);
 
-    expect(storageService.upload).toHaveBeenCalledWith(image);
-    expect(component.presentationForm.controls.cover_image_url.value).toBe('https://storage.example.com/capa.png');
+    expect(eventsService.uploadCover).toHaveBeenCalledWith(createdEvent.id, image);
+    expect(component.presentationForm.controls.cover_image_url.value).toContain('/events/14/images/cover?v=');
     expect(component.successMessage()).toContain('Imagem enviada');
     expect(component.uploadingCover()).toBe(false);
   });
@@ -201,7 +197,7 @@ describe('EventEditorComponent', () => {
 
     component.uploadCover({ target: input } as unknown as Event);
 
-    expect(storageService.upload).not.toHaveBeenCalled();
+    expect(eventsService.uploadCover).not.toHaveBeenCalled();
     expect(component.errorMessage()).toContain('arquivo de imagem');
   });
 
@@ -237,6 +233,7 @@ describe('EventEditorComponent', () => {
       enrollment_end_date: '',
       enrollment_paused: false,
     });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS');
     component.save();
     component.activityForm.setValue({
       title: activityPayload.title,
@@ -256,6 +253,17 @@ describe('EventEditorComponent', () => {
     expect(eventsService.updateActivity).toHaveBeenCalledWith(21, activityPayload);
     expect(eventsService.getAllActivities).toHaveBeenCalledWith(createdEvent.id);
     expect(component.successMessage()).toContain('adicionada');
+  });
+
+  it('allows an activity to be saved without a location', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.ownedEventIds.set(new Set([createdEvent.id]));
+    component.activityForm.setValue({ ...activityPayload, location: '' });
+
+    component.saveActivity();
+
+    expect(eventsService.updateActivity).toHaveBeenCalledWith(21, expect.objectContaining({ location: '' }));
+    expect(component.errorMessage()).toBeNull();
   });
 
   it('should retain the created ID and form when PATCH fails, without creating duplicates on retry', () => {
@@ -300,6 +308,7 @@ describe('EventEditorComponent', () => {
       enrollment_end_date: '',
       enrollment_paused: false,
     });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS');
     component.save();
     component.editActivity({
       id: 21,
@@ -376,6 +385,7 @@ describe('EventEditorComponent', () => {
       enrollment_end_date: '',
       enrollment_paused: false,
     });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS');
 
     component.save();
     component.presentationForm.setValue({
@@ -408,13 +418,15 @@ describe('EventEditorComponent', () => {
   });
 
   it('uses the private event-and-activity flow by default and exposes clear participation choices', () => {
+    expect(component.eventRegistrationPolicy()).toBe('REGISTRATION_REQUIRED');
+    expect(component.enrollmentDatesError()).toContain('Defina a abertura');
     expect(component.activityForm.controls.registration_policy.value).toBe('ACTIVITY_REGISTRANTS_ONLY');
     component.openActivityDialog();
     component.toggleActivityPolicyMenu();
     fixture.detectChanges();
     const options = Array.from(fixture.nativeElement.querySelectorAll('[role="option"]')) as HTMLElement[];
     expect(options.map((option) => option.textContent)).toEqual(expect.arrayContaining([
-      expect.stringContaining('Participação livre'),
+      expect.stringContaining('Atividade aberta, sem inscrição'),
       expect.stringContaining('Inscrição no evento e na atividade'),
       expect.stringContaining('Programação incluída no evento'),
     ]));
@@ -422,6 +434,60 @@ describe('EventEditorComponent', () => {
     options[2].click();
     expect(component.activityForm.controls.registration_policy.value).toBe('INHERITED_FROM_EVENT');
     expect(component.activityPolicyMenuOpen()).toBe(false);
+  });
+
+  it('allows a new event to use open access without retaining registration dates', () => {
+    component.form.patchValue({
+      enrollment_start_date: '2026-08-10T08:00',
+      enrollment_end_date: '2026-09-09T18:00',
+      enrollment_paused: true,
+    });
+
+    component.selectEventRegistrationPolicy('OPEN_ACCESS');
+
+    expect(component.eventRegistrationRequired()).toBe(false);
+    expect(component.form.controls.enrollment_start_date.value).toBe('');
+    expect(component.form.controls.enrollment_end_date.value).toBe('');
+    expect(component.form.controls.enrollment_paused.value).toBe(false);
+    expect(component.enrollmentDatesError()).toBeNull();
+  });
+
+  it('does not pretend to remove a saved enrollment window when the API cannot clear it', () => {
+    component.event.set({
+      ...createdEvent,
+      enrollment_start_date: '2026-08-10T08:00:00',
+      enrollment_end_date: '2026-09-09T18:00:00',
+    });
+    component.editingExisting.set(true);
+
+    component.selectEventRegistrationPolicy('OPEN_ACCESS');
+
+    expect(component.eventRegistrationRequired()).toBe(true);
+    expect(component.errorMessage()).toContain('não permite remover');
+  });
+
+  it('uses prevention as the default simultaneous-registration policy without a placeholder option', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.ownedEventIds.set(new Set([createdEvent.id]));
+    component.activeStep.set('schedule');
+    fixture.detectChanges();
+
+    const selects = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('select')) as HTMLSelectElement[];
+    const select = selects
+      .find((element) => Array.from(element.options)
+        .some((option) => option.value === 'PREVENT')) as HTMLSelectElement;
+    expect(component.conflictPolicy.value).toBe('PREVENT');
+    expect(Array.from(select.options).map((option) => option.value)).toEqual(['PREVENT', 'ALLOW']);
+    expect(fixture.nativeElement.textContent).not.toContain('Manter configuraÃ§Ã£o atual');
+  });
+
+  it('keeps the team area exclusively for editors', () => {
+    component.activeStep.set('team');
+    fixture.detectChanges();
+
+    const team = fixture.nativeElement.querySelector('[aria-labelledby="team-title"]') as HTMLElement;
+    expect(team.textContent).toContain('moderadores');
+    expect(team.querySelector('app-event-guests')).toBeNull();
   });
 
   it('shows every event day, including empty days, and opens a time-only modal on the selected day', () => {

@@ -27,10 +27,11 @@ export interface AdminMessageResponse {
 }
 
 /** Exact enum accepted by the user-role endpoints. */
-export type ApiUserRole = 'ADMIN' | 'STAFF' | 'USER';
+export type ApiUserRole = 'ADMIN' | 'MODERATOR' | 'STAFF' | 'USER';
 
 export const USER_ROLE_OPTIONS: ReadonlyArray<{ value: ApiUserRole; label: string }> = [
   { value: 'USER', label: 'Usuário' },
-  { value: 'STAFF', label: 'Moderador' },
+  { value: 'STAFF', label: 'Equipe' },
+  { value: 'MODERATOR', label: 'Moderador' },
   { value: 'ADMIN', label: 'Administrador' },
 ];

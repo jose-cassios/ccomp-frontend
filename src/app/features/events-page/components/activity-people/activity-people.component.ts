@@ -4,15 +4,17 @@ import { EventsService } from '../../services/events.service';
 import { EventEnrollment } from '../../models/event.model';
 import { apiErrorMessage } from '../../../../core/api/api-error';
 import { EventGuestsComponent } from '../event-guests/event-guests.component';
+import { ActivityCheckInComponent } from '../activity-check-in/activity-check-in.component';
 
 @Component({
-  selector: 'app-activity-people', standalone: true, imports: [EventGuestsComponent],
+  selector: 'app-activity-people', standalone: true, imports: [EventGuestsComponent, ActivityCheckInComponent],
   template: `
     <details (toggle)="open = $any($event.target).open">
-      <summary>Convidados{{ manage ? ' e inscritos' : '' }}</summary>
+      <summary>Convidados{{ manage ? ', inscritos e credenciamento' : '' }}</summary>
       @if (open) {
         <app-event-guests [eventId]="eventId" [activityId]="activityId" [manage]="manage" />
         @if (manage) {
+          <app-activity-check-in [activityId]="activityId" />
           <button type="button" [disabled]="loading()" (click)="load()">Consultar inscritos da atividade</button>
           @if (loading()) { <p role="status"><span class="mini-spinner"></span> Carregando inscritos…</p> }
           @if (error()) { <p role="alert">{{ error() }}</p> }

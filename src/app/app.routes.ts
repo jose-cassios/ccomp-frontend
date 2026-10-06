@@ -13,7 +13,7 @@ import { authGuard } from './features/auth/guards/auth.guard';
 import { publicGuard } from './features/auth/guards/public.guard';
 import { roleGuard } from './features/auth/guards/role.guard';
 import {
-  ADMINISTRATION_ROLES,
+  ADMIN_PANEL_ROLES,
   CONTENT_MANAGEMENT_ROLES,
   NEWS_MANAGEMENT_ROLES,
 } from './features/auth/config/auth.config';
@@ -33,10 +33,15 @@ export const routes: Routes = [
         children: [
         { path: '', component: Home },
         {
+          path: 'check-in',
+          loadComponent: () => import('./features/events-page/pages/activity-check-in/activity-check-in.component').then(m => m.ActivityCheckInPageComponent),
+          canActivate: [authGuard],
+        },
+        {
           path: 'admin/arquivos',
           loadComponent: () => import('./features/admin/pages/admin-files/admin-files.component').then(m => m.AdminFilesComponent),
           canActivate: [authGuard, roleGuard],
-          data: { roles: CONTENT_MANAGEMENT_ROLES },
+          data: { roles: ADMIN_PANEL_ROLES },
         },
         {
           path: 'minha-conta',
@@ -112,7 +117,7 @@ export const routes: Routes = [
               (module) => module.AdminUsersComponent,
             ),
           canActivate: [authGuard, roleGuard],
-          data: { roles: ADMINISTRATION_ROLES },
+          data: { roles: ADMIN_PANEL_ROLES },
         },
         {
           path: 'noticias/nova',

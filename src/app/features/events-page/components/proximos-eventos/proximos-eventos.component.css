@@ -4,7 +4,7 @@
 h2 { margin: 0; color: var(--text-strong); font-size: clamp(1.28rem,2.4vw,1.7rem); letter-spacing: -.025em; }
 .filters { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 8px; border: 1px solid #dce5df; border-radius: 10px; background: rgba(255, 255, 255, .82); }
 label { display: grid; gap: 5px; color: #53646f; font-size: .72rem; font-weight: 750; }
-select { min-width: 138px; min-height: 38px; border: 1px solid #cbd8cf; border-radius: 7px; padding: .5rem .7rem; background: #fff; color: #334155; font: inherit; font-size: .82rem; }
+select { min-width: 138px; min-height: 38px; border: 1px solid #cbd8cf; border-radius: 7px; padding: .5rem .7rem; padding-right: 2.4rem; background-color: #fff; color: #334155; font: inherit; font-size: .82rem; }
 .events-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(270px,320px)); gap: 15px; }
 .events-grid--compact { grid-template-columns: repeat(auto-fill,minmax(220px,280px)); gap: 12px; }
 .event-card { display: flex; min-height: 100%; flex-direction: column; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-card); transition: border-color .2s ease; }

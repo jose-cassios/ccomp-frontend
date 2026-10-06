@@ -74,29 +74,35 @@ mat-divider {
 }
 
 .google-login-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 12px 24px;
-  border: 1px solid var(--gray-300);
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.2s ease;
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: 0 auto;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--border-primary);
+  border-radius: 50%;
+  background: var(--white);
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
-.google-login-button:hover {
-  background-color: var(--gray-100);
-  border-color: var(--gray-400);
+.google-login-button:hover:not(:disabled),
+.google-login-button:focus-visible {
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-500) 16%, transparent);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.google-login-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .google-icon {
   width: 20px;
   height: 20px;
-}
-
-.full-width {
-  width: 100%;
 }
 
 .auth-error {

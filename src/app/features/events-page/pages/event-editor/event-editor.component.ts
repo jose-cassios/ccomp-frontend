@@ -8,7 +8,8 @@ import { catchError, finalize, map, Observable, of, switchMap } from 'rxjs';
 import { ADMINISTRATION_ROLES, CONTENT_MANAGEMENT_ROLES } from '../../../auth/config/auth.config';
 import { AuthService } from '../../../auth/services/auth.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
-import { StorageService } from '../../../../core/storage/storage.service';
+import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
+import { EventCoverDirective } from '../../components/event-cover.directive';
 import {
   ActivityPayload,
   ACTIVITY_REGISTRATION_POLICY_OPTIONS,
@@ -28,6 +29,7 @@ import {
   EventEditor,
   EventEnrollment,
   EventFormat,
+  EventRegistrationPolicy,
   UpdateEventPayload,
   eventActivityTypeLabel,
   eventActivityWeekdayLabel,
@@ -39,7 +41,6 @@ import {
   buildEventActivityDays,
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
-import { EventGuestsComponent } from '../../components/event-guests/event-guests.component';
 import { ActivityPeopleComponent } from '../../components/activity-people/activity-people.component';
 
 type EditorOperation = 'idle' | 'loading' | 'saving' | 'publishing' | 'deleting' | 'activity' | 'editor';
@@ -56,7 +57,7 @@ const EDITOR_STEPS: ReadonlyArray<{ value: EventEditorStep; label: string }> = [
 @Component({
   selector: 'app-event-editor',
   standalone: true,
-  imports: [DatePipe, ReactiveFormsModule, RouterLink, EventGuestsComponent, ActivityPeopleComponent],
+  imports: [DatePipe, ReactiveFormsModule, RouterLink, ActivityPeopleComponent, EventCoverDirective],
   templateUrl: './event-editor.component.html',
   styleUrls: ['./event-editor.component.css', './event-activity-dialog.css'],
 })
@@ -69,7 +70,6 @@ export class EventEditorComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly eventsService = inject(EventsService);
-  private readonly storageService = inject(StorageService);
   private readonly authService = inject(AuthService);
 
   readonly form = this.fb.nonNullable.group({
@@ -91,7 +91,7 @@ export class EventEditorComponent implements OnInit {
     title: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
     description: ['', Validators.maxLength(1000)],
     type: this.fb.nonNullable.control<EventActivityType>('LECTURE', Validators.required),
-    location: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
+    location: ['', Validators.maxLength(255)],
     start_date: ['', Validators.required],
     end_date: ['', Validators.required],
     registration_policy: this.fb.nonNullable.control<ActivityRegistrationPolicy>('ACTIVITY_REGISTRANTS_ONLY', Validators.required),
@@ -123,11 +123,34 @@ export class EventEditorComponent implements OnInit {
   readonly uploadingCover = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
+  private readonly feedbackAutoDismiss = autoDismissFeedback(
+    this.errorMessage,
+    this.successMessage,
+    () => this.dismissFeedback(),
+  );
   readonly hasUnsavedChanges = signal(false);
   readonly categories = EVENT_CATEGORY_OPTIONS;
   readonly formats = EVENT_FORMAT_OPTIONS;
   readonly activityTypes = EVENT_ACTIVITY_TYPE_OPTIONS;
   readonly activityRegistrationPolicies = ACTIVITY_REGISTRATION_POLICY_OPTIONS;
+  readonly eventRegistrationPolicy = signal<EventRegistrationPolicy>('REGISTRATION_REQUIRED');
+  readonly eventRegistrationOptions: ReadonlyArray<{
+    value: EventRegistrationPolicy;
+    label: string;
+    description: string;
+  }> = [
+    {
+      value: 'REGISTRATION_REQUIRED',
+      label: 'Inscrição obrigatória',
+      description: 'A pessoa precisa se inscrever no evento durante o período definido abaixo.',
+    },
+    {
+      value: 'OPEN_ACCESS',
+      label: 'Acesso livre, sem inscrição',
+      description: 'O evento serve para divulgação e participação livre. A página só fica pública após a publicação.',
+    },
+  ];
+  readonly eventRegistrationRequired = computed(() => this.eventRegistrationPolicy() === 'REGISTRATION_REQUIRED');
   readonly activityPolicyLabel = activityRegistrationPolicyLabel;
   readonly activityPolicyDescription = activityRegistrationPolicyDescription;
   readonly activityPolicyMenuOpen = signal(false);
@@ -169,19 +192,43 @@ export class EventEditorComponent implements OnInit {
     const schedule = this.activitySchedule();
     return schedule.find((day) => day.key === this.activeActivityDay()) ?? schedule[0] ?? null;
   });
-  readonly conflictPolicy = this.fb.nonNullable.control<'' | 'PREVENT' | 'ALLOW'>('');
+  readonly conflictPolicy = this.fb.nonNullable.control<'PREVENT' | 'ALLOW'>('PREVENT');
 
   saveConflictPolicy(): void {
     const event = this.event();
     const policy = this.conflictPolicy.value;
-    if (!event || !policy || this.isBusy()) return;
+    if (!event || this.isBusy()) return;
     this.operation.set('saving'); this.errorMessage.set(null);
     this.eventsService.update(event.id, { schedule_conflict_policy: policy }).pipe(
       finalize(() => this.operation.set('idle')),
     ).subscribe({
-      next: () => this.successMessage.set('Regra de conflito atualizada. A API ainda não devolve essa configuração na consulta do evento.'),
+      next: () => this.successMessage.set('Regra de conflito atualizada.'),
       error: (error: unknown) => this.errorMessage.set(apiErrorMessage(error, 'Não foi possível atualizar a regra de conflito.')),
     });
+  }
+
+  selectEventRegistrationPolicy(policy: EventRegistrationPolicy): void {
+    if (policy === this.eventRegistrationPolicy()) return;
+
+    const event = this.event();
+    const persistedEnrollmentWindow = Boolean(event?.enrollment_start_date || event?.enrollment_end_date);
+    if (policy === 'OPEN_ACCESS' && this.editingExisting() && persistedEnrollmentWindow) {
+      this.errorMessage.set(
+        'A API atual não permite remover um período de inscrições já salvo. Mantenha a inscrição obrigatória ou atualize o backend para permitir essa alteração.',
+      );
+      return;
+    }
+
+    this.eventRegistrationPolicy.set(policy);
+    if (policy === 'OPEN_ACCESS') {
+      this.form.patchValue({
+        enrollment_start_date: '',
+        enrollment_end_date: '',
+        enrollment_paused: false,
+      });
+    }
+    this.hasUnsavedChanges.set(true);
+    this.errorMessage.set(null);
   }
   readonly canManageTeam = computed(() => this.isOwner());
   readonly canViewEnrollments = computed(() =>
@@ -570,41 +617,67 @@ export class EventEditorComponent implements OnInit {
       location: activity.location ?? '',
       start_date: this.toLocalInput(activity.start_date ?? null),
       end_date: this.toLocalInput(activity.end_date ?? null),
-      registration_policy: activity.registration_policy ?? 'ACTIVITY_REGISTRANTS_ONLY',
+      registration_policy: this.eventRegistrationRequired()
+        ? activity.registration_policy ?? 'ACTIVITY_REGISTRANTS_ONLY'
+        : 'PUBLIC',
     });
     this.errorMessage.set(null);
     this.successMessage.set(null);
     this.activityDialog?.nativeElement.showModal();
   }
 
-  /** Sends a local cover image to storage and keeps the resulting public URL in the form. */
+  /** The dedicated endpoint associates the image immediately, including for assigned editors. */
   uploadCover(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file || this.uploadingCover() || this.isBusy()) return;
 
-    if (!file.type.startsWith('image/')) {
-      this.errorMessage.set('Selecione um arquivo de imagem válido.');
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      this.errorMessage.set('Selecione um arquivo de imagem PNG, JPEG ou WebP.');
       input.value = '';
       return;
     }
 
+    const currentEvent = this.event();
+    if (!currentEvent) {
+      this.errorMessage.set('Conclua as informações iniciais do evento antes de enviar a capa.');
+      input.value = '';
+      return;
+    }
     this.uploadingCover.set(true);
     this.errorMessage.set(null);
-    this.storageService.upload(file).pipe(
+    this.eventsService.uploadCover(currentEvent.id, file).pipe(
       finalize(() => {
         this.uploadingCover.set(false);
         input.value = '';
       }),
     ).subscribe({
-      next: (response) => {
-        this.presentationForm.controls.cover_image_url.setValue(response.url);
+      next: () => {
+        const url = this.eventsService.coverUrl(currentEvent.id) + '?v=' + Date.now();
+        this.event.update(event => event ? { ...event, cover_image_url: url } : event);
+        this.presentationForm.controls.cover_image_url.setValue(url, { emitEvent: false });
         this.presentationForm.controls.cover_image_url.markAsTouched();
-        this.successMessage.set('Imagem enviada. Ela será aplicada ao avançar ou salvar o evento.');
+        this.successMessage.set('Imagem enviada e vinculada ao evento.');
       },
       error: (error: unknown) => {
         this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível enviar a imagem.'));
       },
+    });
+  }
+
+  removeCover(): void {
+    const event = this.event();
+    if (!event || this.uploadingCover() || this.isBusy()) return;
+    if (!window.confirm('Remover a imagem de capa deste evento?')) return;
+    this.uploadingCover.set(true);
+    this.errorMessage.set(null);
+    this.eventsService.removeCover(event.id).pipe(finalize(() => this.uploadingCover.set(false))).subscribe({
+      next: () => {
+        this.event.update(current => current ? { ...current, cover_image_url: null } : current);
+        this.presentationForm.controls.cover_image_url.setValue('', { emitEvent: false });
+        this.successMessage.set('Imagem de capa removida.');
+      },
+      error: (error: unknown) => this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível remover a capa.')),
     });
   }
 
@@ -908,9 +981,11 @@ export class EventEditorComponent implements OnInit {
       format: value.format,
       start_date: value.start_date,
       end_date: value.end_date,
-      ...(value.enrollment_start_date ? { enrollment_start_date: value.enrollment_start_date } : {}),
-      ...(value.enrollment_end_date ? { enrollment_end_date: value.enrollment_end_date } : {}),
-      enrollment_paused: value.enrollment_paused,
+      ...(this.eventRegistrationRequired() ? {
+        enrollment_start_date: value.enrollment_start_date,
+        enrollment_end_date: value.enrollment_end_date,
+        enrollment_paused: value.enrollment_paused,
+      } : {}),
     };
   }
 
@@ -920,7 +995,6 @@ export class EventEditorComponent implements OnInit {
       ...this.buildBasicUpdatePayload(),
       ...(presentation.summary.trim() ? { summary: presentation.summary.trim() } : {}),
       ...(presentation.content.trim() ? { content: presentation.content.trim() } : {}),
-      ...(presentation.cover_image_url.trim() ? { cover_image_url: presentation.cover_image_url.trim() } : {}),
     };
   }
 
@@ -959,6 +1033,12 @@ export class EventEditorComponent implements OnInit {
     this.event.set(enrichedEvent);
     this.activities.set(enrichedEvent.activities ?? []);
     this.ensureActiveActivityDay();
+    this.eventRegistrationPolicy.set(
+      enrichedEvent.enrollment_start_date || enrichedEvent.enrollment_end_date
+        ? 'REGISTRATION_REQUIRED'
+        : 'OPEN_ACCESS',
+    );
+    this.conflictPolicy.setValue(enrichedEvent.schedule_conflict_policy ?? 'PREVENT', { emitEvent: false });
     this.form.reset({
       title: enrichedEvent.title ?? '',
       category: enrichedEvent.category ?? 'ACADEMIC_EDUCATIONAL',
@@ -991,7 +1071,7 @@ export class EventEditorComponent implements OnInit {
       location: '',
       start_date: '',
       end_date: '',
-      registration_policy: 'ACTIVITY_REGISTRANTS_ONLY',
+      registration_policy: this.eventRegistrationRequired() ? 'ACTIVITY_REGISTRANTS_ONLY' : 'PUBLIC',
     });
   }
 
@@ -1012,18 +1092,20 @@ export class EventEditorComponent implements OnInit {
         : left === right;
     };
     return activity.type === payload.type
-      && activity.location?.trim() === payload.location
+      && (!payload.location || activity.location?.trim() === payload.location)
       && sameDate(activity.start_date, payload.start_date)
       && sameDate(activity.end_date, payload.end_date)
       && activity.registration_policy === payload.registration_policy;
   }
 
   enrollmentDatesError(): string | null {
+    if (!this.eventRegistrationRequired()) return null;
+
     const start = this.form.controls.enrollment_start_date.value;
     const end = this.form.controls.enrollment_end_date.value;
     const eventEnd = this.form.controls.end_date.value;
 
-    if (!start && !end) return null;
+    if (!start && !end) return 'Defina a abertura e o encerramento das inscrições ou escolha acesso livre.';
     if (!start || !end) return 'Informe a abertura e o encerramento das inscrições.';
     if (new Date(start).getTime() > new Date(end).getTime()) {
       return 'O encerramento deve ocorrer depois da abertura das inscrições.';
@@ -1040,8 +1122,7 @@ export class EventEditorComponent implements OnInit {
   }
 
   private hasEnrollmentSettings(): boolean {
-    const value = this.form.getRawValue();
-    return Boolean(value.enrollment_start_date || value.enrollment_end_date || value.enrollment_paused);
+    return this.eventRegistrationRequired();
   }
 
   private advanceTo(step: EventEditorStep): void {
