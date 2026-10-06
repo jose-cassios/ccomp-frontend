@@ -12,6 +12,10 @@ Reinicie o comando após alterar a URL. Os testes usam `/api` relativo.
 
 Para deploy e testes de produção, consulte [o roteiro da Vercel](docs/vercel-deployment.md).
 
+`npm run build` usa a mesma URL do `.env`; para publicar, configure-a antes do build.
+`ng serve`, `ng build` e os comandos npm carregam o `.env` diretamente.
+Reinicie o comando após alterar a URL. Os testes usam `/api` relativo.
+
 To start a local development server, run:
 
 ```bash
