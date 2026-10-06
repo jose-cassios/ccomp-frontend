@@ -1,4 +1,6 @@
+declare const API_URL: string;
+
 export const environment = {
   production: false,
-  apiUrl: 'https://fails-expressed-cyber-configured.trycloudflare.com/api'
+  apiUrl: API_URL,
 };

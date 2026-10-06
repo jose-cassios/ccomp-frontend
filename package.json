@@ -1,6 +1,7 @@
 {
   "name": "ccomp-frontend",
   "version": "0.0.0",
+  "builders": "builders.json",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",

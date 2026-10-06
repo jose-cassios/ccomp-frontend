@@ -1,0 +1,14 @@
+{
+  "builders": {
+    "application": {
+      "implementation": "./scripts/environment-builder.cjs",
+      "schema": "./node_modules/@angular/build/src/builders/application/schema.json",
+      "description": "Build Angular usando API_URL do .env."
+    },
+    "dev-server": {
+      "implementation": "./scripts/environment-builder.cjs",
+      "schema": "./node_modules/@angular/build/src/builders/dev-server/schema.json",
+      "description": "Inicia Angular usando API_URL do .env."
+    }
+  }
+}

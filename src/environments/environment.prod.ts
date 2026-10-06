@@ -1,4 +1,6 @@
+declare const API_URL: string;
+
 export const environment = {
   production: true,
-  apiUrl: 'https://api.example.com'
+  apiUrl: API_URL,
 };

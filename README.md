@@ -4,10 +4,16 @@ This project was generated using [Angular CLI](https://github.com/angular/angula
 
 ## Development server
 
+Configure `API_URL` no arquivo `.env` (use `.env.example` como modelo).
+Depois de trocar a URL, reinicie `npm start`. Nenhum arquivo de ambiente é gerado.
+`npm run build` usa a mesma URL do `.env`; para publicar, configure-a antes do build.
+`ng serve`, `ng build` e os comandos npm carregam o `.env` diretamente.
+Reinicie o comando após alterar a URL. Os testes usam `/api` relativo.
+
 To start a local development server, run:
 
 ```bash
-ng serve
+npm start
 ```
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
