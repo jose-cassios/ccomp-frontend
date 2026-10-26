@@ -2,8 +2,8 @@
 
 ## Como a URL é configurada
 
-Somente `API_URL` muda entre instalações. A configuração utilizada por `ng serve`,
-`ng build`, `npm start` e `npm run build` segue esta prioridade:
+Somente `API_URL` muda entre instalações. A configuração utilizada por `npm run dev`,
+`ng serve`, `ng build`, `npm start` e `npm run build` segue esta prioridade:
 
 1. `process.env.API_URL`, fornecida pela Vercel ou pelo terminal.
 2. `API_URL` no `.env` da raiz, quando não existe a variável de processo.
@@ -16,7 +16,7 @@ Somente a URL selecionada é incorporada ao JavaScript do navegador e do servido
 Exemplos aceitos:
 
 ```dotenv
-API_URL=https://meu-backend.example.com/api
+API_URL=https://liara.picos.ifpi.edu.br/ccomp-api/api
 ```
 
 Se informar apenas `https://meu-backend.example.com`, o caminho `/api` será acrescentado.
@@ -61,7 +61,7 @@ Com Node 24 instalado:
 ```sh
 npm ci
 npm run test:config
-npm start
+npm run dev
 ```
 
 Abra `http://localhost:4200`, acesse eventos/notícias e veja a aba **Network** do navegador.
