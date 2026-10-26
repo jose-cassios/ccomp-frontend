@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize, forkJoin, map, switchMap } from 'rxjs';
@@ -20,6 +20,8 @@ import {
 } from '../../models/admin-user.model';
 import { AdminAuditService } from '../../services/admin-audit.service';
 import { AdminUsersService } from '../../services/admin-users.service';
+import { AdminInfraLogsComponent } from '../../components/admin-infra-logs/admin-infra-logs.component';
+import { ADMINISTRATION_ROLES } from '../../../auth/config/auth.config';
 
 interface RoleOperation {
   userName: string;
@@ -28,14 +30,16 @@ interface RoleOperation {
 }
 
 @Component({
-  selector: 'app-admin-users', standalone: true, imports: [FormsModule, DatePipe, RouterLink],
+  selector: 'app-admin-users', standalone: true, imports: [FormsModule, DatePipe, RouterLink, AdminInfraLogsComponent],
   templateUrl: './admin-users.component.html', styleUrl: './admin-users.component.css',
 })
 export class AdminUsersComponent implements OnInit {
   private readonly usersService = inject(AdminUsersService);
   private readonly auditService = inject(AdminAuditService);
   private readonly authService = inject(AuthService);
-  readonly activeSection = signal<'users' | 'audit'>('users');
+  readonly activeSection = signal<'users' | 'audit' | 'logs'>('users');
+  readonly logsPanel = viewChild(AdminInfraLogsComponent);
+  readonly canViewLogs = computed(() => this.authService.hasAnyRole(ADMINISTRATION_ROLES));
   readonly users = signal<AdminUser[]>([]);
   readonly currentUser = signal<AdminUser | null>(null);
   readonly search = signal('');
@@ -71,7 +75,8 @@ export class AdminUsersComponent implements OnInit {
 
   ngOnInit(): void { this.reload(); }
 
-  selectSection(section: 'users' | 'audit'): void {
+  selectSection(section: 'users' | 'audit' | 'logs'): void {
+    if (section === 'logs' && !this.canViewLogs()) return;
     this.activeSection.set(section);
     this.errorMessage.set(null);
     this.successMessage.set(null);
@@ -81,6 +86,10 @@ export class AdminUsersComponent implements OnInit {
   }
 
   refreshActiveSection(): void {
+    if (this.activeSection() === 'logs') {
+      this.logsPanel()?.reload();
+      return;
+    }
     if (this.activeSection() === 'users') {
       this.reload();
       return;

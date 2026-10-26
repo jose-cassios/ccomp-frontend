@@ -1,0 +1,67 @@
+<section class="logs-panel" aria-labelledby="logs-title" [attr.aria-busy]="loading()">
+  <header>
+    <h2 id="logs-title">Logs de infraestrutura</h2>
+    <p>Consulte mensagens dos serviços da plataforma, das mais recentes para as mais antigas.</p>
+  </header>
+  <form [formGroup]="form" (ngSubmit)="reload()">
+    <fieldset [disabled]="loading()">
+      <legend class="sr-only">Filtros de logs</legend>
+      <label>Serviço
+        <select formControlName="serviceName">
+          <option value="">Todos os serviços</option>
+          @for (service of services; track service) { <option [value]="service">{{ service }}</option> }
+        </select>
+      </label>
+      <label>Container
+        <input formControlName="container" maxlength="128" placeholder="Nome exato do container" />
+      </label>
+      <label>Nível
+        <select formControlName="level" aria-describedby="level-help">
+          <option value="">Todos os níveis</option>
+          @for (level of levels; track level) { <option [value]="level">{{ level }}</option> }
+        </select>
+      </label>
+      <label class="search">Mensagem
+        <input formControlName="search" maxlength="256" placeholder="Buscar trecho literal da mensagem" />
+      </label>
+      <label>De <input type="datetime-local" formControlName="start" /></label>
+      <label>Até <input type="datetime-local" formControlName="end" /></label>
+      <label>Máximo de linhas <input type="number" formControlName="limit" min="1" max="500" step="1" /></label>
+      <div class="actions">
+        <button type="submit" class="primary" [disabled]="loading()">Consultar</button>
+        <button type="button" (click)="clear()" [disabled]="loading()">Limpar</button>
+      </div>
+    </fieldset>
+    <p class="hint">Sem datas, consulta a última hora. Intervalo máximo: 7 dias. Datas e horários exibidos no seu fuso local.</p>
+    <p class="hint" id="level-help">O filtro de nível retorna resultados apenas para proxy, postgres-db e seaweeds. Para outros serviços, use a busca por mensagem.</p>
+  </form>
+  @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+  @if (loading()) {
+    <p class="state" role="status"><span class="spinner" aria-hidden="true"></span> Consultando logs…</p>
+  } @else if (result(); as response) {
+    <div class="summary" role="status">
+      <strong>{{ response.logs.length }} registros</strong>
+      <span>{{ response.start | date:'dd/MM/yyyy HH:mm' }} — {{ response.end | date:'dd/MM/yyyy HH:mm' }}</span>
+    </div>
+    @if (response.logs.length >= response.limit) {
+      <p class="hint">Limite de {{ response.limit }} linhas atingido. Refine o período ou os filtros para consultar outros registros.</p>
+    }
+    @if (!response.logs.length) {
+      <p class="state">Nenhum log encontrado para estes filtros.</p>
+    } @else {
+      <div class="log-list">
+        @for (log of response.logs; track $index) {
+          <article class="log-entry">
+            <div class="metadata">
+              <time [attr.datetime]="log.timestamp">{{ log.timestamp | date:'dd/MM/yyyy HH:mm:ss.SSS' }}</time>
+              <strong>{{ log.service_name || 'Serviço não informado' }}</strong>
+              <span class="level" [class.danger]="log.level === 'error' || log.level === 'fatal' || log.level === 'panic'">{{ log.level || 'Sem nível' }}</span>
+              <span class="container">{{ log.container || 'Container não informado' }}</span>
+            </div>
+            <pre>{{ log.message }}</pre>
+          </article>
+        }
+      </div>
+    }
+  }
+</section>
