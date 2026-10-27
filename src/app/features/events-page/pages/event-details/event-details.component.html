@@ -65,6 +65,11 @@
         @if (canEdit()) {
           <a class="edit-link" [routerLink]="['/eventos', currentEvent.id, 'editar']">Área de edição</a>
         }
+        @if (canManageCertificates()) {
+          <a class="edit-link" [routerLink]="['/eventos', currentEvent.id, 'certificados']">Personalizar certificados</a>
+        }
+        <app-certificate-download [resourceId]="currentEvent.id" />
+        <p class="enrollment-window">Certificado disponível para inscritos com check-in confirmado.</p>
       </aside>
     </article>
 
@@ -148,6 +153,7 @@
                           </div>
 
                           <div class="activity-card__action">
+                            <app-certificate-download [resourceId]="activity.id" scope="activity" />
                             @if (activityRequiresRegistration(activity)) {
                               <button
                                 type="button"

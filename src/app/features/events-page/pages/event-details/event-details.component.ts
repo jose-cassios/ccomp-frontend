@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { catchError, finalize, of, switchMap, throwError } from 'rxjs';
+import { EMPTY, catchError, expand, finalize, of, reduce, switchMap, throwError } from 'rxjs';
 import { CONTENT_MANAGEMENT_ROLES } from '../../../auth/config/auth.config';
 import { AuthService } from '../../../auth/services/auth.service';
 import {
@@ -26,11 +26,12 @@ import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
 import { EventGuestsComponent } from '../../components/event-guests/event-guests.component';
 import { ActivityPeopleComponent } from '../../components/activity-people/activity-people.component';
 import { EventCoverDirective } from '../../components/event-cover.directive';
+import { CertificateDownloadComponent } from '../../components/certificate-download/certificate-download.component';
 
 @Component({
   selector: 'app-event-details',
   standalone: true,
-  imports: [DatePipe, RouterLink, EventGuestsComponent, ActivityPeopleComponent, EventCoverDirective],
+  imports: [DatePipe, RouterLink, EventGuestsComponent, ActivityPeopleComponent, EventCoverDirective, CertificateDownloadComponent],
   templateUrl: './event-details.component.html',
   styleUrl: './event-details.component.css',
 })
@@ -65,6 +66,12 @@ export class EventDetailsComponent implements OnInit {
     const eventId = this.event()?.id;
     return this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES)
       || Boolean(eventId && this.editableEventIds().has(eventId));
+  });
+  readonly canManageCertificates = computed(() => {
+    const event = this.event();
+    return this.authService.hasAnyRole(['ADM', 'MODERATOR'])
+      || Boolean(event?.owner_id && event.owner_id === this.authService.currentUserState()?.id)
+      || Boolean(event && this.editableEventIds().has(event.id));
   });
   readonly categoryLabel = eventCategoryLabel;
   readonly formatLabel = eventFormatLabel;
@@ -327,11 +334,19 @@ export class EventDetailsComponent implements OnInit {
   private loadEditorAccess(): void {
     if (!this.isAuthenticated()) return;
 
+    const cursors = new Set<string>();
     this.eventsService.getEditableEvents(undefined, 50).pipe(
+      expand(page => {
+        if (page.content.some(event => event.id === this.event()?.id) || !page.next_cursor) return EMPTY;
+        if (cursors.has(page.next_cursor)) return EMPTY;
+        cursors.add(page.next_cursor);
+        return this.eventsService.getEditableEvents(page.next_cursor, 50);
+      }),
+      reduce((ids, page) => new Set([...ids, ...page.content.map(event => event.id)]), new Set<number>()),
       catchError(() => of(null)),
-    ).subscribe((page) => {
-      if (!page) return;
-      this.editableEventIds.set(new Set(page.content.map((event) => event.id)));
+    ).subscribe((ids) => {
+      if (!ids) return;
+      this.editableEventIds.set(ids);
     });
   }
 

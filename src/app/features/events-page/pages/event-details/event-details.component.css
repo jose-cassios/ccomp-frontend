@@ -55,3 +55,5 @@
   .event-date strong { font-size: 1.7rem; }
 }
 .activity-card__action small.activity-conflict { color: #a33d18; font-weight: 700; }
+.activity-card__action { display: flex; flex-direction: column; gap: .6rem; }
+.enrollment-card app-certificate-download { margin: .75rem 0 .5rem; }

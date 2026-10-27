@@ -1,0 +1,76 @@
+<main class="certificates-page">
+  <a [routerLink]="['/eventos', eventId, 'editar']">← Voltar ao evento</a>
+  <header class="page-heading">
+    <div><h1>Certificados</h1><p>{{ event()?.title || 'Personalize os certificados dos participantes.' }}</p></div>
+    <a routerLink="/validar">Validar um certificado</a>
+  </header>
+
+  @if (loading()) {
+    <p role="status"><span class="spinner"></span> Carregando modelos…</p>
+  } @else if (loadError(); as message) {
+    <section class="panel"><p role="alert">{{ message }}</p><button type="button" (click)="load()">Tentar novamente</button></section>
+  } @else if (!allowed()) {
+    <p role="alert" class="panel">A personalização está disponível para o responsável pelo evento, editores ativos, moderadores e administradores.</p>
+  } @else {
+    <section class="panel cover-panel" aria-labelledby="cover-title">
+      <div>
+        <h2 id="cover-title">Fundo do certificado</h2>
+        <p>A mesma imagem é utilizada no evento e em todas as suas atividades. O envio substitui o fundo atual.</p>
+        <div class="actions">
+          <label class="upload">Enviar imagem<input type="file" accept="image/png,image/jpeg,image/webp" [disabled]="busy()" (change)="upload($event)" /></label>
+          <button type="button" [disabled]="busy()" (click)="restoreCover()">Restaurar fundo padrão</button>
+        </div>
+        <small>PNG, JPEG ou WebP. Prefira uma imagem horizontal com espaço livre para os textos.</small>
+      </div>
+      @if (coverUrl(); as url) { <img class="cover" [src]="url" alt="Fundo atual do certificado" /> }
+    </section>
+
+    <section class="panel" aria-labelledby="template-title" [attr.aria-busy]="busy()">
+      <div class="tabs" role="tablist" aria-label="Modelo de certificado">
+        <button type="button" role="tab" [attr.aria-selected]="scope() === 'event'" [disabled]="busy()" (click)="selectScope('event')">Do evento {{ forms.event.dirty ? '•' : '' }}</button>
+        <button type="button" role="tab" [attr.aria-selected]="scope() === 'activity'" [disabled]="busy()" (click)="selectScope('activity')">Das atividades {{ forms.activity.dirty ? '•' : '' }}</button>
+      </div>
+      <h2 id="template-title">{{ scope() === 'event' ? 'Modelo do evento' : 'Modelo das atividades' }}</h2>
+      <p>{{ scope() === 'event' ? 'A carga horária considera as atividades com presença confirmada.' : 'Este modelo será aplicado a todas as atividades do evento.' }}</p>
+      <p class="hint">As posições são proporcionais à imagem: 0 é o início, 0,5 é o meio e 1 é o final. Confira a prévia para evitar cortes de texto.</p>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <fieldset [disabled]="busy()">
+          <div formArrayName="boxes" class="boxes">
+            @for (box of boxes.controls; track box; let i = $index) {
+              <article class="text-box" [formGroupName]="i">
+                <div class="box-heading"><h3>Texto {{ i + 1 }}</h3><button type="button" [disabled]="boxes.length <= 1" (click)="removeBox(i)" [attr.aria-label]="'Remover texto ' + (i + 1)">Remover</button></div>
+                <label>Conteúdo<textarea formControlName="text_template" rows="3" maxlength="2000"></textarea></label>
+                <label>Inserir informação do participante ou evento
+                  <select #variable (change)="insertVariable(i, variable.value); variable.value = ''">
+                    <option value="">Selecione uma variável</option>
+                    @for (item of variables(); track item) { <option [value]="item" [disabled]="!variableAvailable(item)">{{ variableLabels[item] || item }}</option> }
+                  </select>
+                </label>
+                <div class="fields">
+                  <label>Posição horizontal (0–1)<input type="number" formControlName="x" min="0" max="1" step="0.01" /></label>
+                  <label>Posição vertical (0–1)<input type="number" formControlName="y" min="0" max="1" step="0.01" /></label>
+                  <label>Largura (0,01–1)<input type="number" formControlName="width" min="0.01" max="1" step="0.01" /></label>
+                  <label>Fonte (8–300)<input type="number" formControlName="font_size" min="8" max="300" step="1" /></label>
+                  <label>Cor hexadecimal<input type="text" formControlName="font_color" placeholder="#000000" maxlength="9" /></label>
+                  <label>Alinhamento<select formControlName="alignment"><option value="LEFT">À esquerda</option><option value="CENTERED">Centralizado</option><option value="RIGHT">À direita</option><option value="JUSTIFIED">Justificado</option></select></label>
+                </div>
+                @if (box.invalid && box.touched) { <p class="error" role="alert">Preencha o texto e revise os limites, a cor hexadecimal e o tamanho da fonte.</p> }
+              </article>
+            }
+          </div>
+          <div class="actions"><button type="button" [disabled]="boxes.length >= 30" (click)="addBox()">+ Adicionar texto</button><small>{{ boxes.length }}/30 caixas</small></div>
+          <p class="hint">Para permitir a validação pública, inclua {{ '{validacao.codigo}' }} ou {{ '{validacao.url}' }} em uma caixa de texto. As alterações só entram em vigor ao salvar.</p>
+          <div class="actions"><button class="primary" type="submit">Salvar e visualizar</button><button type="button" (click)="preview()">Visualizar modelo salvo</button></div>
+        </fieldset>
+      </form>
+      @if (busy()) { <p role="status"><span class="spinner"></span> Processando certificado…</p> }
+      @if (form.dirty && previewUrl()) { <p class="hint">A prévia mostra o modelo salvo. Salve novamente para visualizar suas últimas alterações.</p> }
+      @if (previewUrl(); as url) {
+        <figure><figcaption>Prévia com dados de exemplo</figcaption><img class="preview" [src]="url" alt="Prévia do certificado com dados fictícios" /><a [href]="url" download="certificado-previa.png">Baixar prévia PNG</a></figure>
+      }
+    </section>
+  }
+  @if (error() || success()) {
+    <div class="feedback" [class.error]="error()" [attr.role]="error() ? 'alert' : 'status'">{{ error() || success() }}</div>
+  }
+</main>
