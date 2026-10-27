@@ -3,6 +3,9 @@ import { provideRouter } from '@angular/router';
 
 import { BannerComponent } from './banner.component';
 import { EventListItem } from '../../../events-page/models/event.model';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ApiConfig } from '../../../../core/api/api.config';
 
 describe('Banner', () => {
   let component: BannerComponent;
@@ -11,7 +14,7 @@ describe('Banner', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [BannerComponent],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     })
     .compileComponents();
 
@@ -35,6 +38,21 @@ describe('Banner', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Gerenciar destaques');
+  });
+  it('loads an event highlight cover from the API as an image blob', () => {
+    const createUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:home-cover');
+    const revokeUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    const url = TestBed.inject(ApiConfig).buildUrl('/events/2/images/cover');
+    fixture.componentRef.setInput('highlights', [{ id: 'EVENT:2', source_type: 'EVENT', source_id: 2,
+      title: 'Semana', summary: 'Resumo', image_url: url, label: 'Evento em destaque', link: '/eventos/2' }]);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    const request = http.expectOne(url);
+    expect(request.request.responseType).toBe('blob');
+    request.flush(new Blob(['image'], { type: 'image/png' }));
+    expect(fixture.nativeElement.querySelector('.news-img-container img').getAttribute('src')).toBe('blob:home-cover');
+    fixture.destroy(); expect(revokeUrl).toHaveBeenCalledWith('blob:home-cover'); http.verify();
+    createUrl.mockRestore(); revokeUrl.mockRestore();
   });
 
   const event = (id: number, start: string, end = start): EventListItem => ({

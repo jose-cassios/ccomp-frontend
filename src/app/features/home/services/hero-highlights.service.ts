@@ -6,10 +6,12 @@ import {
   HighlightsResponse,
 } from '../models/global-highlight.model';
 import { Club } from '../../clubes/models/clube.model';
+import { EventsService } from '../../events-page/services/events.service';
 
 @Injectable({ providedIn: 'root' })
 export class HeroHighlightsService {
   private readonly api = inject(ApiService);
+  private readonly events = inject(EventsService);
 
   getAll(): Observable<GlobalHighlight[]> {
     return this.api.get<HighlightsResponse>('/highlights').pipe(
@@ -30,7 +32,7 @@ export class HeroHighlightsService {
           source_id: event.id,
           title: event.title,
           summary: event.summary ?? event.description,
-          image_url: event.cover_image_url ?? null,
+          image_url: this.events.resolveCover(event),
           label: 'Evento em destaque',
           link: `/eventos/${event.id}`,
         })),

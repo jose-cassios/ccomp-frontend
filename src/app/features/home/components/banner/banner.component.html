@@ -30,7 +30,7 @@
         </div>
         <div class="news-img-container">
           @if (currentHighlight().image_url) {
-            <img [src]="currentHighlight().image_url" [alt]="currentHighlight().title" />
+            <img [eventCover]="currentHighlight().image_url!" [alt]="currentHighlight().title" />
           } @else {
             <div class="news-placeholder" aria-hidden="true">CCOMP</div>
           }
