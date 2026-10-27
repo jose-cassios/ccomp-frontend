@@ -1,11 +1,9 @@
 :host { display: block; min-width: 0; }
 .canvas-toolbar, .toolbar-actions, .canvas-status { display: flex; align-items: center; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
 .canvas-toolbar { padding: .65rem; background: var(--brand-50); font-size: .75rem; }
-.zoom-label { display: flex; align-items: center; gap: .35rem; }
-input { accent-color: var(--brand-600); }
-.canvas-toolbar button, select { font: inherit; color: var(--brand-700); background: var(--white); border: 1px solid var(--brand-border); border-radius: .35rem; padding: .4rem; cursor: pointer; }
+.canvas-toolbar button { font: inherit; color: var(--brand-700); background: var(--white); border: 1px solid var(--brand-border); border-radius: .35rem; padding: .4rem; cursor: pointer; }
 .canvas-toolbar button:disabled { opacity: .45; cursor: not-allowed; }
-.viewport { overflow: auto; max-height: 70vh; overscroll-behavior: contain; background: var(--gray-100); }
+.viewport { overflow: auto; max-height: 70vh; background: var(--gray-100); }
 .canvas { position: relative; container-type: inline-size; background: white; overflow: hidden; box-shadow: 0 2px 12px #0001; margin-inline: auto; }
 img { display: block; width: 100%; height: auto; pointer-events: none; }
 .text-box { position: absolute; font-family: Arial, sans-serif; line-height: 1.2; outline: 1px dashed transparent; outline-offset: -1px; min-height: 1.2em; }
@@ -14,6 +12,7 @@ img { display: block; width: 100%; height: auto; pointer-events: none; }
 .text-box.selected { z-index: 1; }
 .canvas-text:focus-visible, .resize-handle:focus-visible { outline: 2px solid var(--brand-600); outline-offset: -2px; }
 .canvas-text:disabled { cursor: wait; }
+.inline-editor { display: block; box-sizing: border-box; width: 100%; min-height: 3em; margin: 0; padding: .15em; resize: vertical; border: 1px solid var(--brand-600); background: white; color: var(--text-primary); font: inherit; text-align: inherit; line-height: 1.2; user-select: text; }
 .resize-handle { position: absolute; top: 0; bottom: 0; width: 18px; padding: 0; border: 0; background: transparent; cursor: ew-resize; touch-action: none; display: grid; place-items: center; }
 .resize-handle.left { left: -9px; } .resize-handle.right { right: -9px; }
 .resize-handle span { width: 7px; height: 16px; border: 1px solid var(--brand-600); border-radius: 3px; background: white; box-shadow: 0 0 0 1px white; }

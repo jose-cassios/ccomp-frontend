@@ -2,15 +2,10 @@
   <div class="toolbar-actions">
     <button type="button" [disabled]="disabled() || active() || !canUndo()" (click)="undo.emit()" title="Desfazer ajuste (Ctrl+Z)">↶ Desfazer</button>
     <button type="button" [disabled]="disabled() || active() || !canRedo()" (click)="redo.emit()" title="Refazer ajuste (Ctrl+Shift+Z)">↷ Refazer</button>
-    <label class="zoom-label">Zoom
-      <select #scale [value]="zoom()" [disabled]="disabled() || active()" (change)="zoom.set(+scale.value)">
-        <option value="75">75%</option><option value="100">Ajustar</option><option value="125">125%</option><option value="150">150%</option><option value="200">200%</option>
-      </select>
-    </label>
   </div>
 </div>
 <div class="viewport">
-  <div class="canvas" [style.width.%]="zoom()" [class.interacting]="active()" role="group" aria-label="Prévia interativa do certificado">
+  <div class="canvas" [style.width.%]="zoom()" [class.interacting]="active()" (wheel)="wheel($event)" role="group" aria-label="Prévia interativa do certificado. Use o scroll sobre o certificado para ajustar o zoom.">
     <img [src]="cover()" alt="Fundo do certificado" draggable="false" (load)="loaded($event)" (error)="imageError.set(true)" />
     @for (box of rendered(); track $index; let i = $index) {
       <div class="text-box" [class.selected]="selected() === i"
@@ -18,13 +13,18 @@
         [style.font-size]="((box.font_size ?? 40) / imageWidth() * 100) + 'cqw'"
         [style.color]="box.color" [style.text-align]="box.align"
         (pointermove)="move($event)" (pointerup)="stop($event)" (pointercancel)="cancel()" (lostpointercapture)="cancel()">
+        @if (editing() === i) {
+          <textarea class="inline-editor" [value]="editDraft()" [readOnly]="disabled()" maxlength="2000" rows="3" aria-label="Editar conteúdo da caixa de texto"
+            (input)="inputText($event)" (keydown)="textKey($event)" (blur)="finishText()" (pointerdown)="$event.stopPropagation()"></textarea>
+        } @else {
         <button type="button" class="canvas-text" [disabled]="disabled()" [attr.aria-label]="'Selecionar e mover texto ' + (i + 1)"
           [attr.aria-pressed]="selected() === i" (focus)="selectedChange.emit(i)" (click)="selectedChange.emit(i)"
-          (pointerdown)="start($event, i)" (keydown)="key($event, i)">
+          (pointerdown)="start($event, i)" (keydown)="key($event, i)" (dblclick)="editText(i)">
           @for (run of box.runs; track $index) {<span [class.bold]="run.style === 'bold'" [class.italic]="run.style === 'italic'" [class.strike]="run.style === 'strike'">{{ run.text }}</span>}
           @if (!box.text_template) { <span class="placeholder">Digite seu texto</span> }
         </button>
-        @if (selected() === i) {
+        }
+        @if (selected() === i && editing() === null) {
           <button type="button" class="resize-handle left" [disabled]="disabled()" aria-label="Redimensionar pela borda esquerda"
             title="Arraste para ajustar a largura" (pointerdown)="start($event, i, 'left')" (keydown)="key($event, i, 'left')"><span></span></button>
           <button type="button" class="resize-handle right" [disabled]="disabled()" aria-label="Redimensionar pela borda direita"

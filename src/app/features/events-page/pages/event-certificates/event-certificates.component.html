@@ -38,6 +38,7 @@
           <app-certificate-canvas [cover]="url" [boxes]="designBoxes" [samples]="samples()" [selected]="selectedBox()" [disabled]="busy()"
             [canUndo]="undoStack().length > 0" [canRedo]="redoStack().length > 0"
             (selectedChange)="selectedBox.set($event)" (moved)="moveBox($event)" (resized)="resizeBox($event)"
+            (textChanged)="changeCanvasText($event)" (deleteRequested)="removeBox($event)"
             (editStarted)="beginCanvasEdit()" (committed)="rememberTransform($event)" (cancelled)="cancelCanvasEdit()"
             (undo)="undoTransform()" (redo)="redoTransform()" (dimensions)="imageSize.set($event)" />
         }

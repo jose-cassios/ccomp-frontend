@@ -41,6 +41,21 @@ describe('Certificate download', () => {
     expect(component.busy()).toBe(false); fixture.destroy();
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:download');
   });
+  it('offers the event certificate as a link while keeping the existing download endpoint', () => {
+    const pending = new Subject<Blob>(); api.download.mockReturnValue(pending);
+    const fixture = create();
+    fixture.componentRef.setInput('scope', 'event'); fixture.componentRef.setInput('asLink', true);
+    fixture.componentRef.setInput('label', 'Solicitar certificado'); fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector('a') as HTMLAnchorElement;
+    expect(link.textContent).toContain('Solicitar certificado');
+    expect(fixture.nativeElement.querySelector('button')).toBeNull();
+    const click = new MouseEvent('click', { cancelable: true, bubbles: true }); link.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(true);
+    expect(api.download).toHaveBeenCalledWith(9, 'event');
+    fixture.detectChanges(); expect(link.getAttribute('aria-busy')).toBe('true');
+    link.dispatchEvent(new MouseEvent('click', { cancelable: true }));
+    expect(api.download).toHaveBeenCalledTimes(1);
+  });
   it('displays backend check-in errors beside the download action', () => {
     api.download.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 400, error: { message: 'Faça o check-in da atividade.' } })));
     const fixture = create(); fixture.componentInstance.download(); fixture.detectChanges();

@@ -43,6 +43,25 @@ describe('Event certificate customization', () => {
     expect(component.unsaved).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('Fundo do certificado');
   });
+  it('persists inline text edits and handles Delete through the preview', () => {
+    const fixture = create(); const component = fixture.componentInstance;
+    fixture.nativeElement.querySelector('.canvas-text').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    fixture.detectChanges();
+    const editor = fixture.nativeElement.querySelector('.inline-editor') as HTMLTextAreaElement;
+    editor.value = 'Certificamos a participação de {participante.nome}';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    editor.dispatchEvent(new FocusEvent('blur')); fixture.detectChanges();
+    expect(component.form.dirty).toBe(true);
+    component.save();
+    expect(api.saveTemplate.mock.calls[0][2][0].text_template).toBe(editor.value);
+    component.addBox(); fixture.detectChanges();
+    const buttons = fixture.nativeElement.querySelectorAll('.canvas-text');
+    buttons[1].focus();
+    buttons[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }));
+    expect(component.boxes.length).toBe(1);
+    expect(component.designBoxes[0].text_template).toBe(editor.value);
+    expect(component.form.dirty).toBe(true);
+  });
   it('finds an active editor beyond the first page', () => {
     auth.currentUserState.mockReturnValue({ id: 'editor' });
     events.getEditableEvents.mockReturnValueOnce(of({ content: [], next_cursor: 'next' }))

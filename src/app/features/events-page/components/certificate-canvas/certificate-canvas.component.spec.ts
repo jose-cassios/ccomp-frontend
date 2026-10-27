@@ -49,6 +49,66 @@ describe('Certificate interactive preview', () => {
     fixture.componentRef.setInput('disabled', true); component.key(event, 0);
     expect(moved).toHaveBeenCalledTimes(1);
   });
+  it('edits the template on double click and restores it on Escape', () => {
+    const fixture = create(); const component = fixture.componentInstance;
+    const changed = vi.fn(); const removed = vi.fn();
+    component.textChanged.subscribe(changed); component.deleteRequested.subscribe(removed);
+    fixture.nativeElement.querySelector('.canvas-text').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    fixture.detectChanges();
+    const editor = fixture.nativeElement.querySelector('.inline-editor') as HTMLTextAreaElement;
+    expect(editor.value).toBe(box.text_template);
+    editor.value = 'Novo texto'; editor.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(changed).toHaveBeenLastCalledWith({ index: 0, text: 'Novo texto' });
+    editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+    expect(removed).not.toHaveBeenCalled();
+    editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    expect(changed).toHaveBeenLastCalledWith({ index: 0, text: box.text_template });
+    expect(fixture.nativeElement.querySelector('.inline-editor')).toBeNull();
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('.canvas-text'));
+  });
+  it('keeps edited content when focus leaves the text box', () => {
+    const fixture = create(); const component = fixture.componentInstance;
+    const changed = vi.fn(); component.textChanged.subscribe(changed);
+    component.editText(0); fixture.detectChanges();
+    const editor = fixture.nativeElement.querySelector('.inline-editor') as HTMLTextAreaElement;
+    editor.value = 'Conteúdo atualizado'; editor.dispatchEvent(new Event('input'));
+    editor.dispatchEvent(new FocusEvent('blur'));
+    expect(component.editing()).toBeNull();
+    expect(changed).toHaveBeenCalledTimes(1);
+    expect(changed).toHaveBeenCalledWith({ index: 0, text: 'Conteúdo atualizado' });
+  });
+  it('deletes the focused box without repeating or deleting the last required box', () => {
+    const fixture = create(); const component = fixture.componentInstance; const removed = vi.fn();
+    component.deleteRequested.subscribe(removed);
+    const press = (repeat = false) => fixture.nativeElement.querySelector('.canvas-text')
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', repeat, bubbles: true, cancelable: true }));
+    press(); expect(removed).not.toHaveBeenCalled();
+    fixture.componentRef.setInput('boxes', [box, { ...box, text_template: 'Outro texto' }]); fixture.detectChanges();
+    press(); press(true); expect(removed).toHaveBeenCalledExactlyOnceWith(0);
+    fixture.componentRef.setInput('disabled', true); fixture.detectChanges(); press();
+    expect(removed).toHaveBeenCalledTimes(1);
+  });
+  it('zooms only over the certificate and leaves outside scrolling alone', () => {
+    const fixture = create(); const component = fixture.componentInstance;
+    const canvas = fixture.nativeElement.querySelector('.canvas');
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 1000, height: 500 } as DOMRect);
+    const outside = new WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true });
+    fixture.nativeElement.querySelector('.viewport').dispatchEvent(outside);
+    expect(outside.defaultPrevented).toBe(false); expect(component.zoom()).toBe(100);
+    const inside = new WheelEvent('wheel', { deltaY: -100, clientX: 500, clientY: 250, bubbles: true, cancelable: true });
+    canvas.dispatchEvent(inside);
+    expect(inside.defaultPrevented).toBe(true); expect(component.zoom()).toBeGreaterThan(100);
+    for (let i = 0; i < 30; i++) canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, cancelable: true }));
+    expect(component.zoom()).toBe(250);
+    for (let i = 0; i < 30; i++) canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: 100, cancelable: true }));
+    expect(component.zoom()).toBe(50);
+    expect(fixture.nativeElement.querySelector('select')).toBeNull();
+    component.editText(0); fixture.detectChanges();
+    const typing = new WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true });
+    fixture.nativeElement.querySelector('.inline-editor').dispatchEvent(typing);
+    expect(typing.defaultPrevented).toBe(false); expect(component.zoom()).toBe(50);
+  });
   function startGesture(fixture: ReturnType<typeof create>, side?: 'left' | 'right') {
     const target = fixture.nativeElement.querySelector(side ? '.resize-handle.' + side : '.canvas-text');
     target.setPointerCapture = vi.fn();

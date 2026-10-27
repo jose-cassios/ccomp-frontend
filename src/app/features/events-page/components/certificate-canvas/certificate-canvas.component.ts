@@ -35,6 +35,8 @@ export class CertificateCanvasComponent {
   readonly editStarted = output<void>();
   readonly committed = output<CertificateTransform>();
   readonly cancelled = output<void>();
+  readonly textChanged = output<{ index: number; text: string }>();
+  readonly deleteRequested = output<number>();
   readonly dimensions = output<{ width: number; height: number }>();
   readonly imageWidth = signal(1600);
   readonly imageError = signal(false);
@@ -45,6 +47,12 @@ export class CertificateCanvasComponent {
   readonly active = signal(false);
   readonly overflow = signal(false);
   readonly announcement = signal('');
+  readonly editing = signal<number | null>(null);
+  readonly editDraft = signal('');
+  private originalText = '';
+  private focusEditor = false;
+  private focusBox: number | null = null;
+  private zoomAnchor: { x: number; y: number; clientX: number; clientY: number } | null = null;
   readonly rendered = computed(() => this.boxes().map(box => ({
     ...box, runs: certificateTextRuns(box.text_template, this.samples()),
     color: certificateColor(box.font_color).css,
@@ -56,6 +64,20 @@ export class CertificateCanvasComponent {
     // Text height changes as its width changes. Read the actual browser layout.
     afterEveryRender({ read: () => {
       const canvas = this.element.nativeElement.querySelector<HTMLElement>('.canvas');
+      if (canvas && this.zoomAnchor) {
+        const rect = canvas.getBoundingClientRect(); const anchor = this.zoomAnchor;
+        this.zoomAnchor = null;
+        canvas.parentElement!.scrollLeft += rect.left + anchor.x * rect.width - anchor.clientX;
+        canvas.parentElement!.scrollTop += rect.top + anchor.y * rect.height - anchor.clientY;
+      }
+      if (this.focusEditor) {
+        const editor = canvas?.querySelector<HTMLTextAreaElement>('.inline-editor');
+        if (editor) { this.focusEditor = false; editor.focus({ preventScroll: true }); editor.select(); }
+      }
+      if (this.focusBox !== null) {
+        canvas?.querySelectorAll<HTMLButtonElement>('.canvas-text')[this.focusBox]?.focus({ preventScroll: true });
+        this.focusBox = null;
+      }
       const selected = canvas?.querySelector<HTMLElement>('.text-box.selected');
       if (!canvas || !selected) { this.overflow.set(false); return; }
       const page = canvas.getBoundingClientRect(); const text = selected.getBoundingClientRect();
@@ -72,7 +94,7 @@ export class CertificateCanvasComponent {
   }
 
   start(event: PointerEvent, index: number, side?: 'left' | 'right'): void {
-    if (this.disabled() || this.drag || event.button !== 0) return;
+    if (this.disabled() || this.drag || this.editing() !== null || event.button !== 0) return;
     const target = event.currentTarget as HTMLElement;
     const shell = target.closest<HTMLElement>('.text-box');
     const canvas = shell?.parentElement;
@@ -96,6 +118,7 @@ export class CertificateCanvasComponent {
     if (!drag || drag.id !== event.pointerId) return;
     if (this.disabled()) { this.cancel(); return; }
     let dx = event.clientX - drag.startX; let dy = event.clientY - drag.startY;
+    if (Math.abs(dx) + Math.abs(dy) < 3) return;
     if (event.shiftKey && !drag.side) {
       if (Math.abs(dx) >= Math.abs(dy)) dy = 0; else dx = 0;
     }
@@ -146,8 +169,61 @@ export class CertificateCanvasComponent {
   @HostListener('window:blur')
   blurred(): void { this.cancel(); }
 
+  editText(index: number): void {
+    if (this.disabled()) return;
+    this.cancel(); this.selectedChange.emit(index);
+    this.originalText = this.boxes()[index].text_template;
+    this.editDraft.set(this.originalText); this.editing.set(index);
+    this.focusEditor = true; this.editStarted.emit();
+  }
+
+  inputText(event: Event): void {
+    const index = this.editing();
+    if (index === null || this.disabled()) return;
+    const text = (event.target as HTMLTextAreaElement).value;
+    this.editDraft.set(text); this.textChanged.emit({ index, text });
+  }
+
+  finishText(cancel = false): void {
+    const index = this.editing();
+    if (index === null) return;
+    this.editing.set(null); this.focusEditor = false;
+    if (cancel) this.textChanged.emit({ index, text: this.originalText });
+    if (cancel || this.editDraft() === this.originalText) this.cancelled.emit();
+    this.announcement.set(cancel ? 'Edição cancelada.' : 'Texto atualizado.');
+  }
+
+  textKey(event: KeyboardEvent): void {
+    event.stopPropagation();
+    if (event.key === 'Escape' || (event.key === 'Enter' && (event.ctrlKey || event.metaKey))) {
+      event.preventDefault(); this.focusBox = this.editing(); this.finishText(event.key === 'Escape');
+    }
+  }
+
+  wheel(event: WheelEvent): void {
+    if (this.disabled() || this.drag || this.editing() !== null || !event.deltaY) return;
+    const canvas = event.currentTarget as HTMLElement;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    event.preventDefault();
+    const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rect.height : 1);
+    const next = Math.max(50, Math.min(250, this.zoom() * Math.exp(-Math.max(-100, Math.min(100, delta)) * .0015)));
+    if (next === this.zoom()) return;
+    this.zoomAnchor = { x: (event.clientX - rect.left) / rect.width, y: (event.clientY - rect.top) / rect.height,
+      clientX: event.clientX, clientY: event.clientY };
+    this.zoom.set(next);
+  }
+
   key(event: KeyboardEvent, index: number, side?: 'left' | 'right'): void {
-    if (this.disabled() || this.drag) return;
+    if (this.disabled() || this.drag || this.editing() !== null) return;
+    if (event.key === 'Delete') {
+      event.preventDefault();
+      if (event.repeat) return;
+      if (this.boxes().length > 1) this.deleteRequested.emit(index);
+      else this.announcement.set('O certificado precisa de pelo menos uma caixa de texto.');
+      return;
+    }
+    if (event.key === 'F2') { event.preventDefault(); this.editText(index); return; }
     if ((event.ctrlKey || event.metaKey) && ['z', 'y'].includes(event.key.toLowerCase())) {
       event.preventDefault();
       if (event.key.toLowerCase() === 'y' || event.shiftKey) this.redo.emit(); else this.undo.emit();

@@ -248,6 +248,12 @@ export class EventCertificatesComponent implements OnInit {
     this.boxes.at(move.index).patchValue({ x: move.x, y: move.y }); this.form.markAsDirty();
   }
 
+  changeCanvasText(change: { index: number; text: string }): void {
+    if (this.busy()) return;
+    const control = this.boxes.at(change.index).controls.text_template;
+    control.setValue(change.text); control.markAsDirty();
+  }
+
   resizeBox(change: { index: number; x: number; width: number }): void {
     if (this.busy()) return;
     this.boxes.at(change.index).patchValue({ x: change.x, width: change.width }); this.form.markAsDirty();

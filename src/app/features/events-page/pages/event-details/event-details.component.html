@@ -68,8 +68,6 @@
         @if (canManageCertificates()) {
           <a class="edit-link" [routerLink]="['/eventos', currentEvent.id, 'certificados']">Personalizar certificados</a>
         }
-        <app-certificate-download [resourceId]="currentEvent.id" />
-        <p class="enrollment-window">Certificado disponível para inscritos com check-in confirmado.</p>
       </aside>
     </article>
 
@@ -199,6 +197,12 @@
         <app-event-guests [eventId]="currentEvent.id" />
         <h2>Informações</h2>
         <dl>
+          @if (isAuthenticated() && subscribed()) {
+          <div>
+            <dt>Certificado</dt>
+            <dd><app-certificate-download [resourceId]="currentEvent.id" [asLink]="true" label="Solicitar certificado" /></dd>
+          </div>
+          }
           <div>
             <dt>Data de início</dt>
             <dd>{{ currentEvent.start_date | date: 'dd/MM/yyyy, HH:mm' }}</dd>

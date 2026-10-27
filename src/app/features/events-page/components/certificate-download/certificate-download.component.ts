@@ -13,10 +13,17 @@ import { CertificatesService } from '../../services/certificates.service';
   selector: 'app-certificate-download',
   standalone: true,
   template: `
+    @if (asLink()) {
+      <a href="#" [attr.aria-disabled]="busy()" [attr.aria-busy]="busy()" (click)="$event.preventDefault(); download()">
+        @if (busy()) { <span class="spinner" aria-hidden="true"></span> Gerando certificado… }
+        @else { {{ label() }} }
+      </a>
+    } @else {
     <button type="button" [disabled]="busy()" [attr.aria-busy]="busy()" (click)="download()">
       @if (busy()) { <span class="spinner" aria-hidden="true"></span> Gerando certificado… }
-      @else { Baixar certificado }
+      @else { {{ label() }} }
     </button>
+    }
     @if (error(); as message) { <p role="alert" class="error">{{ message }}</p> }
     @if (success(); as message) { <p role="status">{{ message }}</p> }
   `,
@@ -25,6 +32,9 @@ import { CertificatesService } from '../../services/certificates.service';
     button { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; padding: .65rem .85rem; border: 1px solid var(--brand-border); border-radius: .6rem; background: var(--brand-50); color: var(--brand-700); font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; }
     button:disabled { opacity: .65; cursor: wait; }
     button:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 2px; }
+    a { display: inline-flex; align-items: center; gap: .5rem; color: var(--brand-700); text-decoration: underline; text-underline-offset: .2em; }
+    a[aria-disabled="true"] { opacity: .65; cursor: wait; }
+    a:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 2px; }
     p { font-size: .8rem; margin-top: .5rem; max-width: 28rem; color: var(--text-secondary); }
     .error { color: var(--error); }
     .spinner { width: 1rem; height: 1rem; border: 2px solid var(--brand-border); border-top-color: var(--brand-600); border-radius: 50%; animation: spin .8s linear infinite; }
@@ -35,6 +45,8 @@ import { CertificatesService } from '../../services/certificates.service';
 export class CertificateDownloadComponent {
   readonly resourceId = input.required<number>();
   readonly scope = input<CertificateScope>('event');
+  readonly label = input('Baixar certificado');
+  readonly asLink = input(false);
   private readonly api = inject(CertificatesService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
