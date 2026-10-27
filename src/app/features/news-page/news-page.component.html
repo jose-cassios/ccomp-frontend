@@ -4,11 +4,9 @@
       <header class="news-header">
         <div>
           <h1 class="page-title">Notícias</h1>
-          <p>Fique por dentro das novidades do curso de Computação.</p>
         </div>
         @if (canManageNews()) {
           <a class="btn-create-news" routerLink="/noticias/nova">
-            <span class="btn-icon" aria-hidden="true">+</span>
             Nova notícia
           </a>
         }

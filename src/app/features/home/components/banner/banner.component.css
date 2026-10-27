@@ -12,7 +12,7 @@ h1 span { color: var(--brand-600); }
 .hero-stats strong { color: var(--brand-900); font-size: 1.4rem; line-height: 1; }
 .hero-stats span { color: var(--text-secondary); font-size: .58rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
 .campus-image { position: absolute; z-index: -1; inset: 40% -24px 0; background: url('/ifma.jpg') center bottom / cover no-repeat; opacity: 0.9; mask-image: linear-gradient(to bottom, transparent 0%, #000 65%), linear-gradient(to right, #000 85%, transparent); mask-composite: intersect; }
-.course-link { align-self: flex-start; margin: auto 0 18px 4px; padding: 10px 14px; border: 1px solid var(--border-primary); border-radius: 8px; background: var(--surface-card); color: var(--brand-700); font-size: .75rem; font-weight: 750; text-decoration: none; }
+.course-link { align-self: flex-start; margin: auto 0 18px 10px; padding: 10px 14px; border: 1px solid var(--border-primary); border-radius: 8px; background: var(--surface-card); color: var(--brand-700); font-size: .75rem; font-weight: 750; text-decoration: none; }
 .hero-dashboard { display: flex; flex-direction: column; justify-content: center; gap: 14px; min-width: 0; }
 .news-card { display: grid; grid-template-columns: 1fr 1fr; min-height: 205px; overflow: hidden; border: 1px solid var(--border-primary); border-radius: 13px; background: var(--surface-card); }
 .news-content { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; gap: 10px; padding: 18px; }

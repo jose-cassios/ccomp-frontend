@@ -84,6 +84,23 @@ describe('EventDetailsComponent', () => {
     expect(cover.src).toBe('https://example.com/pesquisa.jpg');
   });
 
+  it('places the event certificate request in the information card', () => {
+    authenticated.set(true); component.subscribed.set(true); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.info-card app-certificate-download a')?.textContent).toContain('Solicitar certificado');
+    expect(fixture.nativeElement.querySelector('.event-hero app-certificate-download')).toBeNull();
+  });
+
+  it('hides the certificate section for visitors and users without event enrollment', () => {
+    expect(fixture.nativeElement.querySelector('.info-card app-certificate-download')).toBeNull();
+    authenticated.set(true); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.info-card app-certificate-download')).toBeNull();
+    component.subscribed.set(true); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.info-card app-certificate-download')).not.toBeNull();
+    component.subscribed.set(false); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.info-card app-certificate-download')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.info-card').textContent).not.toContain('Certificado');
+  });
+
   it('restores activity subscriptions from the dedicated endpoint', () => {
     authenticated.set(true);
     eventsService.getMyActivitySubscriptions.mockReturnValueOnce(of([scheduleActivity]));

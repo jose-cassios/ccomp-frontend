@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
 import { HeroHighlightsService } from './hero-highlights.service';
+import { ApiConfig } from '../../../core/api/api.config';
 
 describe('HeroHighlightsService', () => {
   const api = { get: vi.fn() };
@@ -96,5 +97,17 @@ describe('HeroHighlightsService', () => {
         image_url: 'https://example.com/semana.jpg',
       }));
     });
+  });
+  for (const field of ['cover_image_url', 'cover_image_key', 'coverImageKey', 'coverImageUrl']) {
+    it(`resolves a storage key in ${field} through the event cover endpoint`, () => {
+      api.get.mockReturnValue(of({ news: [], clubs: [], events: [{ id: 2, title: 'Semana', [field]: 'events/2/cover/image.png' }] }));
+      service.getAll().subscribe(highlights => {
+        expect(highlights[0].image_url).toBe(TestBed.inject(ApiConfig).buildUrl('/events/2/images/cover'));
+      });
+    });
+  }
+  it('keeps an event without cover empty instead of requesting a missing image', () => {
+    api.get.mockReturnValue(of({ news: [], clubs: [], events: [{ id: 2, title: 'Semana', cover_image_url: null }] }));
+    service.getAll().subscribe(highlights => expect(highlights[0].image_url).toBeNull());
   });
 });

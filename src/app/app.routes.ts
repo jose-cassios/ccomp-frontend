@@ -33,6 +33,20 @@ export const routes: Routes = [
         children: [
         { path: '', component: Home },
         {
+          path: 'validar',
+          loadComponent: () => import('./features/events-page/pages/certificate-validation/certificate-validation.component').then(m => m.CertificateValidationComponent),
+        },
+        {
+          path: 'validar/:code',
+          loadComponent: () => import('./features/events-page/pages/certificate-validation/certificate-validation.component').then(m => m.CertificateValidationComponent),
+        },
+        {
+          path: 'eventos/:id/certificados',
+          loadComponent: () => import('./features/events-page/pages/event-certificates/event-certificates.component').then(m => m.EventCertificatesComponent),
+          canActivate: [authGuard],
+          canDeactivate: [pendingEventChangesGuard],
+        },
+        {
           path: 'check-in',
           loadComponent: () => import('./features/events-page/pages/activity-check-in/activity-check-in.component').then(m => m.ActivityCheckInPageComponent),
           canActivate: [authGuard],

@@ -1,0 +1,150 @@
+<main class="certificates-page">
+  <header class="page-heading">
+    <div><h1>Estúdio de certificados</h1></div>
+    <a routerLink="/validar">Validar um certificado</a>
+  </header>
+
+  @if (loading()) {
+    <p role="status"><span class="spinner"></span> Carregando modelos…</p>
+  } @else if (loadError(); as message) {
+    <section class="panel"><p role="alert">{{ message }}</p><button type="button" (click)="load()">Tentar novamente</button></section>
+  } @else if (!allowed()) {
+    <p role="alert" class="panel">A personalização está disponível para o responsável pelo evento, editores ativos, moderadores e administradores.</p>
+  } @else {
+    <div class="tabs" role="group" aria-label="Modelo de certificado">
+      <button type="button" [attr.aria-pressed]="scope() === 'event'" [disabled]="busy()" (click)="selectScope('event')">Do evento</button>
+      <button type="button" [attr.aria-pressed]="scope() === 'activity'" [disabled]="busy()" (click)="selectScope('activity')">Das atividades</button>
+    </div>
+
+    <details class="panel">
+      <summary>Fundo do certificado <small>Enviar imagem ou restaurar o padrão</small></summary>
+      <div class="cover-panel">
+        <div>
+          <p>A imagem de fundo é compartilhada pelo evento e suas atividades. Ao enviar, ela substitui o fundo atual.</p>
+          <div class="actions">
+            <label class="upload">Enviar imagem<input type="file" accept="image/png,image/jpeg,image/webp" [disabled]="busy()" (change)="upload($event)" /></label>
+            <button type="button" [disabled]="busy()" (click)="restoreCover()">Restaurar fundo padrão</button>
+          </div>
+          <small>PNG, JPEG ou WebP. Prefira uma imagem horizontal com espaço livre para os textos.</small>
+        </div>
+        @if (coverUrl(); as url) { <img class="cover" [src]="url" alt="Fundo atual do certificado" /> }
+      </div>
+    </details>
+
+    <div class="design-layout" [attr.aria-busy]="busy()">
+      <section class="live-panel panel" aria-labelledby="live-title">
+        <div class="box-heading"><h2 id="live-title">Prévia ao vivo</h2><span class="status-pill">{{ form.dirty ? 'Alterações não salvas' : 'Modelo salvo' }}</span></div>
+        @if (coverUrl(); as url) {
+          <app-certificate-canvas [cover]="url" [boxes]="designBoxes" [samples]="samples()" [selected]="selectedBox()" [disabled]="busy()"
+            [canUndo]="undoStack().length > 0" [canRedo]="redoStack().length > 0"
+            (selectedChange)="selectedBox.set($event)" (moved)="moveBox($event)" (resized)="resizeBox($event)"
+            (textChanged)="changeCanvasText($event)" (deleteRequested)="removeBox($event)"
+            (editStarted)="beginCanvasEdit()" (committed)="rememberTransform($event)" (cancelled)="cancelCanvasEdit()"
+            (undo)="undoTransform()" (redo)="redoTransform()" (dimensions)="imageSize.set($event)" />
+        }
+        <div class="actions">
+          <button type="button" [disabled]="busy() || boxes.length >= 30" (click)="addBox('title')">+ Título</button>
+          <button type="button" [disabled]="busy() || boxes.length >= 30" (click)="addBox('participant')">+ Nome do participante</button>
+          <button type="button" [disabled]="busy() || boxes.length >= 30" (click)="addBox()">+ Texto livre</button>
+        </div>
+        @if (!hasValidation) {
+          <div class="validation-tip">
+            <p>Permita que outras pessoas confiram a autenticidade do certificado.</p>
+            <button type="button" [disabled]="busy() || boxes.length >= 30" (click)="addBox('validation')">Adicionar código de validação</button>
+          </div>
+        }
+      </section>
+
+      <section class="panel controls-panel" aria-labelledby="controls-title">
+        <div class="box-heading"><h2 id="controls-title">Textos do certificado</h2><small>{{ boxes.length }}/30</small></div>
+        <div class="text-list" role="group" aria-label="Selecione um texto para editar">
+          @for (box of boxes.controls; track box; let i = $index) {
+            <button type="button" [attr.aria-pressed]="selectedBox() === i" [disabled]="busy()" (click)="selectedBox.set(i)" [title]="boxLabel(i)">
+              <span>{{ i + 1 }}</span><span class="text-label">{{ boxLabel(i) }}</span>
+            </button>
+          }
+        </div>
+        <form [formGroup]="form" (ngSubmit)="save()">
+          <fieldset [disabled]="busy()">
+            <div formArrayName="boxes">
+              @for (box of boxes.controls; track box; let i = $index) {
+                @if (selectedBox() === i) {
+                  <article class="text-box" [formGroupName]="i">
+                    <div class="box-heading"><h3>Editar texto {{ i + 1 }}</h3>
+                      <div class="actions compact"><button type="button" [disabled]="boxes.length >= 30" (click)="duplicate(i)">Duplicar</button><button type="button" [disabled]="boxes.length <= 1" (click)="removeBox(i)">Remover</button></div>
+                    </div>
+                    <div class="content-heading">
+                      <label [attr.for]="'certificate-content-' + i">Conteúdo</label>
+                      <details #infoMenu class="insert-menu" (keydown.escape)="infoMenu.open = false; insertTrigger.focus()">
+                        <summary #insertTrigger aria-label="Adicionar informação automática" title="Adicionar informação automática">+</summary>
+                        <div class="insert-options" role="group" aria-label="Informações automáticas">
+                          @for (item of variables(); track item) {
+                            <button type="button" [disabled]="!variableAvailable(item)" (click)="insertVariable(i, item, content); infoMenu.open = false">{{ variableLabels[item] || item }}</button>
+                          }
+                        </div>
+                      </details>
+                    </div>
+                    <div class="format-bar" role="group" aria-label="Formatação do texto">
+                      <div class="tool-group">
+                        <input class="font-size" type="number" formControlName="font_size" min="8" max="300" step="1" aria-label="Tamanho da fonte" title="Tamanho da fonte" />
+                        <button type="button" class="icon-tool" (click)="formatText(i, '**', content)" aria-label="Negrito" title="Negrito"><strong>N</strong></button>
+                        <button type="button" class="icon-tool" (click)="formatText(i, '*', content)" aria-label="Itálico" title="Itálico"><em>I</em></button>
+                        <button type="button" class="icon-tool unavailable" aria-disabled="true" (click)="explainUnderline()" aria-label="Sublinhado indisponível na emissão" title="Sublinhado: ainda não disponível na emissão"><u>S</u></button>
+                        <input #picker type="color" [value]="color(box.controls.font_color.value).rgb" (input)="setColor(i, picker.value)" aria-label="Cor do texto" title="Cor do texto" />
+                      </div>
+                      <div class="tool-group" role="group" aria-label="Alinhamento do texto">
+                        @for (alignment of alignments; track alignment.value) {
+                          <button type="button" class="icon-tool" [attr.aria-label]="alignment.label" [title]="alignment.label"
+                            [attr.aria-pressed]="box.controls.alignment.value === alignment.value" (click)="setAlignment(i, alignment.value)">
+                            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path [attr.d]="alignment.path" /></svg>
+                          </button>
+                        }
+                        <label class="opacity-tool" title="Opacidade do texto">Opac.
+                          <input #opacity type="number" min="0" max="100" step="1" [value]="color(box.controls.font_color.value).opacity" (change)="setOpacity(i, opacity.value)" aria-label="Opacidade do texto em porcentagem" /><span>%</span>
+                        </label>
+                      </div>
+                    </div>
+                    <textarea #content [id]="'certificate-content-' + i" formControlName="text_template" rows="4" maxlength="2000" placeholder="Digite o texto do certificado"></textarea>
+                    <small class="character-count">{{ box.controls.text_template.value.length }}/2000</small>
+                    <div class="position-group">
+                      <button type="button" (click)="centerBox(i)" title="Centralizar a caixa de texto na página">Centralizar na página</button>
+                      <details class="position-controls">
+                        <summary>Ajuste preciso</summary>
+                        <div class="position-fields">
+                          <label>Horizontal (%)
+                            <input #horizontal type="number" min="0" [max]="percent(1 - box.controls.width.value)" step="0.1" [value]="percent(box.controls.x.value)" (change)="position(i, 'x', horizontal.value)" />
+                          </label>
+                          <label>Vertical (%)
+                            <input #vertical type="number" min="0" max="100" step="0.1" [value]="percent(box.controls.y.value)" (change)="position(i, 'y', vertical.value)" />
+                          </label>
+                        </div>
+                      </details>
+                    </div>
+                    @if (box.invalid && box.touched) { <p class="error" role="alert">Preencha o conteúdo e revise os ajustes deste texto.</p> }
+                  </article>
+                }
+              }
+            </div>
+          </fieldset>
+        </form>
+      </section>
+    </div>
+
+    <div class="save-bar panel">
+      <span role="status">@if (busy()) { <span class="spinner"></span> Processando certificado… } @else { {{ form.dirty ? 'Suas alterações estão prontas para salvar.' : 'Nenhuma alteração pendente neste modelo.' }} }</span>
+      <div class="actions"><button type="button" [disabled]="busy()" (click)="preview()">Conferir modelo salvo</button><button class="primary" type="button" [disabled]="busy()" (click)="save()">Salvar e conferir</button></div>
+    </div>
+    @if (previewUrl(); as url) {
+      <details class="panel final-preview" open>
+        <summary>Prévia final do modelo salvo</summary>
+        @if (form.dirty) { <p class="hint">Esta versão ainda não inclui as alterações não salvas. A prévia ao vivo acima mostra sua edição atual.</p> }
+        <p class="hint">Gerada com dados fictícios para conferir a disposição dos textos.</p>
+        <img class="preview" [src]="url" alt="Prévia final do modelo salvo com dados de exemplo" />
+        <a [href]="url" download="certificado-previa.png">Baixar prévia PNG</a>
+      </details>
+    }
+  }
+  @if (error() || success()) {
+    <div class="feedback" [class.error]="error()" [attr.role]="error() ? 'alert' : 'status'">{{ error() || success() }}</div>
+  }
+</main>

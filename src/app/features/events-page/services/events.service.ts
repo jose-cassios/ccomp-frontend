@@ -490,7 +490,7 @@ export class EventsService {
     };
   }
 
-  private resolveCover(event: ApiEvent): string | null {
+  resolveCover(event: Pick<ApiEvent, 'id' | 'coverImageKey' | 'cover_image_key' | 'coverImageUrl' | 'cover_image_url'>): string | null {
     const cover = event.coverImageKey ?? event.cover_image_key ?? event.coverImageUrl ?? event.cover_image_url;
     if (!cover) return null;
     // The list DTO still calls the storage key coverImageUrl; never use an S3 key as an image URL.

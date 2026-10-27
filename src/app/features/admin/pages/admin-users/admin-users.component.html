@@ -9,7 +9,7 @@
     <button
       type="button"
       class="refresh-button"
-      [disabled]="isBusy() || (activeSection() === 'users' ? loading() : auditLoading())"
+      [disabled]="isBusy() || (activeSection() === 'users' ? loading() : activeSection() === 'logs' ? logsPanel()?.loading() : auditLoading())"
       (click)="refreshActiveSection()"
     >
       Atualizar
@@ -37,6 +37,12 @@
     >
       Auditoria
     </button>
+    @if (canViewLogs()) {
+      <button type="button" role="tab" class="admin-tab"
+        [attr.aria-selected]="activeSection() === 'logs'"
+        [class.admin-tab--active]="activeSection() === 'logs'"
+        (click)="selectSection('logs')">Logs</button>
+    }
   </nav>
 
   @if (errorMessage()) {
@@ -220,7 +226,7 @@
         }
       </section>
     }
-  } @else {
+  } @else if (activeSection() === 'audit') {
     <section class="audit-card" aria-labelledby="audit-title">
       <div class="section-heading">
         <div>
@@ -303,5 +309,7 @@
         }
       }
     </section>
+  } @else if (activeSection() === 'logs' && canViewLogs()) {
+    <app-admin-infra-logs />
   }
 </section>

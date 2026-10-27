@@ -5,6 +5,7 @@ import { AgendaMesComponent } from '../agenda-mes/agenda-mes.component';
 import { ProximosEventosComponent } from '../../../events-page/components/proximos-eventos/proximos-eventos.component';
 import { EventListItem } from '../../../events-page/models/event.model';
 import { GlobalHighlight } from '../../models/global-highlight.model';
+import { EventCoverDirective } from '../../../events-page/components/event-cover.directive';
 
 interface StatItem {
   valor: string;
@@ -14,7 +15,7 @@ interface StatItem {
 @Component({
   selector: 'app-banner',
   standalone: true,
-  imports: [RouterLink, AgendaMesComponent, ProximosEventosComponent],
+  imports: [RouterLink, AgendaMesComponent, ProximosEventosComponent, EventCoverDirective],
   templateUrl: './banner.component.html',
   styleUrl: './banner.component.css'
 })

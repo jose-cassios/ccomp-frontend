@@ -12,7 +12,7 @@
         </div>
       </div>
       <div class="campus-image" aria-hidden="true"></div>
-      <a class="course-link" routerLink="/sobre/apresentacao">Conheça o curso <span aria-hidden="true">↗</span></a>
+      <a class="course-link" routerLink="/sobre/apresentacao">Conheça o curso</a>
     </div>
 
     <div class="hero-dashboard">
@@ -30,7 +30,7 @@
         </div>
         <div class="news-img-container">
           @if (currentHighlight().image_url) {
-            <img [src]="currentHighlight().image_url" [alt]="currentHighlight().title" />
+            <img [eventCover]="currentHighlight().image_url!" [alt]="currentHighlight().title" />
           } @else {
             <div class="news-placeholder" aria-hidden="true">CCOMP</div>
           }
@@ -57,7 +57,7 @@
           (daySelected)="selectedDay.set($event)" />
         <div class="hero-events" id="hero-events" aria-live="polite">
           @if (selectedDay()) {
-            <button class="reset-day" type="button" (click)="selectedDay.set(null)">← Próximos eventos</button>
+            <button class="reset-day" type="button" (click)="selectedDay.set(null)">Próximos eventos</button>
           }
           <app-proximos-eventos [eventos]="agendaEvents()" [agendaMode]="true"
             [heading]="panelTitle()" [loading]="eventsLoading()" [error]="eventsError()"
