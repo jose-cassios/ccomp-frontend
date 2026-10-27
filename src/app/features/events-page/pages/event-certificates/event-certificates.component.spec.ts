@@ -95,4 +95,90 @@ describe('Event certificate customization', () => {
     expect(api.deleteCover).toHaveBeenCalledWith(9); expect(component.previewUrl()).toBeNull();
     expect(component.success()).toContain('restaurado');
   });
+  it('updates color and live preview without saving or generating a server preview', () => {
+    const fixture = create(); const component = fixture.componentInstance;
+    const picker = fixture.nativeElement.querySelector('input[type=color]') as HTMLInputElement;
+    picker.value = '#ff0000'; picker.dispatchEvent(new Event('input')); fixture.detectChanges();
+    expect(component.designBoxes[0].font_color).toBe('#ff0000'); expect(component.unsaved).toBe(true);
+    expect(api.saveTemplate).not.toHaveBeenCalled(); expect(api.preview).not.toHaveBeenCalled();
+    component.setOpacity(0, '50');
+    expect(component.designBoxes[0].font_color).toBe('#80ff0000');
+    component.setColor(0, '#123b6a');
+    expect(component.designBoxes[0].font_color).toBe('#80123b6a');
+  });
+  it('inserts automatic information at the cursor and formats selected text', () => {
+    const fixture = create(); const component = fixture.componentInstance;
+    const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+    component.boxes.at(0).controls.text_template.setValue('Olá pessoa!'); fixture.detectChanges();
+    textarea.setSelectionRange(4, 10);
+    component.insertVariable(0, '{participante.nome}', textarea);
+    expect(component.designBoxes[0].text_template).toBe('Olá {participante.nome}!');
+    textarea.setSelectionRange(4, 23); component.formatText(0, '**', textarea);
+    expect(component.designBoxes[0].text_template).toBe('Olá **{participante.nome}**!');
+  });
+  it('creates positioned presets, prevents duplicate validation and restores removed text', () => {
+    const component = create().componentInstance;
+    component.addBox('validation'); component.addBox('validation');
+    expect(component.boxes.length).toBe(2); expect(component.hasValidation).toBe(true);
+    const validation = component.designBoxes[1];
+    expect(validation.text_template).toContain('{evento.title}');
+    expect(validation.y).toBe(.85);
+    component.removeBox(1); expect(component.hasValidation).toBe(false);
+    component.undoRemove(); expect(component.designBoxes[1]).toEqual(validation);
+  });
+  it('converts percentages and centers text without exceeding the canvas', () => {
+    const component = create().componentInstance;
+    component.position(0, 'width', '95');
+    expect(component.designBoxes[0].width).toBe(.95);
+    expect(component.designBoxes[0].x + component.designBoxes[0].width).toBeLessThanOrEqual(1);
+    component.centerBox(0); expect(component.designBoxes[0].x).toBeCloseTo(.025);
+    component.position(0, 'x', '90'); expect(component.designBoxes[0].x).toBeCloseTo(.05);
+    expect(component.form.dirty).toBe(true);
+  });
+  it('undoes and redoes a whole resize while preserving text and font', () => {
+    const component = create().componentInstance;
+    const before = { x: .2, y: .5, width: .6 }; const after = { x: .15, y: .5, width: .65 };
+    component.beginCanvasEdit(); component.resizeBox({ index: 0, x: after.x, width: after.width });
+    component.rememberTransform({ index: 0, before, after });
+    component.boxes.at(0).controls.text_template.setValue('Texto atualizado');
+    component.undoTransform(); expect(component.designBoxes[0].width).toBe(.6);
+    component.redoTransform(); expect(component.designBoxes[0].width).toBe(.65);
+    expect(component.designBoxes[0].text_template).toBe('Texto atualizado'); expect(component.designBoxes[0].font_size).toBe(25);
+  });
+  it('does not reuse geometry history after removal or changes of model', () => {
+    const component = create().componentInstance;
+    component.rememberTransform({ index: 0, before: { x: .2, y: .5, width: .6 }, after: { x: .3, y: .5, width: .6 } });
+    component.selectScope('activity'); expect(component.undoStack()).toEqual([]);
+    component.addBox(); component.rememberTransform({ index: 0, before: { x: .2, y: .5, width: .6 }, after: { x: .3, y: .5, width: .6 } });
+    component.removeBox(1); expect(component.undoStack()).toEqual([]);
+  });
+  it('preserves the original pristine state when a canvas gesture is cancelled', () => {
+    const component = create().componentInstance;
+    component.beginCanvasEdit(); component.moveBox({ index: 0, x: .3, y: .4 });
+    component.moveBox({ index: 0, x: .2, y: .5 }); component.cancelCanvasEdit();
+    expect(component.form.pristine).toBe(true);
+  });
+  it('groups text tools and inserts automatic information using the plus menu', () => {
+    const fixture = create(); const component = fixture.componentInstance;
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('input[formControlName="font_size"]')?.getAttribute('type')).toBe('number');
+    expect(host.querySelector('input[type="range"]')).toBeNull();
+    expect(host.querySelector('input[type="checkbox"]')).toBeNull();
+    expect(host.textContent).not.toContain('Voltar ao evento');
+    expect(host.textContent).not.toContain('Arraste as bordas laterais para ajustar a largura.');
+    const menu = host.querySelector('.insert-menu') as HTMLDetailsElement;
+    const textarea = host.querySelector('textarea')!;
+    textarea.setSelectionRange(0, textarea.value.length); menu.open = true;
+    const option = Array.from(menu.querySelectorAll('button')).find(button => button.textContent?.includes('Código de validação'))!;
+    option.click();
+    expect(component.designBoxes[0].text_template).toBe('{validacao.codigo}');
+    expect(menu.open).toBe(false);
+  });
+  it('explains unavailable underline without changing the certificate content', () => {
+    const component = create().componentInstance;
+    const text = component.designBoxes[0].text_template;
+    component.explainUnderline();
+    expect(component.error()).toContain('backend');
+    expect(component.designBoxes[0].text_template).toBe(text);
+  });
 });

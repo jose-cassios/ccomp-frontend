@@ -1,4 +1,4 @@
-import { Component, DestroyRef, HostListener, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -10,11 +10,13 @@ import { CertificateAlignment, CertificateBox, CertificateScope } from '../../mo
 import { EventDetails } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 import { CertificatesService } from '../../services/certificates.service';
+import { CertificateCanvasComponent, CertificateGeometry, CertificateTransform } from '../../components/certificate-canvas/certificate-canvas.component';
+import { certificateColor, certificateHex } from '../../models/certificate-design';
 
 @Component({
   selector: 'app-event-certificates',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, CertificateCanvasComponent],
   templateUrl: './event-certificates.component.html',
   styleUrl: './event-certificates.component.css',
 })
@@ -25,6 +27,7 @@ export class EventCertificatesComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder).nonNullable;
   private readonly destroyRef = inject(DestroyRef);
+  private readonly changeDetector = inject(ChangeDetectorRef);
   readonly eventId = Number(this.route.snapshot.paramMap.get('id'));
   readonly event = signal<EventDetails | null>(null);
   readonly loading = signal(true);
@@ -32,6 +35,31 @@ export class EventCertificatesComponent implements OnInit {
   readonly allowed = signal(false);
   readonly busy = signal(false);
   readonly scope = signal<CertificateScope>('event');
+  readonly selectedBox = signal(0);
+  readonly undoStack = signal<CertificateTransform[]>([]);
+  readonly redoStack = signal<CertificateTransform[]>([]);
+  private canvasWasDirty = false;
+  readonly imageSize = signal({ width: 1600, height: 1131 });
+  readonly color = certificateColor;
+  readonly alignments: { value: CertificateAlignment; label: string; path: string }[] = [
+    { value: 'LEFT', label: 'Alinhar à esquerda', path: 'M3 4h14M3 8h9M3 12h14M3 16h9' },
+    { value: 'CENTERED', label: 'Centralizar texto', path: 'M3 4h14M6 8h8M3 12h14M6 16h8' },
+    { value: 'RIGHT', label: 'Alinhar à direita', path: 'M3 4h14M8 8h9M3 12h14M8 16h9' },
+    { value: 'JUSTIFIED', label: 'Justificar texto', path: 'M3 4h14M3 8h14M3 12h14M3 16h14' },
+  ];
+  readonly palette = [
+    { color: '#123b6a', name: 'Azul CCOMP' }, { color: '#2e74b5', name: 'Azul claro' },
+    { color: '#17263a', name: 'Grafite' }, { color: '#000000', name: 'Preto' },
+    { color: '#ffffff', name: 'Branco' }, { color: '#8f5010', name: 'Dourado' },
+  ];
+  readonly samples = computed(() => ({
+    '{participante.nome}': 'Maria da Silva', '{evento.title}': this.event()?.title ?? 'Nome do evento',
+    '{evento.local}': this.event()?.address || 'Local do evento', '{evento.carga_horaria}': '20',
+    '{atividade.nome}': 'Atividade de exemplo', '{atividade.local}': 'Local da atividade',
+    '{atividade.carga_horaria}': '4 horas', '{validacao.codigo}': 'EXEMPLO',
+    '{validacao.url}': 'site/validar/EXEMPLO',
+  }));
+  readonly removedBox = signal<{ scope: CertificateScope; index: number; box: CertificateBox } | null>(null);
   readonly variables = signal<string[]>([]);
   readonly variableLabels: Record<string, string> = {
     '{participante.nome}': 'Nome do participante',
@@ -60,8 +88,14 @@ export class EventCertificatesComponent implements OnInit {
   get form() { return this.forms[this.scope()]; }
   get boxes() { return this.form.controls.boxes; }
   get unsaved() { return this.forms.event.dirty || this.forms.activity.dirty; }
+  get designBoxes(): CertificateBox[] { return this.boxes.getRawValue(); }
+  get hasValidation(): boolean { return this.designBoxes.some(box => /\{validacao\.(codigo|url)\}/.test(box.text_template)); }
 
   constructor() {
+    // Forms also change through presets, dragging and API responses in zoneless mode.
+    for (const form of Object.values(this.forms)) {
+      form.events.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.changeDetector.markForCheck());
+    }
     this.destroyRef.onDestroy(() => {
       this.setImage(this.coverUrl, null); this.setImage(this.previewUrl, null);
     });
@@ -103,23 +137,162 @@ export class EventCertificatesComponent implements OnInit {
   selectScope(scope: CertificateScope): void {
     if (this.busy()) return;
     this.scope.set(scope); this.setImage(this.previewUrl, null);
+    this.selectedBox.set(0);
+    this.clearTransformHistory();
     this.error.set(null); this.success.set(null);
   }
 
-  addBox(): void {
+  addBox(kind: 'text' | 'title' | 'participant' | 'validation' = 'text'): void {
     if (this.busy() || this.boxes.length >= 30) return;
-    this.boxes.push(this.boxForm()); this.form.markAsDirty();
+    if (kind === 'validation' && this.hasValidation) return;
+    this.clearTransformHistory();
+    const font = Math.max(8, Math.min(300, Math.round(this.imageSize().width * .024)));
+    const presets: Record<typeof kind, Partial<CertificateBox>> = {
+      text: { text_template: 'Seu texto aqui', y: Math.min(.8, .45 + this.boxes.length * .04) },
+      title: { text_template: '**CERTIFICADO**', y: .2, font_size: Math.min(300, font * 2) },
+      participant: { text_template: '**{participante.nome}**', y: .38, font_size: Math.min(300, Math.round(font * 1.3)) },
+      // Including event title also supports the backend's activity validation lookup.
+      validation: { text_template: 'Código de validação: {validacao.codigo}\n{evento.title}', y: .85, font_size: Math.max(8, Math.round(font * .55)) },
+    };
+    this.boxes.push(this.boxForm({ x: .15, y: .5, width: .7, font_size: font,
+      font_color: '#123b6a', alignment: 'CENTERED', text_template: '', ...presets[kind] }));
+    this.selectedBox.set(this.boxes.length - 1); this.form.markAsDirty();
   }
 
   removeBox(index: number): void {
     if (this.busy() || this.boxes.length <= 1) return;
+    this.clearTransformHistory();
+    this.removedBox.set({ scope: this.scope(), index, box: this.boxes.at(index).getRawValue() });
     this.boxes.removeAt(index); this.form.markAsDirty();
+    this.selectedBox.set(Math.min(index, this.boxes.length - 1));
   }
 
-  insertVariable(index: number, value: string): void {
+  undoRemove(): void {
+    const removed = this.removedBox();
+    if (!removed || this.busy() || removed.scope !== this.scope() || this.boxes.length >= 30) return;
+    this.clearTransformHistory();
+    this.boxes.insert(removed.index, this.boxForm(removed.box)); this.form.markAsDirty();
+    this.selectedBox.set(removed.index); this.removedBox.set(null);
+  }
+
+  duplicate(index: number): void {
+    if (this.busy() || this.boxes.length >= 30) return;
+    this.clearTransformHistory();
+    const box = this.boxes.at(index).getRawValue();
+    this.boxes.push(this.boxForm({ ...box, y: Math.min(.9, box.y + .05) }));
+    this.selectedBox.set(this.boxes.length - 1); this.form.markAsDirty();
+  }
+
+  insertVariable(index: number, value: string, textarea?: HTMLTextAreaElement): void {
     if (!value || this.busy() || !this.variableAvailable(value)) return;
     const control = this.boxes.at(index).controls.text_template;
-    control.setValue(`${control.value}${value}`); control.markAsDirty();
+    const start = textarea?.selectionStart ?? control.value.length;
+    const end = textarea?.selectionEnd ?? start;
+    control.setValue(control.value.slice(0, start) + value + control.value.slice(end)); control.markAsDirty();
+    if (textarea) {
+      textarea.value = control.value; textarea.focus();
+      textarea.setSelectionRange(start + value.length, start + value.length);
+    }
+  }
+
+  formatText(index: number, marker: '**' | '*', textarea: HTMLTextAreaElement): void {
+    if (this.busy()) return;
+    const control = this.boxes.at(index).controls.text_template;
+    const start = textarea.selectionStart; const end = textarea.selectionEnd;
+    const selected = control.value.slice(start, end) || 'seu texto';
+    control.setValue(control.value.slice(0, start) + marker + selected + marker + control.value.slice(end));
+    control.markAsDirty(); textarea.value = control.value; textarea.focus();
+    textarea.setSelectionRange(start + marker.length, start + marker.length + selected.length);
+  }
+
+  setColor(index: number, rgb: string): void {
+    if (this.busy() || !/^#[\da-f]{6}$/i.test(rgb)) return;
+    const control = this.boxes.at(index).controls.font_color;
+    control.setValue(certificateHex(rgb, certificateColor(control.value).opacity)); control.markAsDirty();
+  }
+
+  setAlignment(index: number, alignment: CertificateAlignment): void {
+    if (this.busy()) return;
+    const control = this.boxes.at(index).controls.alignment;
+    control.setValue(alignment); control.markAsDirty();
+  }
+
+  explainUnderline(): void {
+    this.error.set('Sublinhado ainda não está disponível na emissão de certificados. O backend precisa oferecer esse formato.');
+  }
+
+  setOpacity(index: number, value: string): void {
+    if (this.busy() || !value.trim() || !Number.isFinite(Number(value))) return;
+    const control = this.boxes.at(index).controls.font_color;
+    control.setValue(certificateHex(certificateColor(control.value).rgb, Number(value))); control.markAsDirty();
+  }
+
+  percent(value: number): number { return Math.round(value * 100); }
+
+  position(index: number, key: 'x' | 'y' | 'width', value: string): void {
+    if (this.busy() || !value.trim() || !Number.isFinite(Number(value))) return;
+    this.clearTransformHistory();
+    const box = this.boxes.at(index);
+    const fraction = Math.max(key === 'width' ? .01 : 0, Math.min(1, Number(value) / 100));
+    if (key === 'x') box.controls.x.setValue(Math.min(fraction, 1 - box.controls.width.value));
+    else if (key === 'width') {
+      box.controls.width.setValue(fraction);
+      box.controls.x.setValue(Math.min(box.controls.x.value, 1 - fraction));
+    }
+    else box.controls.y.setValue(fraction);
+    box.markAsDirty();
+  }
+
+  moveBox(move: { index: number; x: number; y: number }): void {
+    if (this.busy()) return;
+    this.boxes.at(move.index).patchValue({ x: move.x, y: move.y }); this.form.markAsDirty();
+  }
+
+  resizeBox(change: { index: number; x: number; width: number }): void {
+    if (this.busy()) return;
+    this.boxes.at(change.index).patchValue({ x: change.x, width: change.width }); this.form.markAsDirty();
+  }
+
+  beginCanvasEdit(): void { this.canvasWasDirty = this.form.dirty; }
+
+  cancelCanvasEdit(): void { if (!this.canvasWasDirty) this.form.markAsPristine(); }
+
+  rememberTransform(transform: CertificateTransform): void {
+    this.undoStack.update(items => [...items.slice(-49), transform]); this.redoStack.set([]);
+  }
+
+  undoTransform(): void { this.restoreTransform(false); }
+  redoTransform(): void { this.restoreTransform(true); }
+
+  private restoreTransform(redo: boolean): void {
+    if (this.busy()) return;
+    const source = redo ? this.redoStack : this.undoStack;
+    const target = redo ? this.undoStack : this.redoStack;
+    const change = source().at(-1);
+    if (!change) return;
+    const box = this.boxes.at(change.index);
+    const expected = redo ? change.before : change.after;
+    // Do not overwrite newer geometry edits made using another control.
+    if (!box || (Object.keys(expected) as (keyof CertificateGeometry)[])
+      .some(key => Math.abs(box.controls[key].value - expected[key]) > 1e-8)) {
+      this.clearTransformHistory(); return;
+    }
+    box.patchValue(redo ? change.after : change.before); this.form.markAsDirty();
+    this.selectedBox.set(change.index); source.update(items => items.slice(0, -1)); target.update(items => [...items, change]);
+  }
+
+  private clearTransformHistory(): void { this.undoStack.set([]); this.redoStack.set([]); }
+
+  centerBox(index: number): void {
+    if (this.busy()) return;
+    this.clearTransformHistory();
+    const box = this.boxes.at(index);
+    box.controls.x.setValue((1 - box.controls.width.value) / 2); box.markAsDirty();
+  }
+
+  boxLabel(index: number): string {
+    return this.boxes.at(index).controls.text_template.value
+      .replace(/\{[^{}]+\}/g, token => this.variableLabels[token] ?? token).replace(/[*~]/g, '').trim() || `Texto ${index + 1}`;
   }
 
   variableAvailable(value: string): boolean {
@@ -130,12 +303,14 @@ export class EventCertificatesComponent implements OnInit {
     if (this.busy() || !this.allowed()) return;
     if (this.form.invalid || !this.boxes.length) {
       this.form.markAllAsTouched();
+      const invalidIndex = this.boxes.controls.findIndex(box => box.invalid);
+      if (invalidIndex >= 0) this.selectedBox.set(invalidIndex);
       this.error.set('Revise as caixas de texto: preencha o conteúdo e os valores dentro dos limites indicados.');
       return;
     }
     const form = this.form;
     this.run(this.api.saveTemplate(this.eventId, this.scope(), form.getRawValue().boxes).pipe(
-      tap(() => { form.markAsPristine(); this.success.set('Modelo salvo. Gerando prévia…'); }),
+      tap(() => { form.markAsPristine(); this.clearTransformHistory(); this.removedBox.set(null); this.success.set('Modelo salvo. Gerando prévia…'); }),
       switchMap(() => this.api.preview(this.eventId, this.scope())),
     ), blob => { this.setImage(this.previewUrl, blob); this.success.set('Modelo salvo. Confira a prévia abaixo.'); },
     'Não foi possível concluir. Se o modelo já foi salvo, tente visualizar novamente.');
