@@ -1,19 +1,15 @@
-export interface CourseHighlight{
-  value:string;
-  label:string;
+export interface CourseHighlight {
+  value: string;
+  label: string;
 }
 
-export interface CourseDetail{
-  term:string;
-  description:string;
-}
-
-export interface GraduateCompetence {
-  title: string;
+export interface CourseDetail {
+  term: string;
   description: string;
 }
 
-export interface AcademicExperience {
+/** Áreas de atuação destacadas na apresentação do curso. */
+export interface CareerPath {
   title: string;
   description: string;
 }
@@ -21,7 +17,9 @@ export interface AcademicExperience {
 export interface CoursePresentationContent {
   highlights: CourseHighlight[];
   courseDetails: CourseDetail[];
-  objectives: string[];
-  graduateCompetences: GraduateCompetence[];
-  academicExperience: AcademicExperience[];
+  curriculum: CourseDetail[];
+  presentation: string;
+  careerPaths: CareerPath[];
+  professionalProfile: string[];
 }
+

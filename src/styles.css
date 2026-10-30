@@ -14,6 +14,13 @@ body {
   color: var(--text-strong);
 }
 
+/* Rolagem suave para links de âncora, desligada se o sistema pedir menos movimento. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 ::selection {
   background: var(--brand-100);
   color: var(--text-strong);
