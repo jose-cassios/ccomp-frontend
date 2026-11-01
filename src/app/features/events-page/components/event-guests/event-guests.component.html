@@ -1,3 +1,4 @@
+@if (!accessDenied()) {
 <section class="guest-panel" [attr.aria-busy]="loading() || busy()">
   <h3>{{ activityId ? 'Convidados da atividade' : 'Convidados do evento' }}</h3>
   @if (error()) { <p role="alert">{{ error() }}</p><button type="button" (click)="loadGuests()">Atualizar convidados</button> }
@@ -40,3 +41,5 @@
   @if (guestCursor()) { <button type="button" [disabled]="loading()" (click)="loadGuests(true)">Mais convidados</button> }
   @if (manage) { <small>A API ainda não fornece nome/foto nem permite vincular convidados a atividades.</small> }
 </section>
+
+}

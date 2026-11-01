@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, Input, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -22,6 +23,7 @@ export class EventGuestsComponent implements OnInit {
   readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   readonly form = this.fb.nonNullable.group({ email: ['', [Validators.required, Validators.email]] });
+  readonly accessDenied = signal(false);
   readonly guests = signal<EventGuest[]>([]);
   readonly invitations = signal<GuestInvitation[]>([]);
   readonly guestCursor = signal<string | null>(null);
@@ -42,8 +44,12 @@ export class EventGuestsComponent implements OnInit {
     this.error.set('');
     this.service.guests(this.eventId, more ? this.guestCursor()! : undefined, this.activityId)
       .pipe(finalize(() => this.loading.set(false))).subscribe({
-        next: (page) => { this.guests.update((rows) => more ? [...rows, ...page.content] : page.content); this.guestCursor.set(page.next_cursor); },
-        error: (e: unknown) => this.error.set(apiErrorMessage(e, 'Não foi possível consultar convidados. A API ainda possui restrições de acesso a esta consulta.')),
+        next: (page) => { this.accessDenied.set(false); this.guests.update((rows) => more ? [...rows, ...page.content] : page.content); this.guestCursor.set(page.next_cursor); },
+        error: (e: unknown) => {
+          if (e instanceof HttpErrorResponse && [401, 403].includes(e.status)) {
+            this.accessDenied.set(true); this.guests.set([]); this.error.set('');
+          } else this.error.set(apiErrorMessage(e, 'Falha ao consultar convidados. Tente novamente.'));
+        },
       });
   }
   loadInvitations(more = false) {

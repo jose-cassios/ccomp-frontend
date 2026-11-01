@@ -106,6 +106,15 @@ export class AuthService {
     );
   }
 
+  loginWithGoogle(credential: string): Observable<AuthResponse> {
+    return this.api.post<AuthResponse>('/auth/google', { credential }).pipe(
+      tap(response => this.handleAuthSuccess(response)),
+      switchMap(response => this.loadCurrentUser().pipe(
+        map(() => response), catchError(() => of(response)),
+      )),
+    );
+  }
+
   forgotPassword(data: ForgotPasswordRequest): Observable<void> {
     return this.api.post<void>('/auth/forgot-password', data);
   }
