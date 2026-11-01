@@ -1,176 +1,132 @@
 <div class="course-page">
 
-  <!-- HERO: apenas mensagem. -->
+  <!-- HERO -->
   <section class="course-hero">
-    <div class="page-shell hero-grid">
-      <div class="hero-content">
-        <span class="badge-inst">Bacharelado • Campus Caxias</span>
+    <div class="page-shell page-section hero-inner section-split">
+      <div class="section-intro">
+        <p class="hero-eyebrow">Bacharelado - Campus Caxias</p>
 
-        <h1 class="hero-title">
-          Ciência da <span class="text-highlight">Computação</span>
-        </h1>
-
-        <p class="hero-desc">
-          Uma formação para quem quer compreender a computação em profundidade e transformar
-          conhecimento em soluções para pessoas, organizações e sociedade.
-        </p>
+        <h1 class="hero-title">Ciência da Computação</h1>
       </div>
 
-      <div class="hero-visual" aria-hidden="true">
-        <div class="visual-orbit"></div>
-        <div class="code-panel">
-          <div class="panel-top"><i></i><i></i><i></i></div>
-          <div class="code-lines">
-            <span class="line line-lg"></span>
-            <span class="line line-md"></span>
-            <span class="line line-sm"></span>
-            <span class="line line-lg"></span>
-            <span class="line line-xs"></span>
-          </div>
-          <span class="code-mark">&lt;/&gt;</span>
-        </div>
-        <span class="floating-chip chip-top">algoritmos</span>
-        <span class="floating-chip chip-bottom">inovação</span>
+      <div class="section-body">
+        <p class="hero-desc">{{ content.presentation }}</p>
       </div>
     </div>
   </section>
 
-  <!-- informações basicas: ficha técnica + ação principal da página -->
-  <section id="informacoes" class="page-shell page-section">
-    <div class="section-header">
-      <span class="linha-verde"></span>
-      <h2>Informações do curso</h2>
-    </div>
-
-    <div class="course-info">
-      <div class="info-highlights">
-        <dl>
-          @for (highlight of content.highlights; track highlight.label) {
-            <div class="highlight">
-              <dt>{{ highlight.value }}</dt>
-              <dd>{{ highlight.label }}</dd>
-            </div>
-          }
-        </dl>
-      </div>
-
-      <dl class="info-sheet">
-        @for (detail of content.courseDetails; track detail.term) {
-          <div class="info-row">
-            <dt>{{ detail.term }}</dt>
-            <dd>{{ detail.description }}</dd>
-          </div>
-        }
-      </dl>
-    </div>
-
-    <div class="info-actions">
-      <a class="btn-cta" routerLink="/ensino/matriz">Conhecer a matriz curricular</a>
-      <a class="btn-text" routerLink="/processo-seletivo">Ver processo seletivo</a>
-    </div>
-  </section>
-
-  <!-- missão do curso -->
-  <section id="o-curso" class="soft-section">
-    <div class="page-shell page-section">
-    <div class="section-header">
-      <span class="linha-verde"></span>
-      <h2>Formação ampla, prática e conectada ao futuro</h2>
-    </div>
-
-    <p class="section-lead">
-      O bacharelado combina fundamentos científicos, desenvolvimento de software, dados, sistemas e
-      inovação para formar profissionais preparados para contextos tecnológicos diversos.
-    </p>
-
-    <div class="mission-grid">
-      <article class="mission-card">
-        <span class="card-label">Missão</span>
-        <h3>Formar profissionais que entendem tecnologia além das ferramentas.</h3>
-        <p>
-          Integramos ensino, pesquisa e extensão para desenvolver autonomia intelectual, domínio
-          técnico, pensamento crítico e compromisso com a transformação social.
-        </p>
-      </article>
-
-      <article class="mission-card mission-card-dark">
-        <span class="card-label">Visão</span>
-        <h3>Ser referência regional em formação e inovação em computação.</h3>
-        <p>
-          Criando um ambiente acadêmico conectado à ciência, ao mercado, à comunidade e às novas
-          fronteiras da tecnologia.
-        </p>
-      </article>
-    </div>
-    </div>
-  </section>
-
-  <!-- OBJETIVOS -->
-  <section>
-    <div class="page-shell page-section split-section">
-      <div class="split-intro">
-        <div class="section-header">
-          <span class="linha-verde"></span>
-          <h2>O que você desenvolve ao longo da graduação</h2>
-        </div>
+  <!-- ÁREAS DE ATUAÇÃO -->
+  <section class="page-section">
+    <div class="page-shell section-split">
+      <div class="section-intro">
+        <h2>Onde o egresso atua</h2>
         <p class="section-lead">
-          Mais do que aprender tecnologias, o estudante constrói repertório para compreender
-          problemas, escolher abordagens e criar soluções consistentes.
+          A formação em fundamentos científicos da computação abre três caminhos principais de
+          carreira.
         </p>
       </div>
 
-      <ul class="check-list">
-        @for (objective of content.objectives; track objective) {
-          <li class="check-item">
-            <span class="check-icon" aria-hidden="true">✓</span>
-            <p>{{ objective }}</p>
-          </li>
-        }
-      </ul>
-    </div>
-  </section>
-
-  <!-- PERFIL DO ALUNO -->
-  <section class="soft-section">
-    <div class="page-shell page-section">
-    <div class="section-header">
-      <span class="linha-verde"></span>
-      <h2>Perfil do egresso</h2>
-    </div>
-
-    <p class="section-lead">
-      A formação equilibra profundidade conceitual, competência prática e consciência sobre o
-      impacto das soluções computacionais.
-    </p>
-
-    <div class="competence-grid">
-      @for (competence of content.graduateCompetences; track competence.title) {
-        <article class="competence-card">
-          <h3>{{ competence.title }}</h3>
-          <p>{{ competence.description }}</p>
-        </article>
-      }
-    </div>
-    </div>
-  </section>
-
-  <!-- EXPERIÊNCIA ACADÊMICA -->
-  <section>
-    <div class="page-shell page-section">
-      <div class="section-header">
-        <span class="linha-verde"></span>
-        <h2>Um curso que acontece dentro e fora da sala de aula</h2>
-      </div>
-
-      <div class="experience-grid">
-        @for (item of content.academicExperience; track item.title) {
-          <article class="experience-card">
-            <h3>{{ item.title }}</h3>
-            <p>{{ item.description }}</p>
+      <div class="section-body topic-grid">
+        @for (path of content.careerPaths; track path.title) {
+          <article class="topic">
+            <h3>{{ path.title }}</h3>
+            <p>{{ path.description }}</p>
           </article>
         }
       </div>
     </div>
   </section>
+
+  <!-- PERFIL PROFISSIONAL -->
+  <section class="page-section">
+    <div class="page-shell section-split">
+      <div class="section-intro">
+        <h2>Perfil profissional</h2>
+        <p class="section-lead">
+          Algumas das características que o bacharel em Computação desenvolve ao longo do curso.
+        </p>
+      </div>
+
+      <div class="section-body">
+        <ul class="objective-list">
+          @for (item of content.professionalProfile; track item) {
+            <li>{{ item }}</li>
+          }
+        </ul>
+
+        <div class="info-actions">
+          <a
+            class="btn-text"
+            href="https://caxias.ifma.edu.br/computacao/"
+            target="_blank"
+            rel="noopener"
+          >Ver o perfil completo na ficha do curso</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DETALHES DO CURSO -->
+  <section class="page-section">
+    <div class="page-shell section-split">
+      <div class="section-intro">
+        <h2>Detalhes do curso</h2>
+        <p class="section-lead">
+          Dados oficiais conforme o Projeto Pedagógico do Curso de 2023.
+        </p>
+      </div>
+
+      <div class="section-body">
+        <dl class="key-figures">
+          @for (highlight of content.highlights; track highlight.label) {
+            <div class="figure">
+              <dt>{{ highlight.value }}</dt>
+              <dd>{{ highlight.label }}</dd>
+            </div>
+          }
+        </dl>
+
+        <dl class="info-sheet">
+          @for (detail of content.courseDetails; track detail.term) {
+            <div class="info-row">
+              <dt>{{ detail.term }}</dt>
+              <dd>{{ detail.description }}</dd>
+            </div>
+          }
+        </dl>
+
+        <h3 class="body-subhead">Composição da carga horária</h3>
+
+        <dl class="info-sheet">
+          @for (item of content.curriculum; track item.term) {
+            <div class="info-row">
+              <dt>{{ item.term }}</dt>
+              <dd>{{ item.description }}</dd>
+            </div>
+          }
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  @if (showBackToTop()) {
+    <button
+      type="button"
+      class="back-to-top"
+      aria-label="Voltar ao topo da página"
+      (click)="scrollToTop()"
+    >
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <path
+          d="M12 19V5m0 0-6 6m6-6 6 6"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </button>
+  }
 
 </div>

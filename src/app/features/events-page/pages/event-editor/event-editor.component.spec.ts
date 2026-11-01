@@ -6,11 +6,13 @@ import { EventDetails, EventEditor } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 import { EventEditorComponent } from './event-editor.component';
 import { EventGuestsService } from '../../services/event-guests.service';
+import { ActivityInstructorsService } from '../../services/activity-instructors.service';
 
 describe('EventEditorComponent', () => {
   let component: EventEditorComponent;
   let fixture: ComponentFixture<EventEditorComponent>;
   let router: Router;
+  const instructors = { invitations: vi.fn(() => of([])), invite: vi.fn(() => of({ message: 'Convite enviado.' })), cancel: vi.fn(() => of({})) };
 
   const createdEvent: EventDetails = {
     id: 14,
@@ -74,6 +76,7 @@ describe('EventEditorComponent', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({}) } } },
         { provide: AuthService, useValue: { hasAnyRole: () => false, currentUserState: () => ({ id: 'event-owner' }) } },
         { provide: EventsService, useValue: eventsService },
+        { provide: ActivityInstructorsService, useValue: instructors },
         { provide: EventGuestsService, useValue: { guests: () => of({ content: [], next_cursor: null }), invitations: () => of({ content: [], next_cursor: null }) } },
       ],
     }).compileComponents();
@@ -481,13 +484,51 @@ describe('EventEditorComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Manter configuraÃ§Ã£o atual');
   });
 
-  it('keeps the team area exclusively for editors', () => {
+  it('keeps guests out of the team area', () => {
     component.activeStep.set('team');
     fixture.detectChanges();
 
     const team = fixture.nativeElement.querySelector('[aria-labelledby="team-title"]') as HTMLElement;
     expect(team.textContent).toContain('moderadores');
     expect(team.querySelector('app-event-guests')).toBeNull();
+  });
+
+  it('moves enrollments to the team step and limits manual additions to moderators', () => {
+    vi.spyOn(TestBed.inject(AuthService), 'hasAnyRole').mockImplementation(roles => roles.includes('MODERATOR'));
+    component.activeStep.set('team'); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#enrollments-title')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('#manual-enrollment-title')).not.toBeNull();
+    component.manualEnrollmentForm.controls.email.setValue('late@example.com');
+    component.requestManualEnrollment();
+    expect(component.errorMessage()).toContain('Nenhum participante foi adicionado');
+    expect(component.enrollments()).toEqual([]);
+    component.activeStep.set('review'); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#enrollments-title')).toBeNull();
+  });
+
+  it('keeps external guest fields editable and reports that persistence is unavailable', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.externalGuestForm.patchValue({ name: 'Palestrante externo', image_url: 'https://example.com/photo.png' });
+    fixture.detectChanges();
+    const input = fixture.nativeElement.querySelector('input[placeholder="Nome do palestrante"]') as HTMLInputElement;
+    expect(input.closest('fieldset')?.disabled).toBe(false);
+    component.requestExternalGuest();
+    expect(component.peopleError()).toContain('não foram salvos');
+    expect(component.externalGuestForm.controls.name.value).toBe('Palestrante externo');
+  });
+
+  it('invites an internal instructor only for a saved activity and retains email on failure', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.instructorForm.controls.email.setValue('aluno@ifma.edu.br');
+    component.inviteInstructor(); expect(instructors.invite).not.toHaveBeenCalled();
+    component.editingActivityId.set(21);
+    instructors.invite.mockReturnValueOnce(throwError(() => new Error('offline')));
+    component.inviteInstructor();
+    expect(component.instructorForm.controls.email.value).toBe('aluno@ifma.edu.br');
+    component.inviteInstructor();
+    expect(instructors.invite).toHaveBeenLastCalledWith(21, 'aluno@ifma.edu.br');
+    expect(component.instructorForm.controls.email.value).toBe('');
+    expect(component.peopleBusy()).toBe(false);
   });
 
   it('shows every event day, including empty days, and opens a time-only modal on the selected day', () => {

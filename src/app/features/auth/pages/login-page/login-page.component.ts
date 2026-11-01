@@ -1,3 +1,4 @@
+import { GoogleLoginComponent } from '../../components/google-login/google-login.component';
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
@@ -16,6 +17,7 @@ import { apiErrorMessage } from '../../../../core/api/api-error';
   selector: 'app-login-page',
   standalone: true,
   imports: [
+    GoogleLoginComponent,
     CommonModule,
     ReactiveFormsModule,
     MatCardModule,
@@ -58,11 +60,6 @@ export class LoginPageComponent {
     });
   }
 
-  onGoogleLogin(): void {
-    this.errorMessage.set(
-      'O login com Google ainda está sendo configurado pela API. Use seu e-mail e senha para continuar.',
-    );
-  }
 
   navigateToRegister(): void {
     const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');

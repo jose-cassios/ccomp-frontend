@@ -128,7 +128,7 @@
                               }
                             </div>
                             <h3>{{ activity.title }}</h3>
-                            <app-activity-people [eventId]="currentEvent.id" [activityId]="activity.id" />
+                            <app-activity-people [eventId]="currentEvent.id" [activityId]="activity.id" [canView]="isAuthenticated() && subscribed()" />
                             <p class="activity-meta">
                               @if (activity.end_date) {
                                 <span>Até {{ activity.end_date | date: 'HH:mm' }}</span>
@@ -140,7 +140,7 @@
                             @if (activity.description) {
                               <p class="activity-description">{{ activity.description }}</p>
                             }
-                            @if (activity.guest; as guest) {
+                            @if ((isAuthenticated() && (subscribed() || canManageCertificates())) ? activity.guest : null; as guest) {
                               <div class="activity-guest">
                                 @if (guest.image_url) {
                                   <img [src]="guest.image_url" [alt]="'Foto de ' + guest.name" />
@@ -194,7 +194,7 @@
       </section>
 
       <aside class="info-card">
-        <app-event-guests [eventId]="currentEvent.id" />
+        <app-event-guests [eventId]="currentEvent.id" [canView]="isAuthenticated() && (subscribed() || canManageCertificates())" />
         <h2>Informações</h2>
         <dl>
           @if (isAuthenticated() && subscribed()) {

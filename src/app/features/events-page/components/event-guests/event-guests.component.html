@@ -1,9 +1,10 @@
+@if ((canView || manage) && !accessDenied()) {
 <section class="guest-panel" [attr.aria-busy]="loading() || busy()">
   <h3>{{ activityId ? 'Convidados da atividade' : 'Convidados do evento' }}</h3>
   @if (error()) { <p role="alert">{{ error() }}</p><button type="button" (click)="loadGuests()">Atualizar convidados</button> }
   @if (message()) { <p role="status">{{ message() }}</p> }
   @if (busy() || loading() || invitationsLoading()) { <p role="status"><span class="mini-spinner"></span> Carregando…</p> }
-  @if (manage && !activityId) {
+  @if (manage && !activityId && canViewEmail()) {
     <p>Convidados não recebem permissão de edição. Para colaboradores, use a equipe organizadora.</p>
     <p>A integração está disponível, mas a API ainda precisa ajustar a identificação do usuário e o envio do e-mail. Se a operação falhar, nada será confirmado nesta tela.</p>
     <form [formGroup]="form" (ngSubmit)="invite()">
@@ -28,7 +29,10 @@
   }
   @for (guest of guests(); track guest.id) {
     <article>
-      <div><strong>{{ guest.user_id === auth.getCurrentUser()?.id ? 'Você' : 'Convidado #' + guest.id }}</strong>
+      @if (guest.image_url) { <img class="guest-photo" [src]="guest.image_url" [alt]="guest.name || 'Convidado externo'" /> }
+      <div><strong>{{ guest.name || (guest.user_id === auth.getCurrentUser()?.id ? 'Você' : 'Convidado externo') }}</strong>
+        @if (canViewEmail() && guest.email) { <small>{{ guest.email }}</small> }
+        @if (manage && !guest.name) { <small>A API ainda não disponibiliza nome e foto deste convidado.</small> }
         <small>{{ guest.status === 'CONFIRMED' ? 'Confirmado' : 'Cancelado' }} · {{ guest.visibility === 'PUBLIC' ? 'Visível ao público' : 'Privado' }}</small>
       </div>
       @if (canUpdate(guest)) {
@@ -38,5 +42,6 @@
     </article>
   } @empty { @if (!loading()) { <p>Nenhum convidado disponível para exibição.</p> } }
   @if (guestCursor()) { <button type="button" [disabled]="loading()" (click)="loadGuests(true)">Mais convidados</button> }
-  @if (manage) { <small>A API ainda não fornece nome/foto nem permite vincular convidados a atividades.</small> }
 </section>
+
+}

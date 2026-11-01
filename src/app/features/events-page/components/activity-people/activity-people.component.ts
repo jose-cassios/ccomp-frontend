@@ -5,14 +5,17 @@ import { EventEnrollment } from '../../models/event.model';
 import { apiErrorMessage } from '../../../../core/api/api-error';
 import { EventGuestsComponent } from '../event-guests/event-guests.component';
 import { ActivityCheckInComponent } from '../activity-check-in/activity-check-in.component';
+import { ActivityInstructorsComponent } from './activity-instructors.component';
 
 @Component({
-  selector: 'app-activity-people', standalone: true, imports: [EventGuestsComponent, ActivityCheckInComponent],
+  selector: 'app-activity-people', standalone: true, imports: [EventGuestsComponent, ActivityCheckInComponent, ActivityInstructorsComponent],
   template: `
+    @if (canView || manage) {
     <details (toggle)="open = $any($event.target).open">
-      <summary>Convidados{{ manage ? ', inscritos e credenciamento' : '' }}</summary>
+      <summary>Convidados e ministrantes{{ manage ? ', inscritos e credenciamento' : '' }}</summary>
       @if (open) {
-        <app-event-guests [eventId]="eventId" [activityId]="activityId" [manage]="manage" />
+        <app-event-guests [eventId]="eventId" [activityId]="activityId" [manage]="manage" [canView]="canView" />
+        <app-activity-instructors [eventId]="eventId" [activityId]="activityId" />
         @if (manage) {
           <app-activity-check-in [activityId]="activityId" />
           <button type="button" [disabled]="loading()" (click)="load()">Consultar inscritos da atividade</button>
@@ -24,6 +27,7 @@ import { ActivityCheckInComponent } from '../activity-check-in/activity-check-in
         }
       }
     </details>
+    }
   `,
   styles: `:host { display:block; margin-top:.75rem; font-size:.85rem } summary, button { cursor:pointer; color:var(--brand-700) } button { padding:.6rem; border:1px solid var(--border-subtle); background:var(--surface-card); border-radius:.5rem } p { margin:.5rem 0; overflow-wrap:anywhere }`,
 })
@@ -31,6 +35,7 @@ export class ActivityPeopleComponent {
   @Input({ required: true }) eventId!: number;
   @Input({ required: true }) activityId!: number;
   @Input() manage = false;
+  @Input() canView = false;
   open = false;
   readonly rows = signal<EventEnrollment[]>([]);
   readonly cursor = signal<string | null>(null);

@@ -23,6 +23,18 @@ describe('AuthService roles', () => {
 
   afterEach(() => localStorage.clear());
 
+  it('uses the Google endpoint and persists platform tokens and profile', () => {
+    const payload = btoa(JSON.stringify({ sub: 'google-user', roles: ['ROLE_USER'], exp: 9999999999 }));
+    api.post.mockReturnValue(of({ accessToken: `header.${payload}.signature`, refreshToken: 'refresh-google' }));
+    api.get.mockReturnValue(of({ id: 'google-user', name: 'Ana', email_address: 'ana@example.com' }));
+    const service = TestBed.inject(AuthService);
+    service.loginWithGoogle('google-credential').subscribe();
+    expect(api.post).toHaveBeenCalledWith('/auth/google', { credential: 'google-credential' });
+    expect(service.getRefreshToken()).toBe('refresh-google');
+    expect(service.isAuthenticatedState()).toBe(true);
+    expect(service.getCurrentUser()).toMatchObject({ name: 'Ana', email: 'ana@example.com' });
+  });
+
   it('keeps STAFF separate from moderation privileges', () => {
     const payload = btoa(JSON.stringify({
       sub: 'd2bfffb6-3ff6-46a6-884a-38e0db08c387',

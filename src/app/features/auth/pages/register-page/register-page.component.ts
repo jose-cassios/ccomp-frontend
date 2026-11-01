@@ -1,3 +1,4 @@
+import { GoogleLoginComponent } from '../../components/google-login/google-login.component';
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
@@ -17,6 +18,7 @@ import { apiErrorMessage } from '../../../../core/api/api-error';
   selector: 'app-register-page',
   standalone: true,
   imports: [
+    GoogleLoginComponent,
     CommonModule,
     ReactiveFormsModule,
     MatCardModule,
@@ -58,11 +60,6 @@ export class RegisterPageComponent {
     });
   }
 
-  onGoogleLogin(): void {
-    this.errorMessage.set(
-      'O cadastro com Google ainda está sendo configurado pela API. Crie sua conta com e-mail e senha.',
-    );
-  }
 
   navigateToLogin(): void {
     const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');

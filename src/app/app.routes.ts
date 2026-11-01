@@ -68,6 +68,12 @@ export const routes: Routes = [
           canActivate: [authGuard],
         },
         {
+          path: 'accept-instructor-invite',
+          loadComponent: () => import('./features/events-page/pages/guest-invitation/guest-invitation.component').then(m => m.GuestInvitationComponent),
+          canActivate: [authGuard],
+          data: { invitationKind: 'instructor' },
+        },
+        {
           path: 'eventos/novo',
           loadComponent: () =>
             import('./features/events-page/pages/event-editor/event-editor.component').then(

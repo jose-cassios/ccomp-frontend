@@ -4,13 +4,15 @@ import { finalize } from 'rxjs';
 import { EventGuestsService } from '../../services/event-guests.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
 import { apiMessage } from '../../models/event.model';
+import { ActivityInstructorsService } from '../../services/activity-instructors.service';
 
 @Component({
   standalone: true, imports: [RouterLink],
   template: `
     <main>
-      <h1>Convite para participar do evento</h1>
-      <p>Use a conta do e-mail que recebeu o convite. Este convite é de convidado, não de editor.</p>
+      <h1>{{ isInstructor ? 'Convite para ministrar uma atividade' : 'Convite para participar como convidado externo' }}</h1>
+      <p>Use a conta do email que recebeu o convite.</p>
+      <p>{{ isInstructor ? 'Ao aceitar, você passa a ser responsável pela atividade e poderá editar suas informações.' : 'Este convite não concede permissão para editar o evento ou suas atividades.' }}</p>
       @if (!valid) { <p role="alert">Link inválido ou incompleto. Solicite um novo convite à organização.</p> }
       @else if (!done()) {
         <button type="button" [disabled]="busy()" (click)="reply(true)">Aceitar convite</button>
@@ -27,6 +29,8 @@ import { apiMessage } from '../../models/event.model';
 export class GuestInvitationComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(EventGuestsService);
+  private readonly instructors = inject(ActivityInstructorsService);
+  readonly isInstructor = this.route.snapshot.data?.['invitationKind'] === 'instructor';
   readonly code = this.route.snapshot.queryParamMap.get('code')?.trim() ?? '';
   readonly valid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(this.code);
   readonly busy = signal(false);
@@ -36,7 +40,8 @@ export class GuestInvitationComponent {
   reply(accept: boolean) {
     if (!this.valid || this.busy() || this.done()) return;
     this.busy.set(true); this.error.set('');
-    this.service.reply(this.code, accept).pipe(finalize(() => this.busy.set(false))).subscribe({
+    const request = this.isInstructor ? this.instructors.reply(this.code, accept) : this.service.reply(this.code, accept);
+    request.pipe(finalize(() => this.busy.set(false))).subscribe({
       next: (result) => { this.done.set(true); this.message.set(apiMessage(result, accept ? 'Convite aceito.' : 'Convite recusado.')); },
       error: (e: unknown) => this.error.set(apiErrorMessage(e, 'Não foi possível responder. Confira se está na conta convidada e se o convite ainda é válido.')),
     });
