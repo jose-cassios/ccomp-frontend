@@ -11,3 +11,4 @@ button, a { padding: .6rem .8rem; border: 1px solid var(--border-subtle); border
 button:disabled { opacity: .55; cursor: wait; }
 [role=alert] { color: var(--danger-700, #a32335); }
 @media(max-width: 480px) { form { align-items: stretch; flex-direction: column; } }
+:host .guest-photo { width: 3rem; height: 3rem; border-radius: 50%; object-fit: cover; flex-shrink: 0; }

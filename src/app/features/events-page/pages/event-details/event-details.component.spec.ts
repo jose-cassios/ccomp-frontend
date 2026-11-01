@@ -54,6 +54,7 @@ describe('EventDetailsComponent', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-09-12T08:00:00').getTime());
     authenticated.set(false);
     await TestBed.configureTestingModule({
       imports: [EventDetailsComponent],
@@ -72,6 +73,34 @@ describe('EventDetailsComponent', () => {
     fixture = TestBed.createComponent(EventDetailsComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('blocks new registrations from the exact start time, including anonymous visitors', () => {
+    const activity = { ...scheduleActivity, registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const, can_subscribe: true };
+    for (const time of ['2026-09-12T14:00:00', '2026-09-12T14:30:00', '2026-09-12T16:00:00']) {
+      vi.mocked(Date.now).mockReturnValue(new Date(time).getTime());
+      expect(component.activityRegistrationBlocked(activity)).toBe(true);
+      expect(component.activityRegistrationHint(activity)).toContain('já começou');
+      component.toggleActivitySubscription(activity);
+      expect(eventsService.subscribeActivity).not.toHaveBeenCalled();
+    }
+  });
+
+  it('keeps cancellation available for an existing reservation after the start', () => {
+    authenticated.set(true);
+    vi.mocked(Date.now).mockReturnValue(new Date('2026-09-12T14:30:00').getTime());
+    const activity = { ...scheduleActivity, registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const, subscribed: true };
+    expect(component.activityRegistrationBlocked(activity)).toBe(false);
+    component.toggleActivitySubscription(activity);
+    expect(eventsService.unsubscribeActivity).toHaveBeenCalledWith(activity.id);
+  });
+
+  it('offers only the event certificate, never individual activity downloads', () => {
+    authenticated.set(true); component.subscribed.set(true); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('app-certificate-download').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('.activity-card__action app-certificate-download')).toBeNull();
   });
 
   it('should use the summary in the hero and keep the full content in the presentation', () => {
@@ -130,6 +159,7 @@ describe('EventDetailsComponent', () => {
   });
 
   it('should load the compact schedule with location and guest', () => {
+    authenticated.set(true); component.subscribed.set(true); fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Abertura');
     expect(fixture.nativeElement.textContent).toContain('Auditório');
     expect(fixture.nativeElement.textContent).toContain('Ana Silva');

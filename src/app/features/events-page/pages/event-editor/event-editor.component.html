@@ -339,7 +339,7 @@
 
           <footer class="form-footer">
             <span>Se desejar, adicione atividades agora. Você também poderá editar depois.</span>
-            <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="continueFromSchedule()">Próximo: equipe</button>
+            <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="continueFromSchedule()">Próximo: inscritos/equipe</button>
           </footer>
         </section>
       }
@@ -349,7 +349,7 @@
           <div class="card-heading">
             <div>
               <span>Etapa 4</span>
-              <h2 id="team-title">Equipe organizadora</h2>
+              <h2 id="team-title">Inscritos/Equipe</h2>
             </div>
           </div>
           <p class="card-copy">Inclua moderadores que poderão editar as informações e a programação.</p>
@@ -384,35 +384,6 @@
               <p class="empty-inline">Nenhum editor adicional foi incluído.</p>
             }
           </div>
-
-          <footer class="form-footer">
-            <span>Você pode incluir colaboradores nesta etapa sempre que precisar.</span>
-            <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="continueFromTeam()">Próximo: revisão</button>
-          </footer>
-        </section>
-      }
-
-      @case ('review') {
-        <section class="editor-card review-card" aria-labelledby="review-title">
-          <div class="card-heading">
-            <div>
-              <span>Etapa 5</span>
-              <h2 id="review-title">Revisão do evento</h2>
-            </div>
-            <button class="button button--outline" type="button" (click)="selectStep('details')">Editar informações</button>
-          </div>
-          <p class="card-copy">Confira os dados antes de concluir a criação do evento.</p>
-
-          <dl class="review-list">
-            <div><dt>Evento</dt><dd>{{ form.controls.title.value }}</dd></div>
-            <div><dt>Resumo</dt><dd>{{ presentationForm.controls.summary.value || 'Ainda não informado' }}</dd></div>
-            <div><dt>Formato</dt><dd>{{ form.controls.format.value }}</dd></div>
-            <div><dt>Início</dt><dd>{{ form.controls.start_date.value || 'Não informado' }}</dd></div>
-            <div><dt>Publicação</dt><dd>{{ publicationStatusLabel(event()?.status) }}</dd></div>
-            <div><dt>Execução</dt><dd>{{ executionStatusLabel(event()?.execution_status) }}</dd></div>
-            <div><dt>Participação</dt><dd>{{ eventRegistrationRequired() ? 'Inscrição obrigatória' : 'Acesso livre, sem inscrição' }}</dd></div>
-            <div><dt>Atividades</dt><dd>{{ activities().length }} cadastrada(s)</dd></div>
-          </dl>
 
           @if (canViewEnrollments()) {
             <section class="review-enrollments" aria-labelledby="enrollments-title">
@@ -451,6 +422,48 @@
               }
             </section>
           }
+
+          @if (canAddEnrollment()) {
+            <section aria-labelledby="manual-enrollment-title">
+              <h3 id="manual-enrollment-title">Adicionar participante por email</h3>
+              <p class="card-copy">Para inscrições manuais, inclusive após o evento. Recurso aguardando suporte da API.</p>
+              <form class="inline-form" [formGroup]="manualEnrollmentForm" (ngSubmit)="requestManualEnrollment()">
+                <label class="field field--grow"><span>Email do participante</span>
+                  <input type="email" formControlName="email" placeholder="participante@exemplo.com" />
+                  @if (manualEnrollmentForm.controls.email.touched && manualEnrollmentForm.controls.email.invalid) { <strong>Informe um email válido.</strong> }
+                </label>
+                <button type="submit" class="button button--primary" [disabled]="isBusy()">Adicionar participante</button>
+              </form>
+            </section>
+          }
+          <footer class="form-footer">
+            <span>Você pode incluir colaboradores nesta etapa sempre que precisar.</span>
+            <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="continueFromTeam()">Próximo: revisão</button>
+          </footer>
+        </section>
+      }
+
+      @case ('review') {
+        <section class="editor-card review-card" aria-labelledby="review-title">
+          <div class="card-heading">
+            <div>
+              <span>Etapa 5</span>
+              <h2 id="review-title">Revisão do evento</h2>
+            </div>
+            <button class="button button--outline" type="button" (click)="selectStep('details')">Editar informações</button>
+          </div>
+          <p class="card-copy">Confira os dados antes de concluir a criação do evento.</p>
+
+          <dl class="review-list">
+            <div><dt>Evento</dt><dd>{{ form.controls.title.value }}</dd></div>
+            <div><dt>Resumo</dt><dd>{{ presentationForm.controls.summary.value || 'Ainda não informado' }}</dd></div>
+            <div><dt>Formato</dt><dd>{{ form.controls.format.value }}</dd></div>
+            <div><dt>Início</dt><dd>{{ form.controls.start_date.value || 'Não informado' }}</dd></div>
+            <div><dt>Publicação</dt><dd>{{ publicationStatusLabel(event()?.status) }}</dd></div>
+            <div><dt>Execução</dt><dd>{{ executionStatusLabel(event()?.execution_status) }}</dd></div>
+            <div><dt>Participação</dt><dd>{{ eventRegistrationRequired() ? 'Inscrição obrigatória' : 'Acesso livre, sem inscrição' }}</dd></div>
+            <div><dt>Atividades</dt><dd>{{ activities().length }} cadastrada(s)</dd></div>
+          </dl>
 
           <div class="review-actions">
             <button class="button button--secondary" type="button" (click)="selectStep('schedule')">Voltar à programação</button>
@@ -504,7 +517,7 @@
                   <h2 id="activity-dialog-title">{{ editingActivityId() ? 'Editar atividade' : 'Nova atividade' }}</h2>
                   <p>Preencha os dados e escolha os horários para este dia.</p>
                 </div>
-                <button type="button" class="activity-modal-close" aria-label="Fechar atividade" [disabled]="isBusy()" (click)="cancelActivityEdit()">×</button>
+                <button type="button" class="activity-modal-close" aria-label="Fechar atividade" [disabled]="isBusy() || peopleBusy()" (click)="cancelActivityEdit()">×</button>
               </header>
               @if (errorMessage()) {
                 <p class="schedule-notice schedule-notice--error" role="alert">{{ errorMessage() }}</p>
@@ -604,20 +617,37 @@
                   <p>Essa regra controla apenas a reserva desta atividade. A necessidade de inscrição no evento é definida na etapa Informações.</p>
                 </fieldset>
 
-                <fieldset class="activity-settings field--wide" disabled>
-                  <legend>Convidado externo <small>Opcional</small></legend>
-                  <p>Convidados pertencem a esta atividade, não à equipe organizadora. O vínculo de nome/foto ainda depende das rotas específicas da API.</p>
+                <fieldset class="activity-settings field--wide" [disabled]="isBusy() || peopleBusy()">
+                  <legend>Convidados externos <small>Opcional</small></legend>
+                  <p>Profissionais de fora do IFMA que participam da atividade. Não recebem permissão para editar.</p>
                   <div class="activity-form-grid">
-                    <label class="field">
-                      <span>Nome</span>
-                      <input type="text" placeholder="Nome do palestrante" />
-                    </label>
-                    <label class="field">
-                      <span>URL da foto</span>
-                      <input type="url" placeholder="https://exemplo.com/foto.jpg" />
-                    </label>
+                    <label class="field"><span>Como adicionar</span><select [formControl]="externalGuestForm.controls.mode"><option value="direct">Adicionar sem aceite</option><option value="invite">Enviar convite por email</option></select></label>
+                    <label class="field"><span>Nome do convidado *</span><input type="text" [formControl]="externalGuestForm.controls.name" placeholder="Nome do palestrante" maxlength="255" /></label>
+                    <label class="field"><span>Foto (URL)</span><input type="url" [formControl]="externalGuestForm.controls.image_url" placeholder="https://exemplo.com/foto.jpg" /></label>
+                    <label class="field"><span>Email {{ externalGuestForm.controls.mode.value === 'invite' ? '*' : '(opcional)' }}</span><input type="email" [formControl]="externalGuestForm.controls.email" placeholder="convidado@exemplo.com" /></label>
                   </div>
+                  <p>Nome e foto serão apresentados aos inscritos quando a API permitir o vínculo. O email será visível apenas para ADM e Moderator.</p>
+                  @if (externalGuestForm.controls.mode.value === 'invite') {
+                    <p class="access-note">Por enquanto, este convite é somente para o evento. A API ainda não salva nome, foto ou vínculo com a atividade.</p>
+                  } @else { <p class="access-note">O cadastro sem aceite ainda aguarda implementação na API.</p> }
+                  <button type="button" class="button button--outline" (click)="requestExternalGuest()">{{ externalGuestForm.controls.mode.value === 'invite' ? 'Enviar convite para o evento' : 'Adicionar convidado à atividade' }}</button>
+                  <button type="button" class="text-button" (click)="externalGuestForm.reset()">Limpar convidado</button>
                 </fieldset>
+                <fieldset class="activity-settings field--wide" [disabled]="isBusy() || peopleBusy()">
+                  <legend>Ministrantes / instrutores <small>Opcional</small></legend>
+                  <p>Alunos e servidores do IFMA responsáveis por apresentar esta atividade. Após aceitar o convite, poderão editar esta atividade.</p>
+                  <label class="field"><span>Email do ministrante</span><input type="email" [formControl]="instructorForm.controls.email" placeholder="pessoa@ifma.edu.br" /></label>
+                  @if (instructorForm.controls.email.touched && instructorForm.controls.email.invalid) { <p role="alert">Informe um email válido.</p> }
+                  @if (!editingActivityId()) { <p>Salve a atividade para enviar o convite. Você pode preencher o email agora.</p> }
+                  <button type="button" class="button button--outline" (click)="inviteInstructor()">Convidar ministrante</button>
+                  @for (invitation of instructorInvitations(); track invitation.id) {
+                    <div class="team-list"><article><span><strong>{{ invitation.email }}</strong><small>{{ instructorStatus[invitation.status] || invitation.status }}</small></span>
+                    @if (invitation.status === 'SENT') { <button type="button" class="text-button text-button--danger" (click)="cancelInstructorInvitation(invitation)">Cancelar convite</button> }</article></div>
+                  }
+                </fieldset>
+                @if (peopleBusy()) { <p role="status"><span class="mini-spinner"></span> Processando participação…</p> }
+                @if (peopleError()) { <p class="access-note field--wide" role="alert">{{ peopleError() }}</p> }
+                @if (peopleMessage()) { <p class="access-note field--wide" role="status">{{ peopleMessage() }}</p> }
               </div>
 
               <div class="activity-form-actions">

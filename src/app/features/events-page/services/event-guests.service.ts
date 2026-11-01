@@ -9,6 +9,9 @@ export interface EventGuest {
   user_id: string;
   status: 'CONFIRMED' | 'CANCELED';
   visibility: 'PUBLIC' | 'PRIVATE';
+  name?: string;
+  image_url?: string;
+  email?: string;
 }
 export interface GuestInvitation {
   id: number;
@@ -17,7 +20,9 @@ export interface GuestInvitation {
   status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'CANCELLED';
   expires_at: string | null;
 }
-interface WireGuest extends Omit<EventGuest, 'user_id'> { user_id?: string; userId?: string }
+interface WireGuest extends Omit<EventGuest, 'user_id'> {
+  user_id?: string; userId?: string; imageUrl?: string; email_address?: string; emailAddress?: string;
+}
 interface WireInvitation extends Omit<GuestInvitation, 'email' | 'expires_at'> {
   email_address?: string | { value: string };
   emailAddress?: string | { value: string };
@@ -36,7 +41,10 @@ export class EventGuestsService {
       content: page.content.map((row) => {
         const guest = ('eventGuest' in row ? row.eventGuest : undefined)
           ?? ('event_guest' in row ? row.event_guest : undefined) ?? row as WireGuest;
-        return { ...guest, user_id: guest.user_id ?? guest.userId ?? '' } as EventGuest;
+        return { ...guest, user_id: guest.user_id ?? guest.userId ?? '',
+          image_url: guest.image_url ?? guest.imageUrl,
+          email: guest.email ?? guest.email_address ?? guest.emailAddress,
+        } as EventGuest;
       }),
       next_cursor: page.next_cursor ?? page.nextCursor ?? null,
     })));

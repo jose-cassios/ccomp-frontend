@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, Input, OnInit, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -15,10 +15,11 @@ import { EventGuest, EventGuestsService, GuestInvitation } from '../../services/
   templateUrl: './event-guests.component.html',
   styleUrl: './event-guests.component.css',
 })
-export class EventGuestsComponent implements OnInit {
+export class EventGuestsComponent implements OnChanges {
   @Input({ required: true }) eventId!: number;
   @Input() activityId?: number;
   @Input() manage = false;
+  @Input() canView = false;
   private readonly service = inject(EventGuestsService);
   readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
@@ -37,8 +38,14 @@ export class EventGuestsComponent implements OnInit {
   readonly statusLabels: Record<string, string> = {
     PENDING: 'Pendente', ACCEPTED: 'Aceito', DECLINED: 'Recusado', CANCELLED: 'Cancelado',
   };
-  ngOnInit() { this.loadGuests(); if (this.manage && !this.activityId) this.loadInvitations(); }
+  ngOnChanges() {
+    this.accessDenied.set(false);
+    if (this.canView || this.manage) this.loadGuests(); else this.guests.set([]);
+    if (this.manage && !this.activityId && this.canViewEmail()) this.loadInvitations();
+  }
+  canViewEmail(): boolean { return this.auth.hasAnyRole(['ADM', 'MODERATOR']); }
   loadGuests(more = false) {
+    if (!this.canView && !this.manage) return;
     if (this.loading() || (more && !this.guestCursor())) return;
     this.loading.set(true);
     this.error.set('');

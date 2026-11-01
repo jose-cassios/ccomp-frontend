@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, afterNextRender, DestroyRef } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EMPTY, catchError, expand, finalize, of, reduce, switchMap, throwError } from 'rxjs';
 import { CONTENT_MANAGEMENT_ROLES } from '../../../auth/config/auth.config';
@@ -86,6 +86,22 @@ export class EventDetailsComponent implements OnInit {
   });
   readonly activityTypeLabel = eventActivityTypeLabel;
   readonly activityWeekdayLabel = eventActivityWeekdayLabel;
+
+  private readonly clock = signal(Date.now());
+  constructor() {
+    const destroy = inject(DestroyRef);
+    afterNextRender(() => {
+      const timer = setInterval(() => this.clock.set(Date.now()), 1000);
+      destroy.onDestroy(() => clearInterval(timer));
+    });
+  }
+
+  activityHasStarted(activity: EventActivity): boolean {
+    const now = Math.max(this.clock(), Date.now());
+    const start = Date.parse(activity.start_date ?? '');
+    const end = Date.parse(activity.end_date ?? '');
+    return (Number.isFinite(start) && start <= now) || (Number.isFinite(end) && end <= now);
+  }
 
   ngOnInit(): void {
     const feedback = this.router.getCurrentNavigation()?.extras.state?.['eventFeedback'];
@@ -175,6 +191,7 @@ export class EventDetailsComponent implements OnInit {
   activityRegistrationBlocked(activity: EventActivity): boolean {
     if (this.activitySubscriptionsLoading() || this.activitySubscriptionsError()) return true;
     if (activity.subscribed) return false;
+    if (this.activityHasStarted(activity)) return true;
     if (!this.isAuthenticated()) return false;
     if (this.event()?.schedule_conflict_policy !== 'ALLOW' && this.activityConflict(activity)) return true;
     if (activity.can_subscribe !== null && activity.can_subscribe !== undefined) {
@@ -186,6 +203,7 @@ export class EventDetailsComponent implements OnInit {
 
   activityRegistrationHint(activity: EventActivity): string | null {
     if (activity.subscribed || !this.activityRequiresRegistration(activity)) return null;
+    if (this.activityHasStarted(activity)) return 'Inscrições encerradas: esta atividade já começou.';
     if (!this.isAuthenticated()) return null;
     const conflict = this.activityConflict(activity);
     if (conflict) return this.activityConflictMessage(conflict);
@@ -203,6 +221,9 @@ export class EventDetailsComponent implements OnInit {
   toggleActivitySubscription(activity: EventActivity, cancel = activity.subscribed === true): void {
     const currentEvent = this.event();
     if (!currentEvent || !this.activityRequiresRegistration(activity) || this.activitySubscriptionBusyId()) return;
+    if (!cancel && this.activityHasStarted(activity)) {
+      this.errorMessage.set('Inscrições encerradas: esta atividade já começou.'); return;
+    }
 
     if (!this.isAuthenticated()) {
       void this.router.navigate(['/login'], {
@@ -224,7 +245,9 @@ export class EventDetailsComponent implements OnInit {
       : this.eventsService.getActivityConflicts(activity.id).pipe(switchMap((conflicts) =>
           conflicts.length && currentEvent.schedule_conflict_policy !== 'ALLOW'
             ? throwError(() => new Error(this.activityConflictMessage(conflicts[0])))
-            : this.eventsService.subscribeActivity(activity.id),
+            : this.activityHasStarted(activity)
+              ? throwError(() => new Error('Inscrições encerradas: esta atividade já começou.'))
+              : this.eventsService.subscribeActivity(activity.id),
         ));
 
     request.pipe(finalize(() => this.activitySubscriptionBusyId.set(null))).subscribe({
