@@ -1,13 +1,18 @@
-import { HttpEvent, HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+import { HttpContextToken, HttpEvent, HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Observable, finalize } from 'rxjs';
 import { LoadingService } from './loading.service';
 
-/** Tracks every HttpClient request so the application exposes one consistent loading state. */
+/** Background assets must not interrupt navigation with a global loading overlay. */
+export const SKIP_GLOBAL_LOADING = new HttpContextToken<boolean>(() => false);
+
 export const loadingInterceptor: HttpInterceptorFn = (
   request: HttpRequest<unknown>,
   next: HttpHandlerFn,
 ): Observable<HttpEvent<unknown>> => {
+  if (request.context.get(SKIP_GLOBAL_LOADING)) {
+    return next(request.clone({ timeout: request.timeout ?? 30000 }));
+  }
   const loadingService = inject(LoadingService);
   loadingService.begin();
 

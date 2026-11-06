@@ -2,9 +2,8 @@
   <section class="full-width-section">
     <app-banner
       [highlights]="highlights()"
-      [eventsCount]="events().length"
-      [newsCount]="newsItems().length"
       [events]="events()"
+      [newsCount]="newsItems().length"
       [eventsLoading]="eventsLoading()"
       [eventsError]="eventsError()"
       (retryEvents)="loadEvents()"

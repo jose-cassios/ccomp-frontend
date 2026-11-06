@@ -1,4 +1,4 @@
-:host { display: block; background: var(--surface-page); }
+:host { display: block; background: var(--surface-page); overflow-wrap: anywhere; }
 .event-editor-page { width: min(1120px, 100%); min-height: 75vh; margin: 0 auto; padding: 36px 20px 72px; color: #23313c; }
 .editor-header, .card-heading, .form-footer, .review-actions { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .editor-header { align-items: flex-end; margin-bottom: 26px; }
@@ -53,7 +53,7 @@ h1 { margin: 5px 0 6px; color: var(--text-strong); font-size: clamp(1.75rem, 4vw
 .empty-inline, .access-note { margin: 18px 0 0; border: 1px dashed #cbd8cf; border-radius: 10px; padding: 16px; color: #64748b; font-size: .88rem; text-align: center; }
 .access-note { border-style: solid; border-color: #fed7aa; background: #fffaf0; color: #9a5a13; text-align: left; }
 .review-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 24px 0; }
-.review-list div { padding: 14px; border-radius: 10px; background: var(--surface-subtle); }
+.review-list div { min-width: 0; padding: 14px; border-radius: 10px; background: var(--surface-subtle); }
 .review-list dt { color: #64748b; font-size: .7rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
 .review-list dd { margin: 5px 0 0; color: var(--text-primary); font-weight: 700; }
 .review-enrollments { margin: 24px 0; border-top: 1px solid #e4ece6; padding-top: 20px; }.enrollment-list em { color: var(--brand-700); font-size: .72rem; font-style: normal; font-weight: 800; }

@@ -6,6 +6,7 @@ import { EventListItem } from '../../../events-page/models/event.model';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ApiConfig } from '../../../../core/api/api.config';
+import { SKIP_GLOBAL_LOADING } from '../../../../core/loading/loading.interceptor';
 
 describe('Banner', () => {
   let component: BannerComponent;
@@ -59,6 +60,31 @@ describe('Banner', () => {
     id, title: 'Evento ' + id, slug: 'evento-' + id, description: null,
     category: 'ACADEMIC_EDUCATIONAL', format: 'IN_PERSON',
     start_date: start, end_date: end,
+  });
+
+  it('reuses covers when returning to a slide and loads new covers without global feedback', () => {
+    const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:cover');
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    const urls = [1, 2].map(id => TestBed.inject(ApiConfig).buildUrl(`/events/${id}/images/cover`));
+    fixture.componentRef.setInput('highlights', urls.map((url, index) => ({
+      id: `EVENT:${index + 1}`, source_type: 'EVENT', source_id: index + 1,
+      title: 'Evento', summary: 'Resumo', image_url: url, label: 'Destaque', link: '/eventos/1',
+    })));
+    const http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    const first = http.expectOne(urls[0]);
+    expect(first.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    first.flush(new Blob(['first'], { type: 'image/png' }));
+    component.next(); fixture.detectChanges();
+    const second = http.expectOne(urls[1]);
+    expect(second.request.context.get(SKIP_GLOBAL_LOADING)).toBe(true);
+    second.flush(new Blob(['second'], { type: 'image/png' }));
+    component.prev(); fixture.detectChanges();
+    http.expectNone(urls[0]);
+    expect(fixture.nativeElement.querySelector('.news-img-container img').getAttribute('src')).toBe('blob:cover');
+    fixture.destroy();
+    expect(revoke).toHaveBeenCalledTimes(3);
+    http.verify(); create.mockRestore(); revoke.mockRestore();
   });
 
   it('lists upcoming events chronologically without past or canceled events', () => {

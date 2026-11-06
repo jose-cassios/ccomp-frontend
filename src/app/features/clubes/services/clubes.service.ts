@@ -21,7 +21,7 @@ export class ClubesService {
   private readonly api = inject(ApiService);
 
   search(nextCursor?: string, pageSize = 10): Observable<ClubPage> {
-    return this.api.post<ClubPage>('/clubs/search', null, {
+    return this.api.get<ClubPage>('/clubs/search', {
       params: this.cursorParams('nextCursor', nextCursor, 'pageSize', pageSize),
     });
   }
@@ -30,11 +30,9 @@ export class ClubesService {
     return this.api.get<Club[]>('/highlights/clubs');
   }
 
-  getMine(nextCursor?: string, pageSize = 10, role?: ClubMemberRole): Observable<ClubPage> {
-    let params = this.cursorParams('nextCursor', nextCursor, 'pageSize', pageSize);
-    if (role) params = params.set('role', role);
-    return this.api.post<ClubPage>('/clubs/me', null, {
-      params,
+  getMine(nextCursor?: string, pageSize = 10): Observable<ClubPage> {
+    return this.api.get<ClubPage>('/clubs/me', {
+      params: this.cursorParams('nextCursor', nextCursor, 'pageSize', pageSize),
     });
   }
 

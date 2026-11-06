@@ -1,4 +1,4 @@
-:host { display: block; background: var(--surface-page); }
+:host { display: block; background: var(--surface-page); overflow-wrap: anywhere; }
 .events-page { max-width: 1360px; margin: 0 auto; padding: 22px 16px 48px; color: #263740; }
 .page-header, .management__heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .page-header { align-items: flex-end; margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid #dce5df; }

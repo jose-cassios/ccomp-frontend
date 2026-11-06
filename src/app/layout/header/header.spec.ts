@@ -36,6 +36,19 @@ describe('Header', () => {
     expect(component).toBeTruthy();
   });
 
+  it('opens the mobile navigation, closes on selection and returns focus on Escape', () => {
+    const toggle = fixture.nativeElement.querySelector('.menu-toggle') as HTMLButtonElement;
+    toggle.click(); fixture.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    fixture.nativeElement.querySelector('.nav-link').click(); fixture.detectChanges();
+    expect(component.menuOpen()).toBe(false);
+    toggle.click(); fixture.detectChanges();
+    fixture.nativeElement.querySelector('.nav-container').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(toggle);
+  });
+
   it('links directly to the course presentation without a dropdown menu', () => {
     fixture.detectChanges();
 

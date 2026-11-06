@@ -6,7 +6,7 @@ import { ClubesService } from './clubes.service';
 
 describe('ClubesService', () => {
   const api = {
-    get: vi.fn(() => of({})),
+    get: vi.fn((_endpoint: string, _options?: { params?: HttpParams }) => of({})),
     post: vi.fn((_endpoint: string, _body: unknown, _options?: { params?: HttpParams }) => of({})),
     patch: vi.fn((_endpoint: string, _body: unknown, _options?: { params?: HttpParams }) => of({})),
     delete: vi.fn(() => of(void 0)),
@@ -23,16 +23,15 @@ describe('ClubesService', () => {
 
   it('should use cursor pagination for public and managed clubs', () => {
     service.search('public-cursor', 20).subscribe();
-    service.getMine('mine-cursor', 15, 'INSTRUCTOR').subscribe();
+    service.getMine('mine-cursor', 15).subscribe();
 
-    expect(api.post.mock.calls[0]?.[0]).toBe('/clubs/search');
-    expect(api.post.mock.calls[0]?.[1]).toBeNull();
-    expect(api.post.mock.calls[0]?.[2]?.params?.get('nextCursor')).toBe('public-cursor');
-    expect(api.post.mock.calls[0]?.[2]?.params?.get('pageSize')).toBe('20');
-    expect(api.post.mock.calls[1]?.[0]).toBe('/clubs/me');
-    expect(api.post.mock.calls[1]?.[2]?.params?.get('nextCursor')).toBe('mine-cursor');
-    expect(api.post.mock.calls[1]?.[2]?.params?.get('pageSize')).toBe('15');
-    expect(api.post.mock.calls[1]?.[2]?.params?.get('role')).toBe('INSTRUCTOR');
+    expect(api.get.mock.calls[0]?.[0]).toBe('/clubs/search');
+    expect(api.get.mock.calls[0]?.[1]?.params?.get('nextCursor')).toBe('public-cursor');
+    expect(api.get.mock.calls[0]?.[1]?.params?.get('pageSize')).toBe('20');
+    expect(api.get.mock.calls[1]?.[0]).toBe('/clubs/me');
+    expect(api.get.mock.calls[1]?.[1]?.params?.get('nextCursor')).toBe('mine-cursor');
+    expect(api.get.mock.calls[1]?.[1]?.params?.get('pageSize')).toBe('15');
+    expect(api.post).not.toHaveBeenCalled();
   });
 
   it('should map club CRUD and highlights to the documented routes', () => {

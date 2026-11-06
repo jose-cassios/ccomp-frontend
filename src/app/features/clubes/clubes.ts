@@ -156,8 +156,6 @@ export class Clubes implements OnInit {
     this.selectedClub.set(club);
     this.activeModal.set('details');
     this.modalError.set(null);
-    if (!this.isAuthenticated()) return;
-
     this.clubsService.getById(club.id).subscribe({
       next: (details) => this.selectedClub.set(details),
       error: (error: unknown) => this.modalError.set(this.errorMessage(error, 'Não foi possível carregar todos os detalhes do clube.')),
