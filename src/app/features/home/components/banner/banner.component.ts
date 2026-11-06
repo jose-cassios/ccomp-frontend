@@ -7,11 +7,6 @@ import { EventListItem } from '../../../events-page/models/event.model';
 import { GlobalHighlight } from '../../models/global-highlight.model';
 import { EventCoverDirective } from '../../../events-page/components/event-cover.directive';
 
-interface StatItem {
-  valor: string;
-  label: string;
-}
-
 @Component({
   selector: 'app-banner',
   standalone: true,
@@ -25,11 +20,11 @@ export class BannerComponent implements AfterViewInit, OnDestroy {
   private carouselTimer: ReturnType<typeof setInterval> | null = null;
   readonly highlights = input<readonly GlobalHighlight[]>([]);
   readonly events = input<readonly EventListItem[]>([]);
+  readonly newsCount = input(0);
   readonly eventsLoading = input(false);
   readonly eventsError = input<string | null>(null);
   readonly retryEvents = output<void>();
   readonly selectedDay = signal<Date | null>(null);
-  readonly carouselPaused = signal(false);
   readonly hovered = signal(false);
   readonly focused = signal(false);
   readonly panelTitle = computed(() => {
@@ -52,8 +47,6 @@ export class BannerComponent implements AfterViewInit, OnDestroy {
   openEvent(id: number): void {
     void this.router.navigate(['/eventos', id]);
   }
-  readonly eventsCount = input(0);
-  readonly newsCount = input(0);
   readonly canManageHighlights = input(false);
   readonly manageHighlights = output<void>();
   readonly currentIndex = signal(0);
@@ -61,10 +54,6 @@ export class BannerComponent implements AfterViewInit, OnDestroy {
     this.highlights()[this.currentIndex()] ?? this.highlights()[0] ?? DEFAULT_HIGHLIGHT,
   );
   readonly carouselItems = computed(() => this.highlights().length ? this.highlights() : [DEFAULT_HIGHLIGHT]);
-  readonly estatisticas = computed<StatItem[]>(() => [
-    { valor: String(this.eventsCount()), label: 'Eventos disponíveis' },
-    { valor: String(this.newsCount()), label: 'Notícias publicadas' },
-  ]);
 
   constructor() {
     effect(() => {
@@ -76,7 +65,7 @@ export class BannerComponent implements AfterViewInit, OnDestroy {
     if (!isPlatformBrowser(this.platformId)) return;
 
     this.carouselTimer = setInterval(() => {
-      if (this.carouselItems().length > 1 && !this.carouselPaused() && !this.hovered() && !this.focused()) this.next();
+      if (this.carouselItems().length > 1 && !this.hovered() && !this.focused()) this.next();
     }, 6000);
   }
 
