@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterModule } from '@angular/router';
+import { NavigationEnd, Router, RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ADMIN_PANEL_ROLES } from '../../features/auth/config/auth.config';
 import { AuthService } from '../../features/auth/services/auth.service';
 
@@ -12,7 +13,19 @@ import { AuthService } from '../../features/auth/services/auth.service';
 export class Header {
   private readonly authService = inject(AuthService);
 
-  constructor(private router: Router) {}
+  constructor(private router: Router) {
+    router.events.pipe(takeUntilDestroyed()).subscribe(event => {
+      if (event instanceof NavigationEnd) this.menuOpen.set(false);
+    });
+  }
+
+  readonly menuOpen = signal(false);
+
+  closeMenu(toggle: HTMLButtonElement): void {
+    if (!this.menuOpen()) return;
+    this.menuOpen.set(false);
+    toggle.focus();
+  }
 
   readonly canAccessAdministration = computed(() =>
     this.authService.hasAnyRole(ADMIN_PANEL_ROLES),

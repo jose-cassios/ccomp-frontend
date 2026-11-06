@@ -30,8 +30,13 @@
   </div>
 
   <nav class="header-navigation" aria-label="Navegação principal">
-    <div class="nav-container">
-      <ul class="nav-list">
+    <div class="nav-container" (keydown.escape)="closeMenu(menuToggle)">
+      <button #menuToggle class="menu-toggle" type="button" aria-controls="primary-links"
+        [attr.aria-expanded]="menuOpen()" (click)="menuOpen.set(!menuOpen())">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="menuOpen() ? 'M6 6l12 12M6 18L18 6' : 'M4 6h16M4 12h16M4 18h16'" /></svg>
+        {{ menuOpen() ? 'Fechar menu' : 'Menu' }}
+      </button>
+      <ul id="primary-links" class="nav-list" [class.nav-list--open]="menuOpen()" (click)="menuOpen.set(false)">
         <li class="nav-item">
           <a class="nav-link" routerLink="/" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true }">Home</a>
         </li>
@@ -68,7 +73,7 @@
             {{ isLoggingOut() ? 'Saindo...' : 'Sair' }}
           </button>
         } @else {
-          <a class="session-button" routerLink="/login" (click)="onLogin()">Entrar</a>
+          <a class="session-button" routerLink="/login">Entrar</a>
         }
       </div>
     </div>

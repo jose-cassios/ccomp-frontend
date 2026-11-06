@@ -219,6 +219,8 @@
 }
 
 .session-button:disabled { cursor: wait; opacity: .65; }
+.menu-toggle { display: none; }
+.site-header a:focus-visible, .site-header button:focus-visible { outline: 2px solid var(--brand-500); outline-offset: -2px; }
 
 .sr-only {
   position: absolute;
@@ -237,16 +239,24 @@
   .user-data { display: none; }
 }
 
+@media (max-width: 1000px) {
+  .nav-container { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 12px; }
+  .menu-toggle { display: inline-flex; align-items: center; justify-self: start; gap: 8px; min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: var(--text-primary); font: inherit; font-size: .82rem; font-weight: 650; cursor: pointer; }
+  .menu-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+  .nav-list { display: none; grid-column: 1 / -1; grid-row: 2; max-height: 55svh; overflow-y: auto; padding-block: 4px 8px; }
+  .nav-list--open { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+  .nav-link { min-height: 44px; border-radius: 6px; white-space: normal; overflow-wrap: anywhere; font-size: .82rem; }
+  .session-actions { grid-column: 2; grid-row: 1; align-items: center; padding: 2px 0; }
+  .session-button, .user-summary { min-height: 40px; }
+  .user-data { display: none; }
+}
+
 @media (max-width: 680px) {
   .header-container { min-height: 56px; gap: 12px; }
   .logo-ifma { width: 50px; height: 42px; }
   .brand-text { display: none; }
-  .search-box { width: min(42vw, 190px); }
-  .search-box:focus-within { width: min(48vw, 220px); }
-  .nav-container { overflow-x: auto; gap: 12px; scrollbar-width: none; }
-  .nav-container::-webkit-scrollbar { display: none; }
-  .nav-link { min-height: 44px; padding: 0 10px; font-size: .78rem; }
-  .session-actions { position: sticky; right: 0; padding-left: 8px; background: var(--surface-card); }
-  .user-summary .user-data { display: none; }
-  .session-button { min-height: 29px; }
+  .header-actions { flex: 1; min-width: 0; justify-content: flex-end; gap: 8px; }
+  .search-box, .search-box:focus-within { width: min(100%, 230px); min-width: 0; }
+  .search-box input { font-size: 16px; }
+  .github-link { flex-shrink: 0; width: 40px; height: 40px; }
 }
