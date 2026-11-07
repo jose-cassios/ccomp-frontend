@@ -14,6 +14,15 @@ describe('Guest API contract', () => {
     service = TestBed.inject(EventGuestsService); http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+  it('reads all cursor pages to distinguish existing profiles before registration', () => {
+    let ids: number[] = [];
+    service.allGuests(1).subscribe(rows => ids = rows.map(row => row.id));
+    http.expectOne(r => r.url === '/api/events/1/guests' && !r.params.has('cursor'))
+      .flush({ content: [{ id: 7, name: 'Existing' }], next_cursor: 'page2' });
+    http.expectOne(r => r.url === '/api/events/1/guests' && r.params.get('cursor') === 'page2')
+      .flush({ content: [{ id: 8, name: 'Another' }], next_cursor: null });
+    expect(ids).toEqual([7, 8]);
+  });
   it('normalizes flat activity guests using the event guest ID for images', () => {
     service.guests(1, undefined, 3).subscribe(page => {
       expect(page.content[0].id).toBe(99);

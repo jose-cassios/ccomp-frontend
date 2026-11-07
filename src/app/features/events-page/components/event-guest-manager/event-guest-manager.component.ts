@@ -2,12 +2,12 @@ import { Component, DestroyRef, Input, OnChanges, OnDestroy, Output, EventEmitte
 import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Observable, finalize } from 'rxjs';
-import { EventGuest, EventGuestsService, GuestInvitation, GuestRole } from '../../services/event-guests.service';
+import { Observable, finalize, of, switchMap, tap } from 'rxjs';
+import { EventGuest, EventGuestsService, GuestInvitation, GuestRole, GuestProfile } from '../../services/event-guests.service';
 import { EventCoverDirective } from '../event-cover.directive';
 import { AuthService } from '../../../auth/services/auth.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
-import { apiMessage } from '../../models/event.model';
+import { ApiMessage, apiMessage } from '../../models/event.model';
 
 @Component({
   selector: 'app-event-guest-manager', standalone: true,
@@ -34,6 +34,11 @@ export class EventGuestManagerComponent implements OnChanges, OnDestroy {
   readonly guests = signal<EventGuest[]>([]);
   readonly linked = signal<EventGuest[]>([]);
   readonly selected = signal<EventGuest | null>(null);
+  readonly editing = signal(false);
+  readonly listError = signal('');
+  readonly pendingPhoto = signal<GuestProfile | null>(null);
+  readonly photoCandidates = signal<EventGuest[]>([]);
+  private existingGuestIds = new Set<number>();
   readonly cursor = signal<string | null>(null);
   readonly linkedCursor = signal<string | null>(null);
   readonly invitations = signal<GuestInvitation[]>([]);
@@ -59,20 +64,20 @@ export class EventGuestManagerComponent implements OnChanges, OnDestroy {
     if (changes['eventId'] || changes['activityId']) this.loadLinked();
   }
   ngOnDestroy(): void { if (this.preview()) URL.revokeObjectURL(this.preview()); }
-  private reportDirty(): void { this.dirtyChange.emit(this.form.dirty || this.email.dirty || this.role.dirty || !!this.file()); }
+  private reportDirty(): void { this.dirtyChange.emit(this.form.dirty || this.email.dirty || this.role.dirty || !!this.file() || !!this.pendingPhoto()); }
   preventImplicitSubmit(event: Event): void {
     // This panel sits inside the activity form. Enter must not submit that form.
     if (event.target instanceof HTMLInputElement && event.target.type !== 'file') event.preventDefault();
   }
   load(more = false): void {
     if (this.loading() || (more && !this.cursor())) return;
-    this.loading.set(true);
+    this.loading.set(true); this.listError.set('');
     this.service.guests(this.eventId, more ? this.cursor()! : undefined)
       .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({
         next: page => {
           this.guests.update(rows => more ? [...rows, ...page.content] : page.content);
           this.cursor.set(page.next_cursor);
-        }, error: e => this.error.set(apiErrorMessage(e, 'Não foi possível carregar os convidados. Use Atualizar lista.')),
+        }, error: e => this.listError.set(apiErrorMessage(e, 'Não foi possível carregar os convidados.')),
       });
   }
   loadLinked(more = false): void {
@@ -84,26 +89,97 @@ export class EventGuestManagerComponent implements OnChanges, OnDestroy {
       });
   }
   choose(id: number): void {
-    if (this.busy() || this.disabled) return;
+    if (this.busy() || this.disabled || this.pendingPhoto()) return;
     if ((this.form.dirty || this.role.dirty || this.file()) && !window.confirm('Descartar as alterações do convidado?')) return;
     const guest = this.guests().find(row => row.id === id) ?? null;
-    this.selected.set(guest); this.clearFile();
+    this.editing.set(true); this.selected.set(guest); this.clearFile();
     this.form.reset({ name: guest?.name ?? '', description: guest?.description ?? '' });
     this.role.reset(this.linked().find(row => row.event_guest_id === id)?.role ?? 'PRESENTER');
     this.error.set(''); this.message.set(''); this.reportDirty();
   }
-  save(): void {
+  newGuest(): void {
+    if (this.busy() || this.disabled || this.pendingPhoto()) return;
+    this.choose(0);
+  }
+  cancelEdit(): void {
     if (this.busy() || this.disabled) return;
+    if ((this.form.dirty || this.file() || this.pendingPhoto()) && !window.confirm('Descartar as alterações e a foto pendente? O perfil já cadastrado será mantido.')) return;
+    this.finishEditing();
+  }
+  private finishEditing(): void {
+    this.pendingPhoto.set(null); this.photoCandidates.set([]);
+    this.selected.set(null); this.form.reset(); this.role.reset();
+    this.clearFile(); this.editing.set(false); this.reportDirty();
+  }
+  save(): void {
+    if (this.busy() || this.disabled || this.pendingPhoto()) return;
     this.form.markAllAsTouched();
-    if (this.form.invalid) { this.error.set('Informe o nome do convidado (até 255 caracteres) e uma descrição de até 5.000 caracteres.'); return; }
+    if (this.form.invalid) { this.error.set('Informe o nome do convidado (até 255 caracteres) e uma apresentação de até 5.000 caracteres.'); return; }
     const profile = { name: this.form.controls.name.value.trim(), description: this.form.controls.description.value.trim() };
     const guest = this.selected();
-    this.run(guest ? this.service.profile(this.eventId, guest.id, profile) : this.service.create(this.eventId, profile),
-      guest ? 'Perfil atualizado.' : 'Convidado cadastrado no evento. Selecione o perfil na lista para enviar a foto e associá-lo à atividade.', () => {
-        if (guest) this.selected.set({ ...guest, ...profile });
-        this.form.reset(guest ? profile : { name: '', description: '' }); this.reportDirty(); this.load(); this.loadLinked();
-      });
+    let profileSaved = false;
+    // Snapshot all pages before creating when a photo will need a profile ID.
+    const request: Observable<unknown> = guest
+      ? (this.form.dirty ? this.service.profile(this.eventId, guest.id, profile) : of<ApiMessage>({})).pipe(tap(() => {
+          profileSaved = true; this.selected.set({ ...guest, ...profile }); this.form.reset(profile); this.reportDirty();
+        }))
+      : (this.file() ? this.service.allGuests(this.eventId) : of<EventGuest[]>([])).pipe(
+          tap(rows => this.existingGuestIds = new Set(rows.map(row => row.id))),
+          switchMap(() => this.service.create(this.eventId, profile)),
+          tap(response => {
+            profileSaved = true; this.form.reset(profile);
+            // Use an authoritative ID if the API starts returning it; never guess from a name.
+            if (Number.isSafeInteger(response.id) && response.id! > 0) {
+              this.selected.set({ id: response.id!, ...profile, user_id: '', status: 'CONFIRMED', visibility: 'PUBLIC' });
+            } else if (this.file()) this.pendingPhoto.set(profile);
+            this.reportDirty();
+          }),
+        );
+    this.setBusy(true); this.error.set(''); this.message.set('');
+    request.pipe(
+      switchMap(() => this.file() && this.selected()
+        ? this.service.uploadImage(this.eventId, this.selected()!.id, this.file()!).pipe(tap(() => this.clearFile()))
+        : of<ApiMessage>({})),
+      takeUntilDestroyed(this.destroyRef), finalize(() => this.setBusy(false)),
+    ).subscribe({
+      next: () => {
+        if (this.pendingPhoto()) {
+          this.message.set('Perfil cadastrado. Confirme abaixo o convidado para concluir o envio da foto.');
+          this.findPhotoCandidates();
+        } else {
+          this.message.set(guest ? 'Convidado atualizado com sucesso.' : 'Convidado cadastrado com sucesso.');
+          this.finishEditing(); this.load(); this.loadLinked();
+        }
+      },
+      error: e => {
+        this.error.set((profileSaved ? 'O perfil já foi salvo. A foto não foi enviada. ' : '') + apiErrorMessage(e, 'Tente novamente. Seus dados foram mantidos.'));
+        if (profileSaved) this.load();
+      },
+    });
   }
+  findPhotoCandidates(): void {
+    const profile = this.pendingPhoto(); if (!profile || this.loading()) return;
+    this.loading.set(true); this.error.set('');
+    this.service.allGuests(this.eventId).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({
+      next: rows => {
+        if (this.pendingPhoto() !== profile) return;
+        this.photoCandidates.set(rows.filter(row => !this.existingGuestIds.has(row.id)
+          && row.name?.trim() === profile.name && (row.description ?? '').trim() === profile.description));
+      },
+      error: e => this.error.set(apiErrorMessage(e, 'Perfil salvo, mas não foi possível localizá-lo para enviar a foto. Tente novamente; não é necessário cadastrá-lo outra vez.')),
+    });
+  }
+  confirmPhoto(guest: EventGuest): void {
+    if (this.busy() || this.disabled || !this.pendingPhoto() || !this.photoCandidates().some(row => row.id === guest.id)) return;
+    this.selected.set(guest); this.pendingPhoto.set(null); this.photoCandidates.set([]);
+    this.form.reset({ name: guest.name ?? '', description: guest.description ?? '' }); this.reportDirty();
+    this.save();
+  }
+  finishWithoutPhoto(): void {
+    if (this.busy() || this.disabled) return;
+    this.finishEditing(); this.message.set('Convidado cadastrado sem foto. Você pode adicioná-la em Editar.'); this.load();
+  }
+  private setBusy(value: boolean): void { this.busy.set(value); this.busyChange.emit(value); }
   selectPhoto(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0]; input.value = '';

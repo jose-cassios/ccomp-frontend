@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpParams } from '@angular/common/http';
-import { map } from 'rxjs';
+import { EMPTY, expand, map, reduce } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
 import { ApiConfig } from '../../../core/api/api.config';
 import { ApiMessage } from '../models/event.model';
@@ -19,6 +19,7 @@ export interface EventGuest {
 }
 export type GuestRole = 'PRESENTER' | 'SPECIAL_GUEST' | 'MODERATOR' | 'LISTENER';
 export interface GuestProfile { name: string; description: string; }
+export interface GuestCreatedResponse extends ApiMessage { id?: number; }
 export interface GuestInvitation {
   id: number;
   code: string;
@@ -42,7 +43,18 @@ export class EventGuestsService {
   private readonly api = inject(ApiService);
   private readonly config = inject(ApiConfig);
   create(eventId: number, profile: GuestProfile) {
-    return this.api.post<ApiMessage>(`/events/${eventId}/guests`, profile);
+    return this.api.post<GuestCreatedResponse>(`/events/${eventId}/guests`, profile);
+  }
+  allGuests(eventId: number) {
+    const cursors = new Set<string>();
+    return this.guests(eventId).pipe(
+      expand(page => {
+        if (!page.next_cursor || cursors.has(page.next_cursor)) return EMPTY;
+        cursors.add(page.next_cursor);
+        return this.guests(eventId, page.next_cursor);
+      }),
+      reduce((rows, page) => [...rows, ...page.content], [] as EventGuest[]),
+    );
   }
   profile(eventId: number, guestId: number, profile: GuestProfile) {
     return this.api.patch<ApiMessage>(`/events/${eventId}/guests/${guestId}/profile`, profile);
