@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpParams } from '@angular/common/http';
 import { map } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
+import { ApiConfig } from '../../../core/api/api.config';
 import { ApiMessage } from '../models/event.model';
 
 export interface EventGuest {
@@ -12,7 +13,12 @@ export interface EventGuest {
   name?: string;
   image_url?: string;
   email?: string;
+  description?: string;
+  event_guest_id?: number;
+  role?: GuestRole;
 }
+export type GuestRole = 'PRESENTER' | 'SPECIAL_GUEST' | 'MODERATOR' | 'LISTENER';
+export interface GuestProfile { name: string; description: string; }
 export interface GuestInvitation {
   id: number;
   code: string;
@@ -22,6 +28,7 @@ export interface GuestInvitation {
 }
 interface WireGuest extends Omit<EventGuest, 'user_id'> {
   user_id?: string; userId?: string; imageUrl?: string; email_address?: string; emailAddress?: string;
+  image_key?: string; imageKey?: string; eventGuestId?: number;
 }
 interface WireInvitation extends Omit<GuestInvitation, 'email' | 'expires_at'> {
   email_address?: string | { value: string };
@@ -33,6 +40,23 @@ interface Page<T> { content: T[]; next_cursor?: string | null; nextCursor?: stri
 @Injectable({ providedIn: 'root' })
 export class EventGuestsService {
   private readonly api = inject(ApiService);
+  private readonly config = inject(ApiConfig);
+  create(eventId: number, profile: GuestProfile) {
+    return this.api.post<ApiMessage>(`/events/${eventId}/guests`, profile);
+  }
+  profile(eventId: number, guestId: number, profile: GuestProfile) {
+    return this.api.patch<ApiMessage>(`/events/${eventId}/guests/${guestId}/profile`, profile);
+  }
+  associate(eventId: number, guestId: number, activityId: number, role: GuestRole) {
+    return this.api.post<void>(`/events/${eventId}/guests/${guestId}/activities/${activityId}`, { role });
+  }
+  uploadImage(eventId: number, guestId: number, file: File) {
+    const body = new FormData(); body.append('file', file);
+    return this.api.post<ApiMessage>(`/events/${eventId}/guests/${guestId}/image`, body);
+  }
+  removeImage(eventId: number, guestId: number) {
+    return this.api.delete<void>(`/events/${eventId}/guests/${guestId}/image`);
+  }
   guests(eventId: number, cursor?: string, activityId?: number) {
     const path = activityId ? `/events/activities/${activityId}/guests` : `/events/${eventId}/guests`;
     return this.api.get<Page<WireGuest | { eventGuest?: WireGuest; event_guest?: WireGuest }>>(path, {
@@ -42,7 +66,10 @@ export class EventGuestsService {
         const guest = ('eventGuest' in row ? row.eventGuest : undefined)
           ?? ('event_guest' in row ? row.event_guest : undefined) ?? row as WireGuest;
         return { ...guest, user_id: guest.user_id ?? guest.userId ?? '',
-          image_url: guest.image_url ?? guest.imageUrl,
+          event_guest_id: guest.event_guest_id ?? guest.eventGuestId,
+          image_url: (guest.image_key ?? guest.imageKey)
+            ? this.config.buildUrl(`/events/${eventId}/guests/${guest.event_guest_id ?? guest.eventGuestId ?? guest.id}/image`)
+            : guest.image_url ?? guest.imageUrl,
           email: guest.email ?? guest.email_address ?? guest.emailAddress,
         } as EventGuest;
       }),

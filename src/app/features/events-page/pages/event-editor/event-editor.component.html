@@ -238,7 +238,7 @@
           }
 
           @if (!canManageActivities()) {
-            <p class="access-note">A programação pode ser alterada apenas pelo responsável ou por um editor do evento.</p>
+            <p class="access-note">A programação pode ser alterada pelo responsável, por editores, administradores e moderadores.</p>
           }
 
           @if (activitiesError()) {
@@ -517,7 +517,7 @@
                   <h2 id="activity-dialog-title">{{ editingActivityId() ? 'Editar atividade' : 'Nova atividade' }}</h2>
                   <p>Preencha os dados e escolha os horários para este dia.</p>
                 </div>
-                <button type="button" class="activity-modal-close" aria-label="Fechar atividade" [disabled]="isBusy() || peopleBusy()" (click)="cancelActivityEdit()">×</button>
+                <button type="button" class="activity-modal-close" aria-label="Fechar atividade" [disabled]="isBusy() || peopleBusy() || guestBusy()" (click)="cancelActivityEdit()">×</button>
               </header>
               @if (errorMessage()) {
                 <p class="schedule-notice schedule-notice--error" role="alert">{{ errorMessage() }}</p>
@@ -617,31 +617,24 @@
                   <p>Essa regra controla apenas a reserva desta atividade. A necessidade de inscrição no evento é definida na etapa Informações.</p>
                 </fieldset>
 
-                <fieldset class="activity-settings field--wide" [disabled]="isBusy() || peopleBusy()">
+                <fieldset class="activity-settings field--wide">
                   <legend>Convidados externos <small>Opcional</small></legend>
-                  <p>Profissionais de fora do IFMA que participam da atividade. Não recebem permissão para editar.</p>
-                  <div class="activity-form-grid">
-                    <label class="field"><span>Como adicionar</span><select [formControl]="externalGuestForm.controls.mode"><option value="direct">Adicionar sem aceite</option><option value="invite">Enviar convite por email</option></select></label>
-                    <label class="field"><span>Nome do convidado *</span><input type="text" [formControl]="externalGuestForm.controls.name" placeholder="Nome do palestrante" maxlength="255" /></label>
-                    <label class="field"><span>Foto (URL)</span><input type="url" [formControl]="externalGuestForm.controls.image_url" placeholder="https://exemplo.com/foto.jpg" /></label>
-                    <label class="field"><span>Email {{ externalGuestForm.controls.mode.value === 'invite' ? '*' : '(opcional)' }}</span><input type="email" [formControl]="externalGuestForm.controls.email" placeholder="convidado@exemplo.com" /></label>
-                  </div>
-                  <p>Nome e foto serão apresentados aos inscritos quando a API permitir o vínculo. O email será visível apenas para ADM e Moderator.</p>
-                  @if (externalGuestForm.controls.mode.value === 'invite') {
-                    <p class="access-note">Por enquanto, este convite é somente para o evento. A API ainda não salva nome, foto ou vínculo com a atividade.</p>
-                  } @else { <p class="access-note">O cadastro sem aceite ainda aguarda implementação na API.</p> }
-                  <button type="button" class="button button--outline" (click)="requestExternalGuest()">{{ externalGuestForm.controls.mode.value === 'invite' ? 'Enviar convite para o evento' : 'Adicionar convidado à atividade' }}</button>
-                  <button type="button" class="text-button" (click)="externalGuestForm.reset()">Limpar convidado</button>
+                  <p>Profissionais de fora do IFMA. O cadastro e a associação não concedem permissão para editar.</p>
+                  @if (event(); as currentEvent) {
+                    <app-event-guest-manager [eventId]="currentEvent.id" [activityId]="editingActivityId()"
+                      [disabled]="isBusy() || peopleBusy()" (busyChange)="guestBusy.set($event)" (dirtyChange)="guestDirty.set($event)" />
+                  }
                 </fieldset>
-                <fieldset class="activity-settings field--wide" [disabled]="isBusy() || peopleBusy()">
+                <fieldset class="activity-settings field--wide" [disabled]="isBusy() || peopleBusy() || guestBusy()">
                   <legend>Ministrantes / instrutores <small>Opcional</small></legend>
                   <p>Alunos e servidores do IFMA responsáveis por apresentar esta atividade. Após aceitar o convite, poderão editar esta atividade.</p>
                   <label class="field"><span>Email do ministrante</span><input type="email" [formControl]="instructorForm.controls.email" placeholder="pessoa@ifma.edu.br" /></label>
                   @if (instructorForm.controls.email.touched && instructorForm.controls.email.invalid) { <p role="alert">Informe um email válido.</p> }
                   @if (!editingActivityId()) { <p>Salve a atividade para enviar o convite. Você pode preencher o email agora.</p> }
-                  <button type="button" class="button button--outline" (click)="inviteInstructor()">Convidar ministrante</button>
+                  <button type="button" class="button button--outline" [disabled]="!editingActivityId()" (click)="inviteInstructor()">Convidar ministrante</button>
+                  @if (editingActivityId(); as activityId) { <button type="button" class="text-button" (click)="loadInstructorInvitations(activityId)">Atualizar convites</button> }
                   @for (invitation of instructorInvitations(); track invitation.id) {
-                    <div class="team-list"><article><span><strong>{{ invitation.email }}</strong><small>{{ instructorStatus[invitation.status] || invitation.status }}</small></span>
+                    <div class="team-list"><article><span><strong>{{ invitation.email }}</strong><small>{{ instructorStatus[invitation.status] || invitation.status }} @if (invitation.expires_at) { · Expira {{ invitation.expires_at | date:'dd/MM/yyyy HH:mm' }} }</small></span>
                     @if (invitation.status === 'SENT') { <button type="button" class="text-button text-button--danger" (click)="cancelInstructorInvitation(invitation)">Cancelar convite</button> }</article></div>
                   }
                 </fieldset>
@@ -651,8 +644,9 @@
               </div>
 
               <div class="activity-form-actions">
-                <button class="button button--secondary" type="button" [disabled]="isBusy()" (click)="cancelActivityEdit()">Cancelar</button>
-                <button class="button button--primary" type="submit" [disabled]="isBusy()">
+                @if (!editingActivityId()) { <button class="button button--outline" type="button" [disabled]="isBusy() || peopleBusy() || guestBusy()" (click)="saveActivity(true)">Salvar e gerenciar participantes</button> }
+                <button class="button button--secondary" type="button" [disabled]="isBusy() || peopleBusy() || guestBusy()" (click)="cancelActivityEdit()">Cancelar</button>
+                <button class="button button--primary" type="submit" [disabled]="isBusy() || peopleBusy() || guestBusy()">
                   @if (operation() === 'activity') {
                     <span class="spinner" aria-hidden="true"></span> Salvando…
                   } @else {

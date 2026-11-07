@@ -506,15 +506,24 @@ describe('EventEditorComponent', () => {
     expect(fixture.nativeElement.querySelector('#enrollments-title')).toBeNull();
   });
 
-  it('keeps external guest fields editable and reports that persistence is unavailable', () => {
-    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
-    component.externalGuestForm.patchValue({ name: 'Palestrante externo', image_url: 'https://example.com/photo.png' });
-    fixture.detectChanges();
-    const input = fixture.nativeElement.querySelector('input[placeholder="Nome do palestrante"]') as HTMLInputElement;
-    expect(input.closest('fieldset')?.disabled).toBe(false);
-    component.requestExternalGuest();
-    expect(component.peopleError()).toContain('não foram salvos');
-    expect(component.externalGuestForm.controls.name.value).toBe('Palestrante externo');
+  for (const role of ['ADM', 'MODERATOR']) it('allows ' + role + ' to manage an event owned by someone else', () => {
+    vi.spyOn(TestBed.inject(AuthService), 'hasAnyRole').mockImplementation(roles => roles.includes(role));
+    component.event.set({ ...createdEvent, owner_id: 'another-owner' });
+    component.activityForm.patchValue(activityPayload);
+    expect(component.isOwner()).toBe(false);
+    expect(component.canEditEvent()).toBe(true);
+    expect(component.canManageActivities()).toBe(true);
+    component.saveActivity(true);
+    expect(eventsService.createActivity).toHaveBeenCalled();
+    expect(component.editingActivityId()).toBe(21);
+  });
+
+  it('denies activity changes for an unrelated user', () => {
+    component.event.set({ ...createdEvent, owner_id: 'another-owner' });
+    component.activityForm.patchValue(activityPayload);
+    expect(component.canManageActivities()).toBe(false);
+    component.saveActivity();
+    expect(eventsService.createActivity).not.toHaveBeenCalled();
   });
 
   it('invites an internal instructor only for a saved activity and retains email on failure', () => {

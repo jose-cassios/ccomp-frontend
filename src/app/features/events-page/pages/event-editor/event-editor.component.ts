@@ -43,7 +43,7 @@ import {
 import { EventsService } from '../../services/events.service';
 import { ActivityPeopleComponent } from '../../components/activity-people/activity-people.component';
 import { ActivityInstructorsService, InstructorInvitation } from '../../services/activity-instructors.service';
-import { EventGuestsService } from '../../services/event-guests.service';
+import { EventGuestManagerComponent } from '../../components/event-guest-manager/event-guest-manager.component';
 
 type EditorOperation = 'idle' | 'loading' | 'saving' | 'publishing' | 'deleting' | 'activity' | 'editor';
 type EventEditorStep = 'details' | 'presentation' | 'schedule' | 'team' | 'review';
@@ -59,7 +59,7 @@ const EDITOR_STEPS: ReadonlyArray<{ value: EventEditorStep; label: string }> = [
 @Component({
   selector: 'app-event-editor',
   standalone: true,
-  imports: [DatePipe, ReactiveFormsModule, RouterLink, ActivityPeopleComponent, EventCoverDirective],
+  imports: [DatePipe, ReactiveFormsModule, RouterLink, ActivityPeopleComponent, EventCoverDirective, EventGuestManagerComponent],
   templateUrl: './event-editor.component.html',
   styleUrls: ['./event-editor.component.css', './event-activity-dialog.css'],
 })
@@ -74,7 +74,8 @@ export class EventEditorComponent implements OnInit {
   private readonly eventsService = inject(EventsService);
   private readonly authService = inject(AuthService);
   private readonly instructorsService = inject(ActivityInstructorsService);
-  private readonly guestsService = inject(EventGuestsService);
+  readonly guestBusy = signal(false);
+  readonly guestDirty = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(255)]],
@@ -101,12 +102,6 @@ export class EventEditorComponent implements OnInit {
     registration_policy: this.fb.nonNullable.control<ActivityRegistrationPolicy>('ACTIVITY_REGISTRANTS_ONLY', Validators.required),
   });
   readonly manualEnrollmentForm = this.fb.nonNullable.group({ email: ['', [Validators.required, Validators.email]] });
-  readonly externalGuestForm = this.fb.nonNullable.group({
-    name: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
-    image_url: ['', Validators.pattern(/^https?:\/\/.+/)],
-    email: ['', Validators.email],
-    mode: this.fb.nonNullable.control<'direct' | 'invite'>('direct'),
-  });
   readonly instructorForm = this.fb.nonNullable.group({ email: ['', [Validators.required, Validators.email]] });
   readonly instructorInvitations = signal<InstructorInvitation[]>([]);
   readonly peopleBusy = signal(false);
@@ -122,30 +117,8 @@ export class EventEditorComponent implements OnInit {
     if (this.manualEnrollmentForm.invalid) return;
     this.errorMessage.set('A inscrição manual por email ainda não está disponível na API. Nenhum participante foi adicionado.');
   }
-  requestExternalGuest(): void {
-    if (!this.canManageActivities() || this.isBusy() || this.peopleBusy()) return;
-    this.externalGuestForm.markAllAsTouched();
-    this.peopleError.set(''); this.peopleMessage.set('');
-    const guest = this.externalGuestForm.getRawValue();
-    if (this.externalGuestForm.invalid || (guest.mode === 'invite' && !guest.email.trim())) {
-      this.peopleError.set('Informe o nome, uma foto válida se desejar e o email para enviar convite.'); return;
-    }
-    if (guest.mode === 'direct') {
-      this.peopleError.set('Adicionar sem aceite e vincular nome/foto à atividade ainda dependem da API. Os dados não foram salvos.'); return;
-    }
-    const event = this.event();
-    if (!event) return;
-    this.peopleBusy.set(true);
-    this.guestsService.invite(event.id, guest.email).pipe(finalize(() => this.peopleBusy.set(false))).subscribe({
-      next: () => {
-        this.peopleMessage.set('Convite enviado para o evento. Nome, foto e vínculo com esta atividade ainda não foram salvos: dependem da API.');
-        this.externalGuestForm.controls.email.reset();
-      },
-      error: error => this.peopleError.set(apiErrorMessage(error, 'Não foi possível enviar o convite.')),
-    });
-  }
   inviteInstructor(): void {
-    if (!this.canManageActivities() || this.isBusy() || this.peopleBusy()) return;
+    if (!this.canManageActivities() || this.isBusy() || this.peopleBusy() || this.guestBusy()) return;
     this.instructorForm.markAllAsTouched(); this.peopleError.set(''); this.peopleMessage.set('');
     if (this.instructorForm.invalid) return;
     const id = this.editingActivityId();
@@ -157,14 +130,14 @@ export class EventEditorComponent implements OnInit {
     });
   }
   cancelInstructorInvitation(invitation: InstructorInvitation): void {
-    if (!this.canManageActivities() || this.isBusy() || this.peopleBusy()) return;
+    if (!this.canManageActivities() || this.isBusy() || this.peopleBusy() || this.guestBusy()) return;
     this.peopleBusy.set(true); this.peopleError.set(''); this.peopleMessage.set('');
     this.instructorsService.cancel(invitation.id).pipe(finalize(() => this.peopleBusy.set(false))).subscribe({
       next: () => { this.peopleMessage.set('Convite cancelado.'); this.loadInstructorInvitations(this.editingActivityId()!); },
       error: error => this.peopleError.set(apiErrorMessage(error, 'Não foi possível cancelar o convite.')),
     });
   }
-  private loadInstructorInvitations(id: number): void {
+  loadInstructorInvitations(id: number): void {
     this.instructorsService.invitations(id).subscribe({
       next: rows => { if (this.editingActivityId() === id) this.instructorInvitations.set(rows); },
       error: () => { if (this.editingActivityId() === id) this.peopleError.set('Não foi possível consultar os convites de ministrantes.'); },
@@ -248,7 +221,7 @@ export class EventEditorComponent implements OnInit {
         editor.active && editor.user_id === currentUserId,
       ));
   });
-  readonly canEditEvent = computed(() => this.isAdmin() || this.isOwner() || this.isAssignedEditor());
+  readonly canEditEvent = computed(() => this.authService.hasAnyRole(['ADM', 'MODERATOR']) || this.isOwner() || this.isAssignedEditor());
   readonly canDelete = computed(() => this.isAdmin() || this.isOwner());
   readonly canPublish = computed(() => {
     const currentEvent = this.event();
@@ -258,7 +231,7 @@ export class EventEditorComponent implements OnInit {
       && (this.isAdmin() || this.isOwner() || this.isAssignedEditor()),
     );
   });
-  readonly canManageActivities = computed(() => this.isOwner() || this.isAssignedEditor());
+  readonly canManageActivities = this.canEditEvent;
   readonly activitySchedule = computed(() => buildEventActivityDays(
     this.event()?.start_date, this.event()?.end_date, this.activities(),
   ).map((day) => ({ ...day, count: day.slots.reduce((total, slot) => total + slot.activities.length, 0) })));
@@ -578,9 +551,9 @@ export class EventEditorComponent implements OnInit {
     });
   }
 
-  saveActivity(): void {
+  saveActivity(keepOpen = false): void {
     const currentEvent = this.event();
-    if (!currentEvent || this.isBusy() || this.peopleBusy()) return;
+    if (!currentEvent || this.isBusy() || this.peopleBusy() || this.guestBusy()) return;
     if (!this.canManageActivities()) {
       this.errorMessage.set('Você não tem permissão para alterar a programação deste evento.');
       return;
@@ -635,7 +608,7 @@ export class EventEditorComponent implements OnInit {
           );
           return;
         }
-        if (this.externalGuestForm.controls.name.value || this.externalGuestForm.controls.image_url.value || this.externalGuestForm.controls.email.value || this.instructorForm.controls.email.value) {
+        if (keepOpen || this.guestDirty() || this.instructorForm.controls.email.value) {
           this.editingActivityId.set(activity.id); this.activityForm.markAsPristine();
           this.peopleMessage.set('Atividade salva. Use as ações abaixo para adicionar as participações opcionais.');
           this.loadInstructorInvitations(activity.id);
@@ -678,7 +651,7 @@ export class EventEditorComponent implements OnInit {
 
   editActivity(activity: EventActivity): void {
     if (this.isBusy() || !this.canManageActivities()) return;
-    this.externalGuestForm.reset();
+    this.guestDirty.set(false);
     this.instructorForm.reset(); this.instructorInvitations.set([]); this.peopleError.set(''); this.peopleMessage.set('');
     const startDay = this.toLocalInput(activity.start_date ?? null).slice(0, 10);
     const fallbackDay = this.activitySchedule().find((day) => this.canAddActivityOnDay(day.key))?.key;
@@ -766,8 +739,8 @@ export class EventEditorComponent implements OnInit {
   }
 
   cancelActivityEdit(): void {
-    if (this.isBusy() || this.peopleBusy()) return;
-    if ((this.activityForm.dirty || this.externalGuestForm.dirty || this.instructorForm.dirty) && typeof window !== 'undefined'
+    if (this.isBusy() || this.peopleBusy() || this.guestBusy()) return;
+    if ((this.activityForm.dirty || this.guestDirty() || this.instructorForm.dirty) && typeof window !== 'undefined'
       && !window.confirm('Descartar as alterações desta atividade?')) return;
     this.activityDialog?.nativeElement.close();
     this.activityDialogDay.set(null);
@@ -952,13 +925,13 @@ export class EventEditorComponent implements OnInit {
   }
 
   canDeactivate(): boolean {
-    if ((!this.hasUnsavedChanges() && !(this.activityDialogDay() && (this.activityForm.dirty || this.externalGuestForm.dirty || this.instructorForm.dirty))) || typeof window === 'undefined') return true;
+    if ((!this.hasUnsavedChanges() && !(this.activityDialogDay() && (this.activityForm.dirty || this.guestDirty() || this.instructorForm.dirty))) || typeof window === 'undefined') return true;
     return window.confirm('Há alterações não salvas. Deseja sair mesmo assim?');
   }
 
   @HostListener('window:beforeunload', ['$event'])
   preventUnsavedUnload(event: BeforeUnloadEvent): void {
-    if (this.hasUnsavedChanges() || (this.activityDialogDay() && (this.activityForm.dirty || this.externalGuestForm.dirty || this.instructorForm.dirty))) event.preventDefault();
+    if (this.hasUnsavedChanges() || (this.activityDialogDay() && (this.activityForm.dirty || this.guestDirty() || this.instructorForm.dirty))) event.preventDefault();
   }
 
   private loadEvent(id: string): void {
@@ -1148,7 +1121,7 @@ export class EventEditorComponent implements OnInit {
   }
 
   private resetActivityForm(): void {
-    this.externalGuestForm.reset();
+    this.guestDirty.set(false);
     this.instructorForm.reset(); this.instructorInvitations.set([]); this.peopleError.set(''); this.peopleMessage.set('');
     this.activityForm.reset({
       title: '',

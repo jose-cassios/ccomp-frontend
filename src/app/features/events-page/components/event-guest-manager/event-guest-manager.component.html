@@ -1,0 +1,63 @@
+<section aria-label="Cadastro de convidados externos" [attr.aria-busy]="busy() || loading()" (keydown.enter)="preventImplicitSubmit($event)">
+  <p>Cadastre o perfil sem exigir conta ou aceite. Depois selecione-o para enviar a foto e incluir em atividades.</p>
+  @if (error()) { <p class="feedback error" role="alert">{{ error() }}</p> }
+  @if (message()) { <p class="feedback" role="status">{{ message() }}</p> }
+  @if (busy() || loading()) { <p role="status"><span class="mini-spinner"></span> Processando…</p> }
+  <fieldset [disabled]="busy() || disabled">
+    <label>Perfil do convidado
+      <select [value]="selected()?.id || 0" (change)="choose(+$any($event.target).value)">
+        <option value="0">Cadastrar novo convidado</option>
+        @for (guest of guests(); track guest.id) { <option [value]="guest.id">{{ guest.name || 'Convidado' }} · #{{ guest.id }}</option> }
+      </select>
+    </label>
+    <div class="actions">
+      <button type="button" [disabled]="loading()" (click)="load()">Atualizar lista</button>
+      @if (cursor()) { <button type="button" [disabled]="loading()" (click)="load(true)">Mais convidados</button> }
+    </div>
+    <label>Nome *<input type="text" maxlength="255" [formControl]="form.controls.name" placeholder="Nome do palestrante" /></label>
+    <label>Apresentação (opcional)<textarea rows="2" maxlength="5000" [formControl]="form.controls.description"></textarea></label>
+    <button type="button" (click)="save()">{{ selected() ? 'Salvar perfil' : 'Cadastrar convidado' }}</button>
+    @if (selected(); as guest) {
+      <div class="photo">
+        @if (preview()) { <img [src]="preview()" alt="Prévia da foto selecionada" /> }
+        @else if (guest.image_url) { <img [eventCover]="guest.image_url" [alt]="guest.name || 'Foto do convidado'" /> }
+        <label>Foto do convidado<input type="file" accept="image/png,image/jpeg,image/webp" (change)="selectPhoto($event)" /><small>PNG, JPEG ou WebP, até 10 MB.</small></label>
+      </div>
+      <div class="actions">
+        @if (file()) { <button type="button" (click)="upload()">Enviar foto</button><button type="button" (click)="clearFile()">Descartar foto selecionada</button> }
+        @if (guest.image_url) { <button type="button" (click)="removePhoto()">Remover foto</button> }
+      </div>
+      @if (activityId) {
+        <label>Participação nesta atividade<select [formControl]="role">@for (item of roles; track item.value) { <option [value]="item.value">{{ item.label }}</option> }</select></label>
+        <button type="button" (click)="associate()">Salvar participação nesta atividade</button>
+      } @else { <p>Salve a atividade para associar este convidado à programação.</p> }
+      <p>{{ guest.status === 'CONFIRMED' ? 'Presença confirmada' : 'Presença cancelada' }} · {{ guest.visibility === 'PUBLIC' ? 'Perfil público' : 'Perfil privado' }}</p>
+      <div class="actions">
+        <button type="button" (click)="toggle('visibility')">{{ guest.visibility === 'PUBLIC' ? 'Tornar privado' : 'Tornar público' }}</button>
+        <button type="button" (click)="toggle('status')">{{ guest.status === 'CONFIRMED' ? 'Cancelar presença no evento' : 'Confirmar presença no evento' }}</button>
+      </div>
+      <small>O perfil e a presença são compartilhados entre as atividades deste evento.</small>
+    }
+    @if (activityId) {
+      <h4>Convidados desta atividade</h4>
+      @for (guest of linked(); track guest.id) { <p>{{ guest.name || 'Convidado' }} · {{ guest.status === 'CONFIRMED' ? 'Confirmado' : 'Cancelado' }}</p> }
+      @empty { <p>Nenhum convidado associado.</p> }
+      @if (linkedCursor()) { <button type="button" (click)="loadLinked(true)">Mais participações</button> }
+    }
+    <details (toggle)="$any($event.target).open && loadInvitations()">
+      <summary>Convidar por email (opcional)</summary>
+      <p>Este convite é para o evento. O aceite cria um perfil separado e não vincula automaticamente um perfil já cadastrado ou uma atividade.</p>
+      <label>Email<input type="email" [formControl]="email" /></label>
+      @if (email.touched && email.invalid) { <p class="error">Informe um email válido.</p> }
+      <button type="button" (click)="invite()">Enviar convite</button>
+      @for (invitation of invitations(); track invitation.id) {
+        <div class="invitation">
+          @if (auth.hasAnyRole(['ADM', 'MODERATOR'])) { <strong>{{ invitation.email }}</strong> }
+          <span>{{ invitationStatus[invitation.status] || invitation.status }} · Expira {{ invitation.expires_at | date:'dd/MM HH:mm' }}</span>
+          @if (invitation.status === 'PENDING') { <button type="button" (click)="cancel(invitation)">Cancelar convite</button> }
+        </div>
+      }
+      @if (invitationCursor()) { <button type="button" (click)="loadInvitations(true)">Mais convites</button> }
+    </details>
+  </fieldset>
+</section>
