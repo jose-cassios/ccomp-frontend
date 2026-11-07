@@ -8,8 +8,9 @@ export interface InstructorInvitation {
   id: number;
   email: string;
   status: string;
+  expires_at?: string;
 }
-interface WireInvitation { id: number; emailAddress?: string; email_address?: string; status: string; }
+interface WireInvitation { id: number; emailAddress?: string; email_address?: string; status: string; expires_at?: string; expiresAt?: string; }
 interface Instructor {
   id: number; activityId?: number; activity_id?: number; status: string; name?: string; image_url?: string;
 }
@@ -31,7 +32,7 @@ export class ActivityInstructorsService {
   }
   invitations(activityId: number) {
     return this.api.get<WireInvitation[]>(`/events/activities/${activityId}/instructors/invitations`).pipe(
-      map(rows => rows.map(row => ({ id: row.id, email: row.email_address ?? row.emailAddress ?? '', status: row.status }))),
+      map(rows => rows.map(row => ({ id: row.id, email: row.email_address ?? row.emailAddress ?? '', status: row.status, expires_at: row.expires_at ?? row.expiresAt }))),
     );
   }
   invite(activityId: number, email: string) {

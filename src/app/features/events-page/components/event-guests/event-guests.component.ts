@@ -8,10 +8,11 @@ import { AuthService } from '../../../auth/services/auth.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
 import { ApiMessage, apiMessage } from '../../models/event.model';
 import { EventGuest, EventGuestsService, GuestInvitation } from '../../services/event-guests.service';
+import { EventCoverDirective } from '../event-cover.directive';
 
 @Component({
   selector: 'app-event-guests', standalone: true,
-  imports: [ReactiveFormsModule, DatePipe, RouterLink],
+  imports: [ReactiveFormsModule, DatePipe, RouterLink, EventCoverDirective],
   templateUrl: './event-guests.component.html',
   styleUrl: './event-guests.component.css',
 })
@@ -73,12 +74,7 @@ export class EventGuestsComponent implements OnChanges {
     this.form.markAllAsTouched();
     if (this.form.invalid || this.busy()) return;
     this.mutate(this.service.invite(this.eventId, this.form.controls.email.value),
-      (response) => {
-        const message = apiMessage(response, 'Convite registrado.');
-        return /e-mail.*enviad/i.test(message)
-          ? 'Convite registrado. O envio de e-mail depende da implementação do backend; você pode compartilhar o link abaixo.'
-          : message;
-      }, () => {
+      (response) => apiMessage(response, 'Convite enviado.'), () => {
         this.form.reset(); this.filter.setValue(''); this.loadInvitations();
       });
   }
@@ -89,7 +85,7 @@ export class EventGuestsComponent implements OnChanges {
     const payload = field === 'status'
       ? { status: guest.status === 'CONFIRMED' ? 'CANCELED' as const : 'CONFIRMED' as const }
       : { visibility: guest.visibility === 'PUBLIC' ? 'PRIVATE' as const : 'PUBLIC' as const };
-    this.mutate(this.service.update(this.eventId, guest.id, payload), 'Preferências atualizadas.', () => this.loadGuests());
+    this.mutate(this.service.update(this.eventId, guest.event_guest_id ?? guest.id, payload), 'Preferências atualizadas.', () => this.loadGuests());
   }
   canUpdate(guest: EventGuest) { return this.manage || guest.user_id === this.auth.getCurrentUser()?.id; }
   private mutate(request: Observable<ApiMessage>, message: string | ((response: ApiMessage) => string), done: () => void) {

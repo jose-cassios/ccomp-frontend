@@ -12,6 +12,7 @@ describe('EventEditorComponent', () => {
   let component: EventEditorComponent;
   let fixture: ComponentFixture<EventEditorComponent>;
   let router: Router;
+  const guests = { guests: vi.fn(() => of({ content: [], next_cursor: null })), invitations: vi.fn(() => of({ content: [], next_cursor: null })), associate: vi.fn(() => of(void 0)) };
   const instructors = { invitations: vi.fn(() => of([])), invite: vi.fn(() => of({ message: 'Convite enviado.' })), cancel: vi.fn(() => of({})) };
 
   const createdEvent: EventDetails = {
@@ -69,6 +70,7 @@ describe('EventEditorComponent', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    sessionStorage.clear();
     await TestBed.configureTestingModule({
       imports: [EventEditorComponent],
       providers: [
@@ -77,7 +79,7 @@ describe('EventEditorComponent', () => {
         { provide: AuthService, useValue: { hasAnyRole: () => false, currentUserState: () => ({ id: 'event-owner' }) } },
         { provide: EventsService, useValue: eventsService },
         { provide: ActivityInstructorsService, useValue: instructors },
-        { provide: EventGuestsService, useValue: { guests: () => of({ content: [], next_cursor: null }), invitations: () => of({ content: [], next_cursor: null }) } },
+        { provide: EventGuestsService, useValue: guests },
       ],
     }).compileComponents();
 
@@ -90,6 +92,43 @@ describe('EventEditorComponent', () => {
     const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
     dialog.showModal = vi.fn(() => dialog.setAttribute('open', ''));
     dialog.close = vi.fn(() => dialog.removeAttribute('open'));
+  });
+
+  it('keeps values and disclosure state when panels are collapsed or steps change', () => {
+    const panel = fixture.nativeElement.querySelector('#event-dates') as HTMLDetailsElement;
+    const input = panel.querySelector('input')!;
+    panel.open = true; panel.dispatchEvent(new Event('toggle'));
+    component.form.controls.start_date.setValue('2026-09-10T08:00');
+    fixture.detectChanges();
+    panel.open = false; panel.dispatchEvent(new Event('toggle'));
+    fixture.detectChanges();
+    expect(panel.querySelector('input')).toBe(input);
+    expect(input.value).toBe('2026-09-10T08:00');
+    component.activeStep.set('presentation'); fixture.detectChanges();
+    component.activeStep.set('details'); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#event-dates').open).toBe(false);
+    expect(component.form.controls.start_date.value).toBe('2026-09-10T08:00');
+  });
+
+  it('opens registration settings instead of hiding validation errors in a collapsed panel', () => {
+    component.form.patchValue({ title: createdEvent.title, start_date: '2026-09-10T08:00', end_date: '2026-09-10T18:00' });
+    component.save(); fixture.detectChanges();
+    expect(eventsService.create).not.toHaveBeenCalled();
+    expect(component.activeStep()).toBe('details');
+    expect(fixture.nativeElement.querySelector('#event-registration').open).toBe(true);
+    expect(component.errorMessage()).toBeTruthy();
+  });
+
+  it('takes invalid presentation content back to its expanded section from final review', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.form.patchValue({ title: createdEvent.title, start_date: '2026-09-10T08:00', end_date: '2026-09-10T18:00' });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS');
+    component.presentationForm.controls.summary.setValue('x');
+    component.activeStep.set('review'); fixture.detectChanges();
+    component.completeCreation(); fixture.detectChanges();
+    expect(component.activeStep()).toBe('presentation');
+    expect(fixture.nativeElement.querySelector('#page-content').open).toBe(true);
+    expect(eventsService.update).not.toHaveBeenCalled();
   });
 
   it('should create the event with only the required API fields and advance to the presentation step', () => {
@@ -377,7 +416,7 @@ describe('EventEditorComponent', () => {
     expect(component.errorMessage()).toContain('Não foi possível adicionar o editor');
   });
 
-  it('should publish the event and show the success confirmation in the final review step', () => {
+  it('completes creation as a draft and publishes only through the explicit publish action', () => {
     component.form.setValue({
       title: createdEvent.title,
       category: createdEvent.category,
@@ -397,8 +436,10 @@ describe('EventEditorComponent', () => {
       cover_image_url: '',
     });
     component.savePresentation();
-    component.continueFromSchedule();
+    expect(component.activeStep()).toBe('team');
     component.continueFromTeam();
+    expect(component.activeStep()).toBe('schedule');
+    component.continueFromSchedule();
 
     expect(component.activeStep()).toBe('review');
     expect(component.successMessage()).toBeNull();
@@ -406,11 +447,15 @@ describe('EventEditorComponent', () => {
     component.completeCreation();
 
     expect(component.creationCompleted()).toBe(true);
-    expect(eventsService.publish).toHaveBeenCalledWith(createdEvent.id);
-    expect(component.successMessage()).toContain('Evento publicado com sucesso');
+    expect(eventsService.publish).not.toHaveBeenCalled();
+    expect(eventsService.update.mock.calls.at(-1)?.[1]).not.toHaveProperty('status');
+    expect(component.successMessage()).toContain('rascunho');
     expect(router.navigate).toHaveBeenCalledWith(['/eventos', createdEvent.id], {
-      state: { eventFeedback: expect.stringContaining('Evento publicado com sucesso') },
+      state: { eventFeedback: expect.stringContaining('rascunho') },
     });
+    component.publish();
+    expect(eventsService.publish).toHaveBeenCalledWith(createdEvent.id);
+    expect(component.event()?.status).toBe('PUBLISHED');
   });
 
   it('should not allow jumping ahead before the prior stage is completed', () => {
@@ -484,13 +529,16 @@ describe('EventEditorComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Manter configuraÃ§Ã£o atual');
   });
 
-  it('keeps guests out of the team area', () => {
+  it('places guest registration before the schedule and keeps it out of the activity dialog', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
     component.activeStep.set('team');
     fixture.detectChanges();
 
     const team = fixture.nativeElement.querySelector('[aria-labelledby="team-title"]') as HTMLElement;
     expect(team.textContent).toContain('moderadores');
-    expect(team.querySelector('app-event-guests')).toBeNull();
+    expect(team.querySelector('app-event-guest-manager')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('dialog app-event-guest-manager')).toBeNull();
+    expect(component.steps.map(step => step.value)).toEqual(['details', 'presentation', 'team', 'schedule', 'review']);
   });
 
   it('moves enrollments to the team step and limits manual additions to moderators', () => {
@@ -506,29 +554,66 @@ describe('EventEditorComponent', () => {
     expect(fixture.nativeElement.querySelector('#enrollments-title')).toBeNull();
   });
 
-  it('keeps external guest fields editable and reports that persistence is unavailable', () => {
-    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
-    component.externalGuestForm.patchValue({ name: 'Palestrante externo', image_url: 'https://example.com/photo.png' });
-    fixture.detectChanges();
-    const input = fixture.nativeElement.querySelector('input[placeholder="Nome do palestrante"]') as HTMLInputElement;
-    expect(input.closest('fieldset')?.disabled).toBe(false);
-    component.requestExternalGuest();
-    expect(component.peopleError()).toContain('não foram salvos');
-    expect(component.externalGuestForm.controls.name.value).toBe('Palestrante externo');
+  for (const role of ['ADM', 'MODERATOR']) it('allows ' + role + ' to manage an event owned by someone else', () => {
+    vi.spyOn(TestBed.inject(AuthService), 'hasAnyRole').mockImplementation(roles => roles.includes(role));
+    component.event.set({ ...createdEvent, owner_id: 'another-owner' });
+    component.activityForm.patchValue(activityPayload);
+    expect(component.isOwner()).toBe(false);
+    expect(component.canEditEvent()).toBe(true);
+    expect(component.canManageActivities()).toBe(true);
+    component.saveActivity(true);
+    expect(eventsService.createActivity).toHaveBeenCalled();
+    expect(component.editingActivityId()).toBe(21);
   });
 
-  it('invites an internal instructor only for a saved activity and retains email on failure', () => {
+  it('denies activity changes for an unrelated user', () => {
+    component.event.set({ ...createdEvent, owner_id: 'another-owner' });
+    component.activityForm.patchValue(activityPayload);
+    expect(component.canManageActivities()).toBe(false);
+    component.saveActivity();
+    expect(eventsService.createActivity).not.toHaveBeenCalled();
+  });
+
+  it('preserves activity data while adding people in the preceding step', () => {
     component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.activeStep.set('schedule');
+    component.openActivityDialog();
+    component.activityForm.patchValue(activityPayload);
+    component.activityForm.markAsDirty();
+    component.addMorePeople('instructors');
+    expect(component.sectionOpen('team-instructors')).toBe(true);
+    expect(component.activeStep()).toBe('team');
+    expect(fixture.nativeElement.querySelector('dialog').open).toBe(false);
+    component.rosterForm.setValue({ name: 'Ana', email: 'ana@ifma.edu.br' });
+    component.addRosterInstructor();
+    expect(instructors.invite).not.toHaveBeenCalled();
+    component.continueFromTeam();
+    expect(component.activeStep()).toBe('schedule');
+    expect(fixture.nativeElement.querySelector('dialog').open).toBe(true);
+    expect(component.activityForm.getRawValue()).toEqual(activityPayload);
+    expect(component.instructorRoster()).toContainEqual({ name: 'Ana', email: 'ana@ifma.edu.br' });
+  });
+
+  it('links selected people after saving and retries failed links without creating duplicate activities', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.openActivityDialog();
+    component.activityForm.patchValue(activityPayload);
+    component.activityGuestId.setValue(9);
     component.instructorForm.controls.email.setValue('aluno@ifma.edu.br');
-    component.inviteInstructor(); expect(instructors.invite).not.toHaveBeenCalled();
-    component.editingActivityId.set(21);
     instructors.invite.mockReturnValueOnce(throwError(() => new Error('offline')));
-    component.inviteInstructor();
+    component.saveActivity();
+    expect(guests.associate).toHaveBeenCalledWith(14, 9, 21, 'PRESENTER');
+    expect(component.editingActivityId()).toBe(21);
+    expect(component.activityGuestId.value).toBe(0);
     expect(component.instructorForm.controls.email.value).toBe('aluno@ifma.edu.br');
-    component.inviteInstructor();
+    expect(component.peopleError()).toContain('A atividade foi salva');
+    expect(fixture.nativeElement.querySelector('dialog').open).toBe(true);
+    component.saveActivity();
+    expect(eventsService.createActivity).toHaveBeenCalledTimes(1);
+    expect(guests.associate).toHaveBeenCalledTimes(1);
     expect(instructors.invite).toHaveBeenLastCalledWith(21, 'aluno@ifma.edu.br');
-    expect(component.instructorForm.controls.email.value).toBe('');
     expect(component.peopleBusy()).toBe(false);
+    expect(fixture.nativeElement.querySelector('dialog').open).toBe(false);
   });
 
   it('shows every event day, including empty days, and opens a time-only modal on the selected day', () => {

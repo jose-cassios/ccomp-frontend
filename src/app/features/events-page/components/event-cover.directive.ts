@@ -21,7 +21,7 @@ export class EventCoverDirective implements OnDestroy {
     this.renderer.removeAttribute(this.element.nativeElement, 'src');
     if (!url) return;
     const prefix = this.config.buildUrl('/events/');
-    if (!url.startsWith(prefix) || !/^\d+\/images\/cover(?:\?|$)/.test(url.slice(prefix.length))) {
+    if (!url.startsWith(prefix) || !/^\d+\/(?:images\/cover|guests\/\d+\/image)(?:\?|$)/.test(url.slice(prefix.length))) {
       this.renderer.setAttribute(this.element.nativeElement, 'src', url);
       return;
     }

@@ -1,0 +1,49 @@
+:host { display: block; width: 100%; max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+*, *::before, *::after { box-sizing: border-box; }
+.guest-manager { width: 100%; min-width: 0; max-width: 100%; }
+fieldset { border: 0; padding: 0; margin: 0; min-inline-size: 0; width: 100%; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+label { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 6px; font-size: .85rem; font-weight: 650; }
+input, textarea, select { box-sizing: border-box; min-width: 0; max-width: 100%; width: 100%; padding: 10px; border: 1px solid var(--border-primary); border-radius: 8px; background-color: var(--surface-card); color: var(--text-primary); font: inherit; }
+select { padding-right: 2.5rem; }
+p, small { color: var(--text-secondary); font-size: .82rem; line-height: 1.5; }
+p { margin: 8px 0; }
+button { justify-self: start; min-height: 40px; padding: 8px 12px; border: 1px solid var(--brand-border); border-radius: 8px; background: var(--brand-50); color: var(--brand-700); font: inherit; font-size: .8rem; font-weight: 650; cursor: pointer; }
+button:disabled { opacity: .6; cursor: wait; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.photo { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.photo img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; }
+.photo label { flex: 1; min-width: 160px; }
+.feedback { padding: 12px; border-radius: 8px; background: var(--brand-50); }
+.error { color: var(--danger-text); background: var(--danger-bg); }
+details { border-top: 1px solid var(--border-primary); padding-top: 12px; }
+summary { cursor: pointer; color: var(--brand-700); font-weight: 650; }
+.invitation { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-primary); font-size: .8rem; }
+button:focus-visible, summary:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 2px; }
+.list-heading, .form-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 12px 0 16px; }
+.list-heading > span, .form-heading > span { color: var(--text-secondary); font-size: .8rem; }
+h4 { margin: 0; font-size: 1rem; }
+button.primary { background: var(--brand-600); border-color: var(--brand-600); color: #fff; }
+.guest-list { display: grid; gap: 8px; margin-bottom: 12px; }
+.guest-card { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border-primary); border-radius: 10px; }
+.guest-card img, .avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; }
+.avatar { display: grid; place-items: center; background: var(--brand-50); color: var(--brand-700); font-weight: 700; }
+.guest-card small { display: block; margin-top: 3px; }
+.guest-card strong { font-size: .88rem; }
+.empty { padding: 18px; text-align: center; background: var(--surface-subtle); border-radius: 10px; }
+.form-actions { padding-top: 8px; }
+.photo { padding: 12px; background: var(--surface-subtle); border-radius: 10px; min-width: 0; }
+.photo label { min-width: 0; }
+.photo-confirmation { padding: 14px; margin: 12px 0; background: var(--brand-50); border-radius: 10px; }
+.confirmation-card { display: grid; gap: 8px; margin: 12px 0; padding: 12px; background: var(--surface-card, #fff); border: 1px solid var(--border-primary); border-radius: 8px; }
+.invitation-area, .guest-settings { margin-top: 18px; }
+.guest-settings fieldset { margin-top: 12px; }
+@media (max-width: 600px) {
+  input, textarea, select { font-size: 1rem; }
+  button { min-height: 44px; }
+  .actions > button { flex: 1 1 140px; }
+  .photo label { min-width: 0; width: 100%; flex-basis: 100%; }
+  .guest-card { grid-template-columns: 36px minmax(0, 1fr); gap: 8px; }
+  .guest-card img, .guest-card .avatar { width: 36px; height: 36px; }
+  .guest-card button { grid-column: 2; }
+  .list-heading > .primary { width: 100%; }
+}

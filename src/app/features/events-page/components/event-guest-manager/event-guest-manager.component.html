@@ -1,0 +1,103 @@
+<section class="guest-manager" aria-label="Cadastro de convidados externos" [attr.aria-busy]="busy() || loading()" (keydown.enter)="preventImplicitSubmit($event)">
+  @if (error()) { <p class="feedback error" role="alert">{{ error() }}</p> }
+  @if (message()) { <p class="feedback" role="status">{{ message() }}</p> }
+
+  @if (!editing()) {
+    <div class="list-heading">
+      <span>{{ guests().length }} convidado(s) carregado(s)</span>
+      <button class="primary" type="button" [disabled]="busy() || disabled" (click)="newGuest()">+ Novo convidado</button>
+    </div>
+    @if (listError()) { <p class="error" role="alert">{{ listError() }}</p><button type="button" [disabled]="loading()" (click)="load()">Tentar carregar novamente</button> }
+    @if (loading()) { <p role="status"><span class="mini-spinner"></span> Carregando convidados…</p> }
+    <div class="guest-list">
+      @for (guest of guests(); track guest.id) {
+        <article class="guest-card">
+          @if (guest.image_url) { <img [eventCover]="guest.image_url" [alt]="'Foto de ' + guest.name" /> }
+          @else { <span class="avatar" aria-hidden="true">{{ guest.name?.charAt(0) || '?' }}</span> }
+          <div><strong>{{ guest.name || 'Convidado' }}</strong><small>{{ guest.status === 'CONFIRMED' ? 'Confirmado' : 'Presença cancelada' }} · {{ guest.visibility === 'PUBLIC' ? 'Público' : 'Privado' }}</small></div>
+          <button type="button" [disabled]="busy() || disabled" (click)="choose(guest.id)" [attr.aria-label]="'Editar convidado ' + guest.name">Editar</button>
+        </article>
+      } @empty {
+        @if (!loading() && !listError()) { <p class="empty">Nenhum convidado cadastrado. Use “Novo convidado” para adicionar nome, apresentação e foto.</p> }
+      }
+    </div>
+    @if (cursor()) { <button type="button" [disabled]="loading()" (click)="load(true)">Ver mais convidados</button> }
+  } @else {
+    <div class="form-heading"><h4>{{ selected() ? 'Editar convidado' : 'Novo convidado' }}</h4><span>Nome, apresentação e foto</span></div>
+    <fieldset [disabled]="busy() || disabled || !!pendingPhoto()">
+      <label>Nome *<input type="text" maxlength="255" [formControl]="form.controls.name" placeholder="Nome do convidado" /></label>
+      @if (form.controls.name.touched && form.controls.name.invalid) { <small class="error">Informe o nome do convidado.</small> }
+      <label>Apresentação (opcional)<textarea rows="3" maxlength="5000" [formControl]="form.controls.description" placeholder="Uma breve apresentação de quem vai participar."></textarea></label>
+      <div class="photo">
+        @if (preview()) { <img [src]="preview()" alt="Prévia da foto selecionada" /> }
+        @else if (selected()?.image_url; as imageUrl) { <img [eventCover]="imageUrl" [alt]="'Foto de ' + selected()!.name" /> }
+        @else { <span class="avatar" aria-hidden="true">{{ form.controls.name.value.charAt(0) || '?' }}</span> }
+        <label>Foto (opcional)<input type="file" accept="image/png,image/jpeg,image/webp" (change)="selectPhoto($event)" /><small>PNG, JPEG ou WebP, até 10 MB. Enviada junto com o cadastro.</small></label>
+      </div>
+      <div class="actions">
+        @if (file()) { <button type="button" (click)="clearFile()">Descartar foto selecionada</button> }
+        @if (selected()?.image_url) { <button type="button" (click)="removePhoto()">Remover foto atual</button> }
+      </div>
+      @if (!pendingPhoto()) {
+        <div class="actions form-actions">
+          <button class="primary" type="button" (click)="save()">
+            @if (busy()) { <span class="mini-spinner"></span> Salvando… }
+            @else { {{ selected() ? (file() && !form.dirty ? 'Salvar foto' : 'Salvar alterações') : 'Cadastrar convidado' }} }
+          </button>
+          <button type="button" (click)="cancelEdit()">Cancelar</button>
+        </div>
+      }
+    </fieldset>
+
+    @if (pendingPhoto()) {
+      <div class="photo-confirmation" role="region" aria-label="Concluir envio da foto">
+        <strong>Concluir envio da foto</strong>
+        <p>O perfil foi salvo, mas a API não informou seu identificador. Confirme o perfil abaixo para enviar a foto selecionada.</p>
+        @if (loading()) { <p role="status">Localizando o perfil cadastrado…</p> }
+        @for (guest of photoCandidates(); track guest.id) {
+          <article class="confirmation-card"><strong>{{ guest.name }}</strong><p>{{ guest.description }}</p><small>Perfil #{{ guest.id }}</small>
+            <button class="primary" type="button" [disabled]="busy() || disabled" (click)="confirmPhoto(guest)">Confirmar e enviar foto</button>
+          </article>
+        } @empty {
+          @if (!loading()) { <p>O perfil ainda não apareceu na consulta. Seu cadastro não será repetido e a foto continua selecionada.</p><button type="button" [disabled]="busy() || disabled" (click)="findPhotoCandidates()">Consultar perfil cadastrado</button> }
+        }
+        <button type="button" [disabled]="busy() || disabled" (click)="finishWithoutPhoto()">Concluir sem foto</button>
+      </div>
+    }
+
+    @if (selected(); as guest) {
+      <details class="guest-settings">
+        <summary>Visibilidade e presença</summary>
+        <fieldset [disabled]="busy() || disabled">
+          <p>{{ guest.status === 'CONFIRMED' ? 'Presença confirmada' : 'Presença cancelada' }} · {{ guest.visibility === 'PUBLIC' ? 'Perfil público' : 'Perfil privado' }}</p>
+          <div class="actions">
+            <button type="button" (click)="toggle('visibility')">{{ guest.visibility === 'PUBLIC' ? 'Tornar privado' : 'Tornar público' }}</button>
+            <button type="button" (click)="toggle('status')">{{ guest.status === 'CONFIRMED' ? 'Cancelar presença no evento' : 'Confirmar presença no evento' }}</button>
+          </div>
+          <small>Estas alterações valem para todas as atividades deste evento.</small>
+          @if (activityId) {
+            <label>Participação nesta atividade<select [formControl]="role">@for (item of roles; track item.value) { <option [value]="item.value">{{ item.label }}</option> }</select></label>
+            <button type="button" (click)="associate()">Salvar participação nesta atividade</button>
+          }
+        </fieldset>
+      </details>
+    }
+  }
+  <fieldset class="invitation-area" [disabled]="busy() || disabled">
+    <details (toggle)="$any($event.target).open && loadInvitations()">
+      <summary>Convidar por email (opcional)</summary>
+      <p>Este convite é para o evento. O aceite cria um perfil separado e não vincula automaticamente um perfil já cadastrado ou uma atividade.</p>
+      <label>Email<input type="email" [formControl]="email" /></label>
+      @if (email.touched && email.invalid) { <p class="error">Informe um email válido.</p> }
+      <button type="button" (click)="invite()">Enviar convite</button>
+      @for (invitation of invitations(); track invitation.id) {
+        <div class="invitation">
+          @if (auth.hasAnyRole(['ADM', 'MODERATOR'])) { <strong>{{ invitation.email }}</strong> }
+          <span>{{ invitationStatus[invitation.status] || invitation.status }} · Expira {{ invitation.expires_at | date:'dd/MM HH:mm' }}</span>
+          @if (invitation.status === 'PENDING') { <button type="button" (click)="cancel(invitation)">Cancelar convite</button> }
+        </div>
+      }
+      @if (invitationCursor()) { <button type="button" (click)="loadInvitations(true)">Mais convites</button> }
+    </details>
+  </fieldset>
+</section>

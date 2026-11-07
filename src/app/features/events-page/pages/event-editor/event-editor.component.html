@@ -32,12 +32,13 @@
       <button
         type="button"
         [class.active]="activeStep() === step.value"
+        [attr.aria-current]="activeStep() === step.value ? 'step' : null"
+        [attr.aria-label]="(index + 1) + '. ' + step.label"
         [class.complete]="isStepComplete(step.value)"
         [disabled]="!isStepAvailable(step.value)"
         (click)="selectStep(step.value)"
       >
-        <span>{{ index + 1 }}</span>
-        {{ step.label }}
+        <span class="step-number">{{ index + 1 }}</span><b class="step-label">{{ step.label }}</b><b class="step-short">{{ step.shortLabel }}</b>
       </button>
     }
   </nav>
@@ -53,7 +54,9 @@
             </div>
           </div>
 
-          <div class="form-grid">
+<details class="editor-section" id="event-basics" [open]="sectionOpen('event-basics')" (toggle)="rememberSection($event)">
+  <summary><span><strong>Identificação</strong><small>Nome, categoria e formato</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body"><div class="form-grid">
             <label class="field field--wide">
               <span>Nome do evento *</span>
               <input type="text" formControlName="title" maxlength="255" placeholder="Ex.: Semana da Computação 2026" />
@@ -80,7 +83,11 @@
               </select>
             </label>
 
-            <label class="field">
+</div></div>
+</details>
+<details class="editor-section" id="event-dates" [open]="sectionOpen('event-dates')" (toggle)="rememberSection($event)">
+  <summary><span><strong>Quando acontece</strong><small>{{ form.controls.start_date.value ? (form.controls.start_date.value | date:'dd/MM/yyyy HH:mm') : 'Defina o início e o término do evento' }}</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body"><div class="form-grid">            <label class="field">
               <span>Início *</span>
               <input type="datetime-local" formControlName="start_date" />
             </label>
@@ -90,9 +97,13 @@
               <input type="datetime-local" formControlName="end_date" />
             </label>
 
-            <fieldset class="enrollment-settings field--wide">
+</div></div>
+</details>
+<details class="editor-section" id="event-registration" [open]="sectionOpen('event-registration')" (toggle)="rememberSection($event)">
+  <summary><span><strong>Participação e inscrições</strong><small>{{ eventRegistrationRequired() ? 'Inscrição obrigatória · configure o período' : 'Participação livre, sem inscrição' }}</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body">            <fieldset class="enrollment-settings field--wide">
               <legend>Participação no evento</legend>
-              <p>Defina primeiro se a inscrição no evento será necessária. A publicação continua sendo controlada ao concluir a criação.</p>
+              <p>Defina primeiro se a inscrição no evento será necessária. O evento ficará público somente quando você clicar em Publicar evento.</p>
               <div class="event-registration-options" role="radiogroup" aria-label="Regra de inscrição no evento">
                 @for (option of eventRegistrationOptions; track option.value) {
                   <label class="event-registration-option" [class.selected]="eventRegistrationPolicy() === option.value">
@@ -135,11 +146,9 @@
               } @else {
                 <p class="enrollment-settings__open-note">Não haverá inscrição no evento. Para manter o mesmo fluxo, atividades novas serão abertas e sem reserva individual.</p>
               }
-            </fieldset>
-
-          </div>
-
-          <footer class="form-footer">
+            </fieldset></div>
+</details>
+<footer class="form-footer">
             <span>Os campos marcados com * são obrigatórios.</span>
             <button class="button button--primary" type="submit" [disabled]="isBusy()">
               Próximo: página do evento
@@ -158,7 +167,9 @@
           </div>
           <p class="card-copy">Complete a página que será apresentada às pessoas interessadas no evento.</p>
 
-          <div class="form-grid">
+<details class="editor-section" id="page-content" [open]="sectionOpen('page-content')" (toggle)="rememberSection($event)">
+  <summary><span><strong>Apresentação do evento</strong><small>Resumo e descrição para os participantes</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body"><div class="form-grid">
             <label class="field field--wide">
               <span>Resumo</span>
               <textarea formControlName="summary" rows="3" maxlength="255" placeholder="Apresente o evento em poucas linhas."></textarea>
@@ -177,7 +188,11 @@
               }
             </label>
 
-            <div class="field field--wide">
+</div></div>
+</details>
+<details class="editor-section" id="page-cover" [open]="sectionOpen('page-cover')" (toggle)="rememberSection($event)">
+  <summary><span><strong>Imagem de capa</strong><small>{{ presentationForm.controls.cover_image_url.value ? 'Imagem adicionada · clique para alterar' : 'Escolha uma imagem do computador' }}</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body"><div class="form-grid">            <div class="field field--wide">
               <span>Imagem de capa</span>
               <div class="cover-upload-actions">
                 <label class="cover-upload-button">
@@ -206,11 +221,11 @@
               </figure>
             }
 
-          </div>
-
-          <footer class="form-footer">
+</div></div>
+</details>
+<footer class="form-footer">
             <span>Você poderá alterar estes dados sempre que precisar.</span>
-            <button class="button button--primary" type="submit" [disabled]="isBusy() || uploadingCover()">Próximo: programação</button>
+            <button class="button button--primary" type="submit" [disabled]="isBusy() || uploadingCover()">Próximo: inscritos, equipe e convidados</button>
           </footer>
         </form>
       }
@@ -219,13 +234,15 @@
         <section class="editor-card" aria-labelledby="schedule-title">
           <div class="card-heading">
             <div>
-              <span>Etapa 3</span>
+              <span>Etapa 4</span>
               <h2 id="schedule-title">Programação</h2>
             </div>
           </div>
           <p class="card-copy">Organize a agenda por dia e horário. Atividades simultâneas serão apresentadas juntas aos participantes.</p>
           @if (canManageActivities()) {
-            <div class="inline-form">
+<details class="editor-section" id="schedule-rules" [open]="sectionOpen('schedule-rules')" (toggle)="rememberSection($event)">
+  <summary><span><strong>Inscrições simultâneas</strong><small>{{ conflictPolicy.value === 'ALLOW' ? 'Conflitos permitidos' : 'Conflitos bloqueados' }}</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body">            <div class="inline-form">
               <label class="field field--grow"><span>Inscrições em horários simultâneos</span>
                 <select [formControl]="conflictPolicy">
                   <option value="PREVENT">Impedir inscrições com conflito</option>
@@ -234,14 +251,17 @@
               </label>
               <button type="button" class="button button--outline" [disabled]="isBusy()" (click)="saveConflictPolicy()">Aplicar regra</button>
             </div>
-            <p class="card-copy">O bloqueio de conflito é o padrão. Permita conflitos apenas quando uma mesma pessoa puder acompanhar atividades simultâneas.</p>
+            <p class="card-copy">O bloqueio de conflito é o padrão. Permita conflitos apenas quando uma mesma pessoa puder acompanhar atividades simultâneas.</p></div>
+</details>
           }
 
           @if (!canManageActivities()) {
-            <p class="access-note">A programação pode ser alterada apenas pelo responsável ou por um editor do evento.</p>
+            <p class="access-note">A programação pode ser alterada pelo responsável, por editores, administradores e moderadores.</p>
           }
 
-          @if (activitiesError()) {
+<details class="editor-section" id="schedule-agenda" [open]="sectionOpen('schedule-agenda')" (toggle)="rememberSection($event)">
+  <summary><span><strong>Agenda por dia</strong><small>{{ activities().length }} atividade(s) · adicionar, editar e vincular pessoas</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body">          @if (activitiesError()) {
             <p class="schedule-notice schedule-notice--error" role="alert">{{ activitiesError() }}</p>
           }
 
@@ -337,9 +357,11 @@
             <p class="empty-inline">Defina o início e o término do evento na etapa Informações para montar os dias da programação.</p>
           }
 
-          <footer class="form-footer">
+</div>
+</details>
+<footer class="form-footer">
             <span>Se desejar, adicione atividades agora. Você também poderá editar depois.</span>
-            <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="continueFromSchedule()">Próximo: inscritos/equipe</button>
+            <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="continueFromSchedule()">Próximo: revisão</button>
           </footer>
         </section>
       }
@@ -348,11 +370,13 @@
         <section class="editor-card" aria-labelledby="team-title">
           <div class="card-heading">
             <div>
-              <span>Etapa 4</span>
-              <h2 id="team-title">Inscritos/Equipe</h2>
+              <span>Etapa 3</span>
+              <h2 id="team-title">Inscritos, equipe e convidados</h2>
             </div>
           </div>
-          <p class="card-copy">Inclua moderadores que poderão editar as informações e a programação.</p>
+<details class="editor-section" id="team-editors" [open]="sectionOpen('team-editors')" (toggle)="rememberSection($event)">
+  <summary><span><strong>Equipe de edição</strong><small>{{ editors().length }} colaborador(es) · permissões para editar o evento</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body">          <p class="card-copy">Inclua moderadores que poderão editar as informações e a programação.</p>
           @if (canManageTeam()) {
             <form class="inline-form" [formGroup]="editorForm" (ngSubmit)="addEditor()">
               <label class="field field--grow">
@@ -385,15 +409,13 @@
             }
           </div>
 
-          @if (canViewEnrollments()) {
-            <section class="review-enrollments" aria-labelledby="enrollments-title">
-              <div class="card-heading">
-                <div>
-                  <span>Participantes</span>
-                  <h3 id="enrollments-title">Inscritos</h3>
-                </div>
-                <strong>{{ enrollments().length }} carregado(s)</strong>
-              </div>
+</div>
+</details>
+@if (canViewEnrollments()) {
+            <details class="editor-section" id="team-enrollments" [open]="sectionOpen('team-enrollments')" (toggle)="rememberSection($event)">
+  <summary><span><strong id="enrollments-title">Inscritos</strong><small>{{ enrollments().length }} participante(s) carregado(s)</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body"><section class="review-enrollments" aria-labelledby="enrollments-title">
+
 
               @if (enrollmentsLoading() && !enrollments().length) {
                 <p class="empty-inline">Carregando inscritos...</p>
@@ -420,12 +442,15 @@
               } @else {
                 <p class="empty-inline">Ainda não há inscritos neste evento.</p>
               }
-            </section>
+            </section></div>
+</details>
           }
 
           @if (canAddEnrollment()) {
-            <section aria-labelledby="manual-enrollment-title">
-              <h3 id="manual-enrollment-title">Adicionar participante por email</h3>
+            <details class="editor-section" id="team-manual" [open]="sectionOpen('team-manual')" (toggle)="rememberSection($event)">
+  <summary><span><strong id="manual-enrollment-title">Inscrição manual</strong><small>Por email · aguardando suporte da API</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body"><section aria-labelledby="manual-enrollment-title">
+
               <p class="card-copy">Para inscrições manuais, inclusive após o evento. Recurso aguardando suporte da API.</p>
               <form class="inline-form" [formGroup]="manualEnrollmentForm" (ngSubmit)="requestManualEnrollment()">
                 <label class="field field--grow"><span>Email do participante</span>
@@ -434,11 +459,48 @@
                 </label>
                 <button type="submit" class="button button--primary" [disabled]="isBusy()">Adicionar participante</button>
               </form>
-            </section>
+            </section></div>
+</details>
+          }
+          @if (canManageActivities()) {
+            <details class="editor-section" id="team-guests" [open]="sectionOpen('team-guests')" (toggle)="rememberSection($event)">
+  <summary><span><strong id="event-guests-title">Convidados externos</strong><small>Cadastre perfis e fotos para utilizar nas atividades</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body"><section class="review-enrollments" aria-labelledby="event-guests-title">
+
+              <p class="card-copy">Cadastre os convidados e suas fotos aqui. Na programação, selecione quem participa de cada atividade.</p>
+              @if (event(); as currentEvent) {
+                <app-event-guest-manager [eventId]="currentEvent.id" [disabled]="isBusy() || peopleBusy()"
+                  (busyChange)="guestBusy.set($event)" (dirtyChange)="guestDirty.set($event)" />
+              }
+            </section></div>
+</details>
+            <details class="editor-section" id="team-instructors" [open]="sectionOpen('team-instructors')" (toggle)="rememberSection($event)">
+  <summary><span><strong id="instructor-roster-title">Ministrantes e instrutores</strong><small>{{ instructorRoster().length }} pessoa(s) na lista de preparação</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body"><section class="review-enrollments" aria-labelledby="instructor-roster-title">
+
+              <p class="card-copy">Prepare a lista de alunos e servidores responsáveis pelas atividades. Depois, selecione-os na programação.</p>
+              <p class="access-note">Por enquanto, esta lista de preparação fica salva somente nesta aba do navegador. O convite por email será enviado ao vincular o ministrante a uma atividade. O cadastro compartilhado no evento ainda depende da API.</p>
+              <form class="inline-form" [formGroup]="rosterForm" (ngSubmit)="addRosterInstructor()">
+                <label class="field field--grow"><span>Nome (opcional)</span><input type="text" formControlName="name" maxlength="255" /></label>
+                <label class="field field--grow"><span>Email do ministrante *</span><input type="email" formControlName="email" placeholder="pessoa@ifma.edu.br" />
+                  @if (rosterForm.controls.email.touched && rosterForm.controls.email.invalid) { <strong>Informe um email válido.</strong> }
+                </label>
+                <button class="button button--primary" type="submit" [disabled]="isBusy()">Adicionar à lista</button>
+              </form>
+              @if (rosterMessage()) { <p class="access-note" role="status">{{ rosterMessage() }}</p> }
+              <div class="team-list roster-list">
+                @for (person of instructorRoster(); track person.email) {
+                  <article><span><strong>{{ person.name || person.email }}</strong>@if (person.name) { <small>{{ person.email }}</small> }</span>
+                    <button type="button" class="text-button text-button--danger" [disabled]="isBusy()" (click)="removeRosterInstructor(person.email)">Remover da lista</button>
+                  </article>
+                } @empty { <p class="empty-inline">Nenhum ministrante preparado. A participação é opcional.</p> }
+              </div>
+            </section></div>
+</details>
           }
           <footer class="form-footer">
             <span>Você pode incluir colaboradores nesta etapa sempre que precisar.</span>
-            <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="continueFromTeam()">Próximo: revisão</button>
+            <button class="button button--primary" type="button" [disabled]="isBusy() || peopleBusy() || guestBusy()" (click)="continueFromTeam()">{{ resumeActivity() ? 'Voltar à atividade' : 'Próximo: programação' }}</button>
           </footer>
         </section>
       }
@@ -452,20 +514,31 @@
             </div>
             <button class="button button--outline" type="button" (click)="selectStep('details')">Editar informações</button>
           </div>
-          <p class="card-copy">Confira os dados antes de concluir a criação do evento.</p>
+          <p class="card-copy">Confira os dados antes de concluir. A conclusão não publica o evento; use a ação Publicar evento quando estiver pronto.</p>
 
-          <dl class="review-list">
-            <div><dt>Evento</dt><dd>{{ form.controls.title.value }}</dd></div>
-            <div><dt>Resumo</dt><dd>{{ presentationForm.controls.summary.value || 'Ainda não informado' }}</dd></div>
-            <div><dt>Formato</dt><dd>{{ form.controls.format.value }}</dd></div>
-            <div><dt>Início</dt><dd>{{ form.controls.start_date.value || 'Não informado' }}</dd></div>
-            <div><dt>Publicação</dt><dd>{{ publicationStatusLabel(event()?.status) }}</dd></div>
-            <div><dt>Execução</dt><dd>{{ executionStatusLabel(event()?.execution_status) }}</dd></div>
-            <div><dt>Participação</dt><dd>{{ eventRegistrationRequired() ? 'Inscrição obrigatória' : 'Acesso livre, sem inscrição' }}</dd></div>
-            <div><dt>Atividades</dt><dd>{{ activities().length }} cadastrada(s)</dd></div>
-          </dl>
-
-          <div class="review-actions">
+<details class="editor-section" id="review-info" [open]="sectionOpen('review-info')" (toggle)="rememberSection($event)">
+  <summary><span><strong>Informações e inscrições</strong><small>{{ form.controls.title.value }} · {{ publicationStatusLabel(event()?.status) }}</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body"><dl class="review-list">
+  <div><dt>Formato</dt><dd>{{ formatLabel(form.controls.format.value) }}</dd></div>
+  <div><dt>Execução</dt><dd>{{ executionStatusLabel(event()?.execution_status) }}</dd></div>
+  <div><dt>Início do evento</dt><dd>{{ form.controls.start_date.value | date:'dd/MM/yyyy HH:mm' }}</dd></div>
+  <div><dt>Término do evento</dt><dd>{{ form.controls.end_date.value | date:'dd/MM/yyyy HH:mm' }}</dd></div>
+  <div><dt>Participação</dt><dd>{{ eventRegistrationRequired() ? 'Inscrição obrigatória' : 'Acesso livre, sem inscrição' }}</dd></div>
+  @if (eventRegistrationRequired()) {
+    <div><dt>Inscrições</dt><dd>{{ form.controls.enrollment_start_date.value | date:'dd/MM/yyyy HH:mm' }} até {{ form.controls.enrollment_end_date.value | date:'dd/MM/yyyy HH:mm' }}</dd></div>
+  }
+</dl><button type="button" class="text-button" (click)="selectStep('details')">Editar informações</button></div>
+</details>
+<details class="editor-section" id="review-page" [open]="sectionOpen('review-page')" (toggle)="rememberSection($event)">
+  <summary><span><strong>Página do evento</strong><small>{{ presentationForm.controls.summary.value ? 'Resumo preenchido' : 'Resumo não informado' }} · {{ presentationForm.controls.cover_image_url.value ? 'Com capa' : 'Sem capa' }}</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body"><dl class="review-list"><div><dt>Resumo</dt><dd>{{ presentationForm.controls.summary.value || 'Não informado' }}</dd></div><div><dt>Descrição</dt><dd class="review-description">{{ presentationForm.controls.content.value || 'Não informada' }}</dd></div></dl><button type="button" class="text-button" (click)="selectStep('presentation')">Editar página</button></div>
+</details>
+<details class="editor-section" id="review-people" [open]="sectionOpen('review-people')" (toggle)="rememberSection($event)">
+  <summary><span><strong>Pessoas e programação</strong><small>{{ activities().length }} atividade(s) · confira os vínculos na programação</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body"><dl class="review-list"><div><dt>Equipe de edição</dt><dd>{{ editors().length }} colaborador(es)</dd></div><div><dt>Lista de ministrantes</dt><dd>{{ instructorRoster().length }} preparado(s) · convites enviados ao vincular</dd></div></dl>
+<div class="review-shortcuts"><button type="button" class="text-button" (click)="selectStep('team')">Ver pessoas</button><button type="button" class="text-button" (click)="selectStep('schedule')">Ver programação</button></div></div>
+</details>
+<div class="review-actions">
             <button class="button button--secondary" type="button" (click)="selectStep('schedule')">Voltar à programação</button>
             <button class="button button--primary" type="button" [disabled]="isBusy()" (click)="completeCreation()">
               {{ creationFlow() && !creationCompleted() ? 'Concluir criação' : 'Salvar alterações' }}
@@ -517,7 +590,7 @@
                   <h2 id="activity-dialog-title">{{ editingActivityId() ? 'Editar atividade' : 'Nova atividade' }}</h2>
                   <p>Preencha os dados e escolha os horários para este dia.</p>
                 </div>
-                <button type="button" class="activity-modal-close" aria-label="Fechar atividade" [disabled]="isBusy() || peopleBusy()" (click)="cancelActivityEdit()">×</button>
+                <button type="button" class="activity-modal-close" aria-label="Fechar atividade" [disabled]="isBusy() || peopleBusy() || guestBusy()" (click)="cancelActivityEdit()">×</button>
               </header>
               @if (errorMessage()) {
                 <p class="schedule-notice schedule-notice--error" role="alert">{{ errorMessage() }}</p>
@@ -618,30 +691,35 @@
                 </fieldset>
 
                 <fieldset class="activity-settings field--wide" [disabled]="isBusy() || peopleBusy()">
-                  <legend>Convidados externos <small>Opcional</small></legend>
-                  <p>Profissionais de fora do IFMA que participam da atividade. Não recebem permissão para editar.</p>
-                  <div class="activity-form-grid">
-                    <label class="field"><span>Como adicionar</span><select [formControl]="externalGuestForm.controls.mode"><option value="direct">Adicionar sem aceite</option><option value="invite">Enviar convite por email</option></select></label>
-                    <label class="field"><span>Nome do convidado *</span><input type="text" [formControl]="externalGuestForm.controls.name" placeholder="Nome do palestrante" maxlength="255" /></label>
-                    <label class="field"><span>Foto (URL)</span><input type="url" [formControl]="externalGuestForm.controls.image_url" placeholder="https://exemplo.com/foto.jpg" /></label>
-                    <label class="field"><span>Email {{ externalGuestForm.controls.mode.value === 'invite' ? '*' : '(opcional)' }}</span><input type="email" [formControl]="externalGuestForm.controls.email" placeholder="convidado@exemplo.com" /></label>
-                  </div>
-                  <p>Nome e foto serão apresentados aos inscritos quando a API permitir o vínculo. O email será visível apenas para ADM e Moderator.</p>
-                  @if (externalGuestForm.controls.mode.value === 'invite') {
-                    <p class="access-note">Por enquanto, este convite é somente para o evento. A API ainda não salva nome, foto ou vínculo com a atividade.</p>
-                  } @else { <p class="access-note">O cadastro sem aceite ainda aguarda implementação na API.</p> }
-                  <button type="button" class="button button--outline" (click)="requestExternalGuest()">{{ externalGuestForm.controls.mode.value === 'invite' ? 'Enviar convite para o evento' : 'Adicionar convidado à atividade' }}</button>
-                  <button type="button" class="text-button" (click)="externalGuestForm.reset()">Limpar convidado</button>
+                  <legend>Convidados desta atividade <small>Opcional</small></legend>
+                  <label class="field"><span>Selecionar convidado cadastrado</span>
+                    <select [formControl]="activityGuestId"><option [ngValue]="0">Não adicionar outro convidado</option>
+                      @for (guest of guestOptions(); track guest.id) { <option [ngValue]="guest.id" [disabled]="guest.status === 'CANCELED'">{{ guest.name || 'Convidado' }} · #{{ guest.id }}{{ guest.status === 'CANCELED' ? ' (cancelado)' : '' }}</option> }
+                    </select>
+                  </label>
+                  @if (activityGuestId.value) {
+                    <label class="field"><span>Participação</span><select [formControl]="activityGuestRole">
+                      <option value="PRESENTER">Palestrante</option><option value="SPECIAL_GUEST">Convidado especial</option><option value="MODERATOR">Mediador</option><option value="LISTENER">Ouvinte</option>
+                    </select></label>
+                  }
+                  @if (guestOptionsLoading()) { <p role="status">Carregando convidados…</p> }
+                  <button type="button" class="text-button" [disabled]="guestOptionsLoading()" (click)="loadGuestOptions()">Atualizar lista</button>
+                  @if (guestOptionsCursor()) { <button type="button" class="text-button" [disabled]="guestOptionsLoading()" (click)="loadGuestOptions(true)">Carregar mais convidados</button> }
+                  <button type="button" class="button button--outline" (click)="addMorePeople('guests')">+ Cadastrar mais convidados</button>
+                  @for (guest of linkedGuests(); track guest.id) { <p>{{ guest.name || 'Convidado' }} · Vinculado à atividade</p> }
+                  @if (linkedGuestsCursor()) { <button type="button" class="text-button" (click)="loadLinkedGuests(true)">Ver mais vínculos</button> }
                 </fieldset>
                 <fieldset class="activity-settings field--wide" [disabled]="isBusy() || peopleBusy()">
-                  <legend>Ministrantes / instrutores <small>Opcional</small></legend>
-                  <p>Alunos e servidores do IFMA responsáveis por apresentar esta atividade. Após aceitar o convite, poderão editar esta atividade.</p>
-                  <label class="field"><span>Email do ministrante</span><input type="email" [formControl]="instructorForm.controls.email" placeholder="pessoa@ifma.edu.br" /></label>
-                  @if (instructorForm.controls.email.touched && instructorForm.controls.email.invalid) { <p role="alert">Informe um email válido.</p> }
-                  @if (!editingActivityId()) { <p>Salve a atividade para enviar o convite. Você pode preencher o email agora.</p> }
-                  <button type="button" class="button button--outline" (click)="inviteInstructor()">Convidar ministrante</button>
+                  <legend>Ministrantes desta atividade <small>Opcional</small></legend>
+                  <p>Selecione uma pessoa da lista. Ao salvar a atividade, ela receberá um convite por email e poderá editar esta atividade após aceitá-lo.</p>
+                  <label class="field"><span>Selecionar ministrante</span><select [formControl]="instructorForm.controls.email">
+                    <option value="">Não adicionar outro ministrante</option>
+                    @for (person of instructorRoster(); track person.email) { <option [value]="person.email" [disabled]="hasInstructorInvitation(person.email)">{{ person.name ? person.name + ' · ' : '' }}{{ person.email }}</option> }
+                  </select></label>
+                  <button type="button" class="button button--outline" (click)="addMorePeople('instructors')">+ Preparar mais ministrantes</button>
+                  @if (editingActivityId(); as activityId) { <button type="button" class="text-button" (click)="loadInstructorInvitations(activityId)">Atualizar convites</button> }
                   @for (invitation of instructorInvitations(); track invitation.id) {
-                    <div class="team-list"><article><span><strong>{{ invitation.email }}</strong><small>{{ instructorStatus[invitation.status] || invitation.status }}</small></span>
+                    <div class="team-list"><article><span><strong>{{ invitation.email }}</strong><small>{{ instructorStatus[invitation.status] || invitation.status }} @if (invitation.expires_at) { · Expira {{ invitation.expires_at | date:'dd/MM/yyyy HH:mm' }} }</small></span>
                     @if (invitation.status === 'SENT') { <button type="button" class="text-button text-button--danger" (click)="cancelInstructorInvitation(invitation)">Cancelar convite</button> }</article></div>
                   }
                 </fieldset>
@@ -651,8 +729,9 @@
               </div>
 
               <div class="activity-form-actions">
-                <button class="button button--secondary" type="button" [disabled]="isBusy()" (click)="cancelActivityEdit()">Cancelar</button>
-                <button class="button button--primary" type="submit" [disabled]="isBusy()">
+                <button class="button button--outline" type="button" [disabled]="isBusy() || peopleBusy() || guestBusy()" (click)="saveActivity(true)">Salvar e vincular mais pessoas</button>
+                <button class="button button--secondary" type="button" [disabled]="isBusy() || peopleBusy() || guestBusy()" (click)="cancelActivityEdit()">Cancelar</button>
+                <button class="button button--primary" type="submit" [disabled]="isBusy() || peopleBusy() || guestBusy()">
                   @if (operation() === 'activity') {
                     <span class="spinner" aria-hidden="true"></span> Salvando…
                   } @else {

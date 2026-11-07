@@ -6,7 +6,7 @@
   @if (busy() || loading() || invitationsLoading()) { <p role="status"><span class="mini-spinner"></span> Carregando…</p> }
   @if (manage && !activityId && canViewEmail()) {
     <p>Convidados não recebem permissão de edição. Para colaboradores, use a equipe organizadora.</p>
-    <p>A integração está disponível, mas a API ainda precisa ajustar a identificação do usuário e o envio do e-mail. Se a operação falhar, nada será confirmado nesta tela.</p>
+    <p>O convidado recebe um email e responde usando a conta correspondente.</p>
     <form [formGroup]="form" (ngSubmit)="invite()">
       <label>E-mail do convidado<input type="email" formControlName="email" required autocomplete="email"></label>
       <button type="submit" [disabled]="busy()">Registrar convite</button>
@@ -29,7 +29,7 @@
   }
   @for (guest of guests(); track guest.id) {
     <article>
-      @if (guest.image_url) { <img class="guest-photo" [src]="guest.image_url" [alt]="guest.name || 'Convidado externo'" /> }
+      @if (guest.image_url) { <img class="guest-photo" [eventCover]="guest.image_url" [alt]="guest.name || 'Convidado externo'" /> }
       <div><strong>{{ guest.name || (guest.user_id === auth.getCurrentUser()?.id ? 'Você' : 'Convidado externo') }}</strong>
         @if (canViewEmail() && guest.email) { <small>{{ guest.email }}</small> }
         @if (manage && !guest.name) { <small>A API ainda não disponibiliza nome e foto deste convidado.</small> }
