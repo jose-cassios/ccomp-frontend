@@ -1,4 +1,4 @@
-import { Component, Input, inject, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 import { EventsService } from '../../services/events.service';
 import { EventEnrollment } from '../../models/event.model';
@@ -10,12 +10,12 @@ import { ActivityInstructorsComponent } from './activity-instructors.component';
 @Component({
   selector: 'app-activity-people', standalone: true, imports: [EventGuestsComponent, ActivityCheckInComponent, ActivityInstructorsComponent],
   template: `
-    @if (canView || manage) {
+    @if (canView || manage || canViewInstructors) {
     <details (toggle)="open = $any($event.target).open">
       <summary>Convidados e ministrantes{{ manage ? ', inscritos e credenciamento' : '' }}</summary>
       @if (open) {
         <app-event-guests [eventId]="eventId" [activityId]="activityId" [manage]="manage" [canView]="canView" />
-        <app-activity-instructors [eventId]="eventId" [activityId]="activityId" />
+        <app-activity-instructors (activityChanged)="activityChanged.emit()" [manage]="manage" [eventId]="eventId" [activityId]="activityId" />
         @if (manage) {
           <app-activity-check-in [activityId]="activityId" />
           <button type="button" [disabled]="loading()" (click)="load()">Consultar inscritos da atividade</button>
@@ -36,6 +36,8 @@ export class ActivityPeopleComponent {
   @Input({ required: true }) activityId!: number;
   @Input() manage = false;
   @Input() canView = false;
+  @Input() canViewInstructors = false;
+  @Output() activityChanged = new EventEmitter<void>();
   open = false;
   readonly rows = signal<EventEnrollment[]>([]);
   readonly cursor = signal<string | null>(null);

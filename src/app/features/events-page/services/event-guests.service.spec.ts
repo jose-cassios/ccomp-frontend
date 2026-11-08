@@ -14,6 +14,16 @@ describe('Guest API contract', () => {
     service = TestBed.inject(EventGuestsService); http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+  it('links an active account to an activity and deletes a whole guest profile', () => {
+    service.linkAccount(1, 7, ' person@ifma.edu.br ', 3).subscribe();
+    const account = http.expectOne('/api/events/1/guests/7/account');
+    expect(account.request.method).toBe('PATCH');
+    expect(account.request.body).toEqual({ email: 'person@ifma.edu.br', activity_id: 3 });
+    account.flush({});
+    service.remove(1, 7).subscribe();
+    const remove = http.expectOne('/api/events/1/guests/7');
+    expect(remove.request.method).toBe('DELETE'); remove.flush(null);
+  });
   it('reads all cursor pages to distinguish existing profiles before registration', () => {
     let ids: number[] = [];
     service.allGuests(1).subscribe(rows => ids = rows.map(row => row.id));

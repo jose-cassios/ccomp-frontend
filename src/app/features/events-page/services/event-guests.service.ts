@@ -17,8 +17,8 @@ export interface EventGuest {
   event_guest_id?: number;
   role?: GuestRole;
 }
-export type GuestRole = 'PRESENTER' | 'SPECIAL_GUEST' | 'MODERATOR' | 'LISTENER';
-export interface GuestProfile { name: string; description: string; }
+export type GuestRole = 'PRESENTER' | 'SPECIAL_GUEST' | 'MODERATOR' | 'ASSISTANT' | 'LISTENER';
+export interface GuestProfile { name: string; description: string; account_email?: string; }
 export interface GuestCreatedResponse extends ApiMessage { id?: number; }
 export interface GuestInvitation {
   id: number;
@@ -56,6 +56,8 @@ export class EventGuestsService {
       reduce((rows, page) => [...rows, ...page.content], [] as EventGuest[]),
     );
   }
+  remove(eventId: number, guestId: number) { return this.api.delete<void>(`/events/${eventId}/guests/${guestId}`); }
+  linkAccount(eventId: number, guestId: number, email: string, activityId: number) { return this.api.patch<ApiMessage>(`/events/${eventId}/guests/${guestId}/account`, { email: email.trim(), activity_id: activityId }); }
   profile(eventId: number, guestId: number, profile: GuestProfile) {
     return this.api.patch<ApiMessage>(`/events/${eventId}/guests/${guestId}/profile`, profile);
   }

@@ -128,7 +128,7 @@
                               }
                             </div>
                             <h3>{{ activity.title }}</h3>
-                            <app-activity-people [eventId]="currentEvent.id" [activityId]="activity.id" [canView]="isAuthenticated() && subscribed()" />
+                            <app-activity-people [eventId]="currentEvent.id" [activityId]="activity.id" [canView]="isAuthenticated() && subscribed()" [canViewInstructors]="isAuthenticated()" (activityChanged)="refreshActivities()" />
                             <p class="activity-meta">
                               @if (activity.end_date) {
                                 <span>Até {{ activity.end_date | date: 'HH:mm' }}</span>

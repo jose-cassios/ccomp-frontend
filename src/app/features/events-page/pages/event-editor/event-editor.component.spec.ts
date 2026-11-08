@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../../auth/services/auth.service';
 import { EventDetails, EventEditor } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
@@ -13,7 +14,7 @@ describe('EventEditorComponent', () => {
   let fixture: ComponentFixture<EventEditorComponent>;
   let router: Router;
   const guests = { guests: vi.fn(() => of({ content: [], next_cursor: null })), invitations: vi.fn(() => of({ content: [], next_cursor: null })), associate: vi.fn(() => of(void 0)) };
-  const instructors = { invitations: vi.fn(() => of([])), invite: vi.fn(() => of({ message: 'Convite enviado.' })), cancel: vi.fn(() => of({})) };
+  const instructors = { forActivity: vi.fn(() => of([])), add: vi.fn(() => of({})), invitations: vi.fn(() => of([])), invite: vi.fn(() => of({ message: 'Convite enviado.' })), cancel: vi.fn(() => of({})) };
 
   const createdEvent: EventDetails = {
     id: 14,
@@ -416,6 +417,54 @@ describe('EventEditorComponent', () => {
     expect(component.errorMessage()).toContain('Não foi possível adicionar o editor');
   });
 
+  it('creates an event ending at noon on the same day without truncating or shifting its hours', () => {
+    const sameDayEvent = { ...createdEvent, start_date: '2026-11-08T09:05', end_date: '2026-11-08T12:00' };
+    eventsService.create.mockReturnValueOnce(of(sameDayEvent));
+    component.form.patchValue({ title: sameDayEvent.title, start_date: sameDayEvent.start_date, end_date: sameDayEvent.end_date });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS');
+    component.save();
+    expect(eventsService.create).toHaveBeenCalledWith(expect.objectContaining({
+      start_date: '2026-11-08T09:05', end_date: '2026-11-08T12:00',
+    }));
+    expect(component.activeStep()).toBe('presentation');
+    expect(component.form.controls.end_date.value).toBe('2026-11-08T12:00');
+  });
+
+  it.each([false, true])('allows publishing an ongoing same-day event; backend rejection=%s is not treated as success', (rejected) => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-11-08T09:10:00'));
+      const sameDayEvent = { ...createdEvent, owner_id: 'event-owner', status: 'DRAFT' as const,
+        start_date: '2026-11-08T09:05', end_date: '2026-11-08T12:00' };
+      component.event.set(sameDayEvent);
+      component.form.patchValue({ title: sameDayEvent.title, start_date: sameDayEvent.start_date, end_date: sameDayEvent.end_date });
+      component.selectEventRegistrationPolicy('OPEN_ACCESS');
+      component.presentationForm.patchValue({ summary: 'Encontro da comunidade.', content: 'Atividades durante a manhã.' });
+      eventsService.update.mockReturnValueOnce(of({ ...sameDayEvent, enrollment_start_date: null, enrollment_end_date: null, enrollment_paused: false }));
+      if (rejected) {
+        eventsService.publish.mockReturnValueOnce(throwError(() => new HttpErrorResponse({
+          status: 400, error: { message: 'Não é possível publicar um evento que já foi finalizado.' },
+        })));
+      } else {
+        eventsService.publish.mockReturnValueOnce(of({ ...sameDayEvent, status: 'PUBLISHED' as const }));
+      }
+      component.publish();
+      expect(eventsService.update).toHaveBeenCalledWith(sameDayEvent.id, expect.objectContaining({
+        start_date: '2026-11-08T09:05', end_date: '2026-11-08T12:00',
+      }));
+      expect(eventsService.publish).toHaveBeenCalledWith(sameDayEvent.id);
+      expect(component.event()?.status).toBe(rejected ? 'DRAFT' : 'PUBLISHED');
+      expect(component.form.controls.end_date.value).toBe('2026-11-08T12:00');
+      if (rejected) {
+        expect(component.errorMessage()).toContain('já foi finalizado');
+        expect(component.successMessage()).toBeNull();
+        expect(router.navigate).not.toHaveBeenCalled();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('completes creation as a draft and publishes only through the explicit publish action', () => {
     component.form.setValue({
       title: createdEvent.title,
@@ -592,6 +641,25 @@ describe('EventEditorComponent', () => {
     expect(fixture.nativeElement.querySelector('dialog').open).toBe(true);
     expect(component.activityForm.getRawValue()).toEqual(activityPayload);
     expect(component.instructorRoster()).toContainEqual({ name: 'Ana', email: 'ana@ifma.edu.br' });
+  });
+
+  it('prepares a direct assistant without an account and only creates the record after saving the activity', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.rosterMode.setValue('direct');
+    component.rosterRole.setValue('ASSISTANT');
+    component.rosterDescription.setValue('Apoio no laboratório');
+    component.rosterForm.setValue({ name: 'Ana', email: '' });
+    component.addRosterInstructor();
+    expect(instructors.add).not.toHaveBeenCalled();
+    const person = component.instructorRoster()[0];
+    expect(person.key).toBeTruthy();
+    component.openActivityDialog();
+    component.activityForm.patchValue(activityPayload);
+    component.instructorForm.controls.email.setValue(person.key!);
+    component.saveActivity();
+    expect(instructors.add).toHaveBeenCalledWith(21, { name: 'Ana', description: 'Apoio no laboratório', role: 'ASSISTANT' });
+    expect(instructors.invite).not.toHaveBeenCalled();
+    expect(component.instructorForm.controls.email.value).toBe('');
   });
 
   it('links selected people after saving and retries failed links without creating duplicate activities', () => {

@@ -5,7 +5,7 @@ import { ApiService } from '../../../core/api/api.service';
 import { ActivityInstructorsService } from './activity-instructors.service';
 
 describe('Activity instructor API contract', () => {
-  const api = { get: vi.fn(), post: vi.fn((_path: string, _body?: unknown, _options?: { params: HttpParams }) => of({})), delete: vi.fn(() => of({})) };
+  const api = { get: vi.fn(), patch: vi.fn(() => of({})), post: vi.fn((_path: string, _body?: unknown, _options?: { params: HttpParams }) => of({})), delete: vi.fn(() => of({})) };
   beforeEach(() => { vi.clearAllMocks(); TestBed.configureTestingModule({ providers: [{ provide: ApiService, useValue: api }] }); });
   it('uses the activity invitation and cancellation routes with the correct payload', () => {
     const service = TestBed.inject(ActivityInstructorsService);
@@ -16,13 +16,31 @@ describe('Activity instructor API contract', () => {
     expect(api.post.mock.calls.at(-1)?.[0]).toBe('/events/instructor-invitations/code/reply');
     expect((api.post.mock.calls.at(-1) as unknown as [string, null, { params: { get(k: string): string } }])[2].params.get('accept')).toBe('false');
   });
-  it('normalizes invitation email and fetches all pages before filtering an activity', () => {
+  it('uses the activity participants endpoint without duplicating guests displayed separately', () => {
     const service = TestBed.inject(ActivityInstructorsService);
     api.get.mockReturnValueOnce(of([{ id: 1, email_address: 'a@ifma.edu.br', status: 'SENT' }]));
     service.invitations(7).subscribe(rows => expect(rows[0].email).toBe('a@ifma.edu.br'));
-    api.get.mockReturnValueOnce(of({ content: [{ id: 1, activityId: 99, status: 'CONFIRMED' }], next_cursor: 'next' }))
-      .mockReturnValueOnce(of({ content: [{ id: 2, activity_id: 7, status: 'CONFIRMED' }], next_cursor: null }));
-    service.forActivity(5, 7).subscribe(rows => expect(rows.map(r => r.id)).toEqual([2]));
-    expect(api.get.mock.calls.at(-1)?.[1].params.get('cursor')).toBe('next');
+    api.get.mockReturnValueOnce(of([
+      { id: 1, activity_id: 7, is_guest: true, status: 'CONFIRMED' },
+      { id: 2, activity_id: 7, user_id: 'user', is_guest: false, role: 'ASSISTANT', status: 'CONFIRMED' },
+    ]));
+    service.forActivity(5, 7).subscribe(rows => {
+      expect(rows.map(r => r.id)).toEqual([2]);
+      expect(rows[0].user_id).toBe('user');
+      expect(rows[0].role).toBe('ASSISTANT');
+    });
+    expect(api.get).toHaveBeenLastCalledWith('/events/activities/7/instructors');
+  });
+  it('creates a direct participant and keeps account linking, removal and self cancellation distinct', () => {
+    const service = TestBed.inject(ActivityInstructorsService);
+    const profile = { name: 'Auxiliar', description: 'Apoio', role: 'ASSISTANT' as const };
+    service.add(7, profile).subscribe();
+    expect(api.post).toHaveBeenCalledWith('/events/activities/7/instructors', profile);
+    service.linkAccount(7, 2, ' person@ifma.edu.br ').subscribe();
+    expect(api.patch).toHaveBeenCalledWith('/events/activities/7/instructors/2/account', { email: 'person@ifma.edu.br' });
+    service.remove(7, 2).subscribe();
+    expect(api.delete).toHaveBeenLastCalledWith('/events/activities/7/instructors/2');
+    service.cancelMine(7).subscribe();
+    expect(api.delete).toHaveBeenLastCalledWith('/events/activities/7/instructors/me');
   });
 });

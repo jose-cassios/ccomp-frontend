@@ -296,6 +296,11 @@ export class EventDetailsComponent implements OnInit {
     this.successMessage.set(null);
   }
 
+  refreshActivities(): void {
+    const eventId = this.event()?.id;
+    if (eventId) this.loadActivities(eventId);
+  }
+
   private loadActivities(eventId: number): void {
     this.activitiesLoading.set(true);
     this.activitiesError.set(null);
