@@ -1,3 +1,4 @@
+import { EventRoleCertificatesComponent } from '../../components/certificate-download/event-role-certificates.component';
 import { EVENT_TIME_ZONES, eventTimestamp, eventLocalInput, isEventTimeZone } from '../../models/event-time';
 import { DatePipe, Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -65,7 +66,7 @@ const EDITOR_STEPS: ReadonlyArray<{ value: EventEditorStep; label: string; short
 @Component({
   selector: 'app-event-editor',
   standalone: true,
-  imports: [DatePipe, ReactiveFormsModule, RouterLink, ActivityPeopleComponent, EventCredentialsComponent, ActivityInstructorsComponent, EventCoverDirective, EventGuestManagerComponent],
+  imports: [EventRoleCertificatesComponent, DatePipe, ReactiveFormsModule, RouterLink, ActivityPeopleComponent, EventCredentialsComponent, ActivityInstructorsComponent, EventCoverDirective, EventGuestManagerComponent],
   templateUrl: './event-editor.component.html',
   styleUrls: ['./event-editor.component.css', './event-activity-dialog.css', './event-editor-sections.css'],
 })
@@ -135,6 +136,7 @@ export class EventEditorComponent implements OnInit {
     content: ['', [Validators.minLength(4), Validators.maxLength(5000)]],
     cover_image_url: ['', Validators.pattern(/^https?:\/\/.+/)],
   });
+  readonly activityWorkload = this.fb.control<number | null>(null, [Validators.min(0)]);
   readonly activityForm = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
     description: ['', Validators.maxLength(1000)],
@@ -148,6 +150,19 @@ export class EventEditorComponent implements OnInit {
   // The selector accepts a prepared profile key or an invitation email.
   readonly instructorForm = this.fb.nonNullable.group({ email: [''] });
   readonly rosterForm = this.fb.nonNullable.group({ name: ['', Validators.maxLength(255)], email: ['', Validators.email] });
+  readonly preparedGuestId = signal<number | undefined>(undefined);
+  prepareGuestInstructor(guest: EventGuest): void {
+    if (!this.canManageActivities() || this.isBusy() || this.guestBusy()) return;
+    if (this.rosterDirty() && !window.confirm('Substituir os dados de ministrante ainda não adicionados à lista?')) return;
+    this.preparedGuestId.set(guest.id);
+    this.rosterMode.setValue('direct');
+    this.rosterForm.setValue({ name: guest.name ?? '', email: guest.email ?? '' });
+    this.rosterDescription.setValue(guest.description ?? '');
+    this.rosterRole.setValue('INSTRUCTOR'); this.rosterForm.markAsDirty();
+    this.expandSection('team-instructors');
+    this.rosterMessage.set('Perfil reaproveitado. Informe a conta ativa para habilitar o certificado e adicione à lista. Na programação, selecione esta pessoa como ministrante. O vínculo de convidado é mantido separadamente.');
+    document.getElementById('team-instructors')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }
   readonly rosterMode = this.fb.nonNullable.control<'invite' | 'direct'>('invite');
   readonly rosterDescription = this.fb.nonNullable.control('', Validators.maxLength(5000));
   readonly rosterRole = this.fb.nonNullable.control<'INSTRUCTOR' | 'ASSISTANT'>('INSTRUCTOR');
@@ -177,8 +192,9 @@ export class EventEditorComponent implements OnInit {
     if (email && this.instructorRoster().some(row => row.email.toLowerCase() === email && (row.mode ?? 'invite') === this.rosterMode.value)) {
       this.rosterMessage.set('Este email já está na lista de ministrantes.'); return;
     }
-    this.instructorRoster.update(rows => [...rows, { email, name: this.rosterForm.controls.name.value.trim(), ...(this.rosterMode.value === 'direct' ? { mode: 'direct' as const, key: crypto.randomUUID(), description: this.rosterDescription.value.trim(), role: this.rosterRole.value } : {}) }]);
+    this.instructorRoster.update(rows => [...rows, { email, name: this.rosterForm.controls.name.value.trim(), ...(this.rosterMode.value === 'direct' ? { mode: 'direct' as const, guest_id: this.preparedGuestId(), key: crypto.randomUUID(), description: this.rosterDescription.value.trim(), role: this.rosterRole.value } : {}) }]);
     const stored = this.persistRoster();
+    this.preparedGuestId.set(undefined);
     this.rosterForm.reset(); this.rosterDescription.reset(); this.rosterRole.reset();
     this.rosterMessage.set(stored
       ? 'Pessoa preparada nesta aba. Na programação, selecione-a para cadastrar o vínculo ou enviar o convite escolhido.'
@@ -215,7 +231,7 @@ export class EventEditorComponent implements OnInit {
     if (this.activeStep() !== 'team') return true;
     if ((this.guestDirty() || this.rosterDirty()) && typeof window !== 'undefined'
       && !window.confirm('Há dados de participantes não salvos. Deseja sair desta etapa e descartá-los?')) return false;
-    this.guestDirty.set(false); this.rosterForm.reset(); this.rosterDescription.reset(); this.rosterRole.reset(); return true;
+    this.preparedGuestId.set(undefined); this.guestDirty.set(false); this.rosterForm.reset(); this.rosterDescription.reset(); this.rosterRole.reset(); return true;
   }
   addMorePeople(target: 'guests' | 'instructors' = 'guests'): void {
     if (this.isBusy() || this.peopleBusy() || this.guestBusy()) return;
@@ -257,10 +273,17 @@ export class EventEditorComponent implements OnInit {
       map(() => { this.activityGuestId.reset(); return true; }),
       catchError(error => { failures.push(apiErrorMessage(error, 'Falha ao vincular convidado.')); return of(false); }),
     ));
-    if (prepared?.mode === 'direct') tasks.push(this.instructorsService.add(activity.id, {
+    if (prepared?.mode === 'direct') {
+      const accountLink: Observable<unknown> = email && prepared.guest_id ? this.guestsService.linkAccount(event.id, prepared.guest_id, email, activity.id) : of(null);
+      const guestLink: Observable<unknown> = prepared.guest_id
+        ? accountLink.pipe(
+          switchMap(() => this.guestsService.associate(event.id, prepared.guest_id!, activity.id, prepared.role === 'ASSISTANT' ? 'ASSISTANT' : 'PRESENTER')))
+        : of(null);
+      tasks.push(guestLink.pipe(switchMap(() => this.instructorsService.add(activity.id, {
       name: prepared.name, description: prepared.description, role: prepared.role ?? 'INSTRUCTOR',
       ...(email ? { account_email: email } : {}),
-    }).pipe(map(() => { this.instructorForm.reset(); return true; }), catchError(error => { failures.push(apiErrorMessage(error, 'Falha ao cadastrar ministrante.')); return of(false); })));
+    })), map(() => { this.instructorForm.reset(); return true; }), catchError(error => { failures.push(apiErrorMessage(error, 'Falha ao cadastrar ministrante.')); return of(false); })));
+    }
     else if (email && !this.hasInstructorInvitation(email)) tasks.push(this.instructorsService.invite(activity.id, email).pipe(
       map(() => { this.instructorForm.reset(); return true; }),
       catchError(error => { failures.push(apiErrorMessage(error, 'Falha ao convidar ministrante.')); return of(false); }),
@@ -740,8 +763,8 @@ export class EventEditorComponent implements OnInit {
       this.errorMessage.set('Você não tem permissão para alterar a programação deste evento.');
       return;
     }
-    if (this.activityForm.invalid || this.activityDatesError()) {
-      this.activityForm.markAllAsTouched();
+    if (this.activityForm.invalid || this.activityWorkload.invalid || this.activityDatesError()) {
+      this.activityForm.markAllAsTouched(); this.activityWorkload.markAsTouched();
       this.errorMessage.set(this.activityDatesError() ?? 'Revise os dados obrigatórios e os horários da atividade.');
       return;
     }
@@ -756,6 +779,7 @@ export class EventEditorComponent implements OnInit {
       start_date: value.start_date,
       end_date: value.end_date,
       registration_policy: value.registration_policy,
+      workload_hours: this.activityWorkload.value ?? Math.round((eventTimestamp(value.end_date, currentEvent.time_zone) - eventTimestamp(value.start_date, currentEvent.time_zone)) / 36000) / 100,
     };
     this.operation.set('activity');
     this.errorMessage.set(null);
@@ -837,6 +861,7 @@ export class EventEditorComponent implements OnInit {
     this.activeActivityDay.set(day);
     this.activityDialogDay.set(day);
     // Do not silently shorten an existing activity spanning multiple days.
+    this.activityWorkload.reset(activity.workload_hours ?? null);
     const endDay = this.toLocalInput(activity.end_date ?? null).slice(0, 10);
     this.activityDialogEndDay.set(this.canAddActivityOnDay(endDay) && endDay >= day ? endDay : day);
     this.editingActivityId.set(activity.id);
@@ -916,7 +941,7 @@ export class EventEditorComponent implements OnInit {
 
   cancelActivityEdit(): void {
     if (this.isBusy() || this.peopleBusy() || this.guestBusy()) return;
-    if ((this.activityForm.dirty || this.activityGuestId.dirty || this.instructorForm.dirty) && typeof window !== 'undefined'
+    if ((this.activityForm.dirty || this.activityWorkload.dirty || this.activityGuestId.dirty || this.instructorForm.dirty) && typeof window !== 'undefined'
       && !window.confirm('Descartar as alterações desta atividade?')) return;
     this.activityDialog?.nativeElement.close();
     this.activityDialogDay.set(null);
@@ -1103,13 +1128,13 @@ export class EventEditorComponent implements OnInit {
   }
 
   canDeactivate(): boolean {
-    if ((!this.hasUnsavedChanges() && !this.guestDirty() && !this.rosterDirty() && !(this.activityDialogDay() && (this.activityForm.dirty || this.activityGuestId.dirty || this.instructorForm.dirty))) || typeof window === 'undefined') return true;
+    if ((!this.hasUnsavedChanges() && !this.guestDirty() && !this.rosterDirty() && !(this.activityDialogDay() && (this.activityForm.dirty || this.activityWorkload.dirty || this.activityGuestId.dirty || this.instructorForm.dirty))) || typeof window === 'undefined') return true;
     return window.confirm('Há alterações não salvas. Deseja sair mesmo assim?');
   }
 
   @HostListener('window:beforeunload', ['$event'])
   preventUnsavedUnload(event: BeforeUnloadEvent): void {
-    if (this.hasUnsavedChanges() || this.guestDirty() || this.rosterDirty() || (this.activityDialogDay() && (this.activityForm.dirty || this.activityGuestId.dirty || this.instructorForm.dirty))) event.preventDefault();
+    if (this.hasUnsavedChanges() || this.guestDirty() || this.rosterDirty() || (this.activityDialogDay() && (this.activityForm.dirty || this.activityWorkload.dirty || this.activityGuestId.dirty || this.instructorForm.dirty))) event.preventDefault();
   }
 
   private loadEvent(id: string): void {
@@ -1306,6 +1331,7 @@ export class EventEditorComponent implements OnInit {
   }
 
   private resetActivityForm(): void {
+    this.activityWorkload.reset();
     this.resumeActivity.set(false);
     this.activityGuestId.reset(); this.activityGuestRole.reset();
     this.linkedGuests.set([]); this.linkedGuestsCursor.set(null);

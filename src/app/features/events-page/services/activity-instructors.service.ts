@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpParams } from '@angular/common/http';
-import { map } from 'rxjs';
+import { EMPTY, expand, map, reduce, defer, throwError } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
 import { ApiMessage } from '../models/event.model';
 
@@ -30,6 +30,21 @@ export class ActivityInstructorsService {
         status: row.status ?? 'CONFIRMED',
       } as Instructor)).filter(row => !row.is_guest)),
     );
+  }
+  forEvent(eventId: number) {
+    return defer(() => {
+      const cursors = new Set<string>();
+      const page = (cursor?: string) => this.api.get<{ content: WireInstructor[]; next_cursor?: string | null; nextCursor?: string | null }>(
+        '/events/' + eventId + '/instructors', { params: cursor ? new HttpParams().set('pageSize', 50).set('cursor', cursor) : new HttpParams().set('pageSize', 50) });
+      return page().pipe(expand(result => {
+        const cursor = result.next_cursor ?? result.nextCursor;
+        if (!cursor) return EMPTY;
+        if (cursors.has(cursor)) return throwError(() => new Error('A API repetiu a página de ministrantes.'));
+        cursors.add(cursor); return page(cursor);
+      }), reduce((rows, result) => [...rows, ...result.content.map(row => ({ ...row,
+        activity_id: row.activity_id ?? row.activityId ?? 0, user_id: row.user_id ?? row.userId,
+        is_guest: row.is_guest ?? row.isGuest ?? false, status: row.status ?? 'CONFIRMED' } as Instructor))], [] as Instructor[]));
+    });
   }
   add(activityId: number, profile: InstructorProfile) { return this.api.post<ApiMessage>(`/events/activities/${activityId}/instructors`, profile); }
   linkAccount(activityId: number, instructorId: number, email: string) { return this.api.patch<ApiMessage>(`/events/activities/${activityId}/instructors/${instructorId}/account`, { email: email.trim() }); }

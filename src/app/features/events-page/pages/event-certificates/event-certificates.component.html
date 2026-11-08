@@ -12,15 +12,24 @@
     <p role="alert" class="panel">A personalização está disponível para o responsável pelo evento, editores ativos, moderadores e administradores.</p>
   } @else {
     <div class="tabs" role="group" aria-label="Modelo de certificado">
-      <button type="button" [attr.aria-pressed]="scope() === 'event'" [disabled]="busy()" (click)="selectScope('event')">Do evento</button>
+      <button type="button" [attr.aria-pressed]="scope() === 'event'" [disabled]="busy()" (click)="selectScope('event')">Participantes</button>
       <button type="button" [attr.aria-pressed]="scope() === 'activity'" [disabled]="busy()" (click)="selectScope('activity')">Das atividades</button>
+      <button type="button" [attr.aria-pressed]="scope() === 'instructor'" [disabled]="busy()" (click)="selectScope('instructor')">Ministrantes e auxiliares</button>
+      <button type="button" [attr.aria-pressed]="scope() === 'team'" [disabled]="busy()" (click)="selectScope('team')">Equipe</button>
     </div>
 
+    <details class="panel">
+      <summary>Organização e carga horária da equipe</summary>
+      <label>Organização<input [formControl]="settings.controls.organization" maxlength="255" /></label>
+      <label>Horas para o responsável e editores ativos<input type="number" min="0" step="0.25" [formControl]="settings.controls.team_certificate_workload_hours" /></label>
+      <p>O certificado de ministrante soma as cargas horárias das atividades. Este campo define somente o certificado da equipe.</p>
+      <button type="button" [disabled]="busy() || settings.invalid" (click)="saveSettings()">Salvar configurações</button>
+    </details>
     <details class="panel">
       <summary>Fundo do certificado <small>Enviar imagem ou restaurar o padrão</small></summary>
       <div class="cover-panel">
         <div>
-          <p>A imagem de fundo é compartilhada pelo evento e suas atividades. Ao enviar, ela substitui o fundo atual.</p>
+          <p>A imagem de fundo é compartilhada por participantes, ministrantes, equipe e atividades. Ao enviar, ela substitui o fundo atual.</p>
           <div class="actions">
             <label class="upload">Enviar imagem<input type="file" accept="image/png,image/jpeg,image/webp" [disabled]="busy()" (change)="upload($event)" /></label>
             <button type="button" [disabled]="busy()" (click)="restoreCover()">Restaurar fundo padrão</button>
@@ -44,7 +53,7 @@
         }
         <div class="actions">
           <button type="button" [disabled]="busy() || boxes.length >= 30" (click)="addBox('title')">+ Título</button>
-          <button type="button" [disabled]="busy() || boxes.length >= 30" (click)="addBox('participant')">+ Nome do participante</button>
+          <button type="button" [disabled]="busy() || boxes.length >= 30" (click)="addBox('participant')">+ Nome do titular</button>
           <button type="button" [disabled]="busy() || boxes.length >= 30" (click)="addBox()">+ Texto livre</button>
         </div>
         @if (!hasValidation) {

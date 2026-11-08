@@ -13,8 +13,8 @@ describe('EventEditorComponent', () => {
   let component: EventEditorComponent;
   let fixture: ComponentFixture<EventEditorComponent>;
   let router: Router;
-  const guests = { guests: vi.fn(() => of({ content: [], next_cursor: null })), invitations: vi.fn(() => of({ content: [], next_cursor: null })), associate: vi.fn(() => of(void 0)) };
-  const instructors = { forActivity: vi.fn(() => of([])), add: vi.fn(() => of({})), invitations: vi.fn(() => of([])), invite: vi.fn(() => of({ message: 'Convite enviado.' })), cancel: vi.fn(() => of({})) };
+  const guests = { linkAccount: vi.fn(() => of({})), guests: vi.fn(() => of({ content: [], next_cursor: null })), invitations: vi.fn(() => of({ content: [], next_cursor: null })), associate: vi.fn(() => of(void 0)) };
+  const instructors = { forEvent: vi.fn(() => of([])), forActivity: vi.fn(() => of([])), add: vi.fn(() => of({})), invitations: vi.fn(() => of([])), invite: vi.fn(() => of({ message: 'Convite enviado.' })), cancel: vi.fn(() => of({})) };
 
   const createdEvent: EventDetails = {
     id: 14,
@@ -295,7 +295,7 @@ describe('EventEditorComponent', () => {
     expect(eventsService.createActivity).toHaveBeenCalledWith(createdEvent.id, {
       title: activityPayload.title, description: activityPayload.description,
     });
-    expect(eventsService.updateActivity).toHaveBeenCalledWith(21, activityPayload);
+    expect(eventsService.updateActivity).toHaveBeenCalledWith(21, { ...activityPayload, workload_hours: 1 });
     expect(eventsService.getAllActivities).toHaveBeenCalledWith(createdEvent.id);
     expect(component.successMessage()).toContain('adicionada');
   });
@@ -339,7 +339,7 @@ describe('EventEditorComponent', () => {
     expect(component.activityForm.getRawValue()).toEqual(activityPayload);
     component.saveActivity();
     expect(eventsService.createActivity).toHaveBeenCalledTimes(1);
-    expect(eventsService.updateActivity).toHaveBeenLastCalledWith(22, activityPayload);
+    expect(eventsService.updateActivity).toHaveBeenLastCalledWith(22, { ...activityPayload, workload_hours: 1 });
   });
 
   it('should update an existing activity through the activity PATCH route', () => {
@@ -374,6 +374,7 @@ describe('EventEditorComponent', () => {
     component.saveActivity();
 
     expect(eventsService.updateActivity).toHaveBeenCalledWith(21, {
+      workload_hours: 1.5,
       title: 'Abertura atualizada',
       description: 'Boas-vindas',
       type: 'WORKSHOP',
@@ -790,4 +791,43 @@ describe('EventEditorComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Tentar novamente');
     expect(fixture.nativeElement.textContent).not.toContain('Carregando informações do evento');
   });
+
+  it('reuses a guest as a confirmed instructor, keeping the guest association and account link', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.prepareGuestInstructor({ id: 9, user_id: '', status: 'CONFIRMED', visibility: 'PUBLIC', name: 'Ana', description: 'Palestrante' });
+    component.rosterForm.controls.email.setValue('ana@ifma.edu.br');
+    component.addRosterInstructor();
+    const person = component.instructorRoster()[0];
+    expect(person.guest_id).toBe(9);
+    component.openActivityDialog(); component.activityForm.patchValue(activityPayload);
+    component.instructorForm.controls.email.setValue(person.key!);
+    component.saveActivity();
+    expect(guests.linkAccount).toHaveBeenCalledWith(14, 9, 'ana@ifma.edu.br', 21);
+    expect(guests.associate).toHaveBeenCalledWith(14, 9, 21, 'PRESENTER');
+    expect(instructors.add).toHaveBeenCalledWith(21, { name: 'Ana', description: 'Palestrante', role: 'INSTRUCTOR', account_email: 'ana@ifma.edu.br' });
+    expect(instructors.invite).not.toHaveBeenCalled();
+  });
+  it('keeps a failed guest account link selected for retry without duplicating the activity', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.prepareGuestInstructor({ id: 9, user_id: '', status: 'CONFIRMED', visibility: 'PUBLIC', name: 'Ana' });
+    component.rosterForm.controls.email.setValue('ana@ifma.edu.br'); component.addRosterInstructor();
+    component.openActivityDialog(); component.activityForm.patchValue(activityPayload);
+    const key = component.instructorRoster()[0].key!; component.instructorForm.controls.email.setValue(key);
+    guests.linkAccount.mockReturnValueOnce(throwError(() => new Error('offline')));
+    component.saveActivity();
+    expect(instructors.add).not.toHaveBeenCalled(); expect(component.instructorForm.controls.email.value).toBe(key);
+    expect(component.peopleError()).toContain('A atividade foi salva');
+    component.saveActivity();
+    expect(eventsService.createActivity).toHaveBeenCalledTimes(1); expect(instructors.add).toHaveBeenCalledTimes(1);
+    expect(component.instructorForm.controls.email.value).toBe('');
+  });
+  it('uses explicit workload hours and rejects negative values before saving', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.openActivityDialog(); component.activityForm.patchValue(activityPayload);
+    component.activityWorkload.setValue(-1); component.saveActivity();
+    expect(eventsService.createActivity).not.toHaveBeenCalled();
+    component.activityWorkload.setValue(2.5); component.saveActivity();
+    expect(eventsService.updateActivity).toHaveBeenCalledWith(21, { ...activityPayload, workload_hours: 2.5 });
+  });
+
 });

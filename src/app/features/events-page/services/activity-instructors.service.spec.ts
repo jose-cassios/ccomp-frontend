@@ -43,4 +43,19 @@ describe('Activity instructor API contract', () => {
     service.cancelMine(7).subscribe();
     expect(api.delete).toHaveBeenLastCalledWith('/events/activities/7/instructors/me');
   });
+
+  it('loads every cursor page and normalizes instructor record and account IDs separately', () => {
+    api.get.mockReturnValueOnce(of({ content: [{ id: 11, activityId: 2, userId: 'account', status: 'CONFIRMED' }], nextCursor: 'next' }))
+      .mockReturnValueOnce(of({ content: [{ id: 12, activity_id: 3, user_id: 'account', status: 'CONFIRMED' }], next_cursor: null }));
+    const service = TestBed.inject(ActivityInstructorsService);
+    service.forEvent(7).subscribe(rows => { expect(rows.map(r => r.id)).toEqual([11, 12]); expect(rows[0].user_id).toBe('account'); expect(rows[0].activity_id).toBe(2); });
+    expect(api.get.mock.calls[0][0]).toBe('/events/7/instructors');
+    expect(api.get.mock.calls[1][1].params.get('cursor')).toBe('next');
+  });
+  it('stops a repeated cursor instead of fetching indefinitely', () => {
+    api.get.mockReturnValue(of({ content: [], next_cursor: 'same' }));
+    const error = vi.fn(); TestBed.inject(ActivityInstructorsService).forEvent(7).subscribe({ error });
+    expect(error).toHaveBeenCalled(); expect(api.get).toHaveBeenCalledTimes(2);
+  });
+
 });

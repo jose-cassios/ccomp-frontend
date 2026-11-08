@@ -62,4 +62,12 @@ describe('Certificate download', () => {
     expect(fixture.nativeElement.querySelector('[role=alert]').textContent).toContain('Faça o check-in');
     expect(fixture.componentInstance.success()).toBeNull(); expect(fixture.componentInstance.busy()).toBe(false);
   });
+
+  it('passes the instructor record ID to the certificate request', () => {
+    api.download.mockReturnValue(new Subject<Blob>());
+    const fixture = create(); fixture.componentRef.setInput('scope', 'instructor'); fixture.componentRef.setInput('instructorId', 42);
+    fixture.detectChanges(); fixture.componentInstance.download();
+    expect(api.download).toHaveBeenCalledWith(9, 'instructor', 42);
+  });
+
 });

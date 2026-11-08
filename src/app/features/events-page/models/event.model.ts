@@ -46,6 +46,7 @@ export interface ActivityGuest {
 }
 
 export interface EventActivity {
+  workload_hours?: number | null;
   time_zone?: string;
   id: number;
   event_id: number;
@@ -135,6 +136,8 @@ export interface EventListItem {
 }
 
 export interface EventDetails extends EventListItem {
+  organization?: string | null;
+  team_certificate_workload_hours?: number | null;
   schedule_conflict_policy?: 'ALLOW' | 'PREVENT' | null;
   summary?: string | null;
   content?: string | null;
@@ -176,6 +179,8 @@ export interface CreateEventPayload {
 
 /** Contrato de PATCH /events/{eventId}. */
 export interface UpdateEventPayload {
+  organization?: string;
+  team_certificate_workload_hours?: number;
   time_zone?: string;
   schedule_conflict_policy?: 'ALLOW' | 'PREVENT';
   title?: string;
@@ -197,6 +202,7 @@ export interface CreateActivityPayload {
 }
 
 export interface ActivityPayload extends CreateActivityPayload {
+  workload_hours?: number;
   type: EventActivityType;
   location?: string;
   start_date: string;

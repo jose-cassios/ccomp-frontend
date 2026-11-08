@@ -15,7 +15,8 @@
           @if (guest.image_url) { <img [eventCover]="guest.image_url" [alt]="'Foto de ' + guest.name" /> }
           @else { <span class="avatar" aria-hidden="true">{{ guest.name?.charAt(0) || '?' }}</span> }
           <div><strong>{{ guest.name || 'Convidado' }}</strong><small>{{ guest.status === 'CONFIRMED' ? 'Confirmado' : 'Presença cancelada' }} · {{ guest.visibility === 'PUBLIC' ? 'Público' : 'Privado' }}</small></div>
-          <button type="button" [disabled]="busy() || disabled" (click)="choose(guest.id)" [attr.aria-label]="'Editar convidado ' + guest.name">Editar</button>
+          <div class="actions guest-card-actions"><button type="button" [disabled]="busy() || disabled" (click)="choose(guest.id)" [attr.aria-label]="'Editar convidado ' + guest.name">Editar</button>
+          <button type="button" [disabled]="busy() || disabled" (click)="prepareInstructor.emit(guest)">Usar como ministrante</button></div>
         </article>
       } @empty {
         @if (!loading() && !listError()) { <p class="empty">Nenhum convidado cadastrado. Use “Novo convidado” para adicionar nome, apresentação e foto.</p> }

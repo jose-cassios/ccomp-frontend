@@ -20,6 +20,7 @@ export class EventGuestManagerComponent implements OnChanges, OnDestroy {
   @Input() activities: EventActivity[] = [];
   @Input() activityId: number | null = null;
   @Input() disabled = false;
+  @Output() prepareInstructor = new EventEmitter<EventGuest>();
   @Output() busyChange = new EventEmitter<boolean>();
   @Output() dirtyChange = new EventEmitter<boolean>();
   private readonly service = inject(EventGuestsService);

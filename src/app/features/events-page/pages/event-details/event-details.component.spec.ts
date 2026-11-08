@@ -1,3 +1,4 @@
+import { ActivityInstructorsService } from '../../services/activity-instructors.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
@@ -63,9 +64,10 @@ describe('EventDetailsComponent', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: event.id }) } } },
         {
           provide: AuthService,
-          useValue: { isAuthenticatedState: authenticated, hasAnyRole: () => false, getCurrentUser: () => null },
+          useValue: { isAuthenticatedState: authenticated, currentUserState: () => authenticated() ? { id: 'user' } : null, hasAnyRole: () => false, getCurrentUser: () => null },
         },
         { provide: EventsService, useValue: eventsService },
+        { provide: ActivityInstructorsService, useValue: { forEvent: () => of([]) } },
         { provide: EventGuestsService, useValue: { guests: () => of({ content: [], next_cursor: null }) } },
       ],
     }).compileComponents();

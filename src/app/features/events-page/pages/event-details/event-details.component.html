@@ -195,6 +195,7 @@
       <aside class="info-card">
         <app-event-guests [eventId]="currentEvent.id" [canView]="isAuthenticated() && (subscribed() || canManageCertificates())" />
         <h2>Informações</h2>
+        @if (isAuthenticated()) { <app-event-role-certificates [eventId]="currentEvent.id" [teamMember]="isTeamMember()" /> }
         <dl>
           @if (isAuthenticated() && subscribed()) {
           <div>

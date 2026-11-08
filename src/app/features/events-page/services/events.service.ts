@@ -27,6 +27,9 @@ import {
 } from '../models/event.model';
 
 interface ApiEvent {
+  organization?: string | null;
+  teamCertificateWorkloadHours?: number;
+  team_certificate_workload_hours?: number;
   time_zone?: string;
   timeZone?: string;
   scheduleConflictPolicy?: 'ALLOW' | 'PREVENT' | null;
@@ -67,6 +70,8 @@ interface ApiEvent {
 }
 
 interface ApiEventActivity {
+  workload_hours?: number;
+  workloadHours?: number;
   time_zone?: string;
   timeZone?: string;
   id: number;
@@ -479,6 +484,8 @@ export class EventsService {
     const listItem = this.toListItem(event);
     return {
       ...listItem,
+      organization: event.organization,
+      team_certificate_workload_hours: event.team_certificate_workload_hours ?? event.teamCertificateWorkloadHours,
       schedule_conflict_policy: event.schedule_conflict_policy ?? event.scheduleConflictPolicy ?? null,
       summary: event.summary ?? event.description ?? null,
       description: event.content ?? event.description ?? event.summary ?? null,
@@ -516,6 +523,7 @@ export class EventsService {
 
     return {
       time_zone: activity.time_zone ?? activity.timeZone,
+      workload_hours: activity.workload_hours ?? activity.workloadHours,
       id: activity.id,
       event_id: activity.eventId ?? activity.event_id ?? Number(fallbackEventId),
       title: activity.title ?? activity.name ?? 'Atividade',

@@ -58,9 +58,12 @@ export class EventCertificatesComponent implements OnInit {
     '{atividade.nome}': 'Atividade de exemplo', '{atividade.local}': 'Local da atividade',
     '{atividade.carga_horaria}': '4 horas', '{validacao.codigo}': 'EXEMPLO',
     '{validacao.url}': 'site/validar/EXEMPLO',
+    '{ministrante.nome}': 'Ana Silva', '{ministrante.carga_horaria}': '8',
+    '{equipe.nome}': 'João Santos', '{equipe.carga_horaria}': '12', '{evento.organizacao}': this.event()?.organization || 'CCOMP',
   }));
   readonly removedBox = signal<{ scope: CertificateScope; index: number; box: CertificateBox } | null>(null);
-  readonly variables = signal<string[]>([]);
+  private readonly variablesByScope = signal<Record<CertificateScope, string[]>>({ event: [], activity: [], instructor: [], team: [] });
+  readonly variables = computed(() => this.variablesByScope()[this.scope()]);
   readonly variableLabels: Record<string, string> = {
     '{participante.nome}': 'Nome do participante',
     '{evento.title}': 'Nome do evento',
@@ -69,7 +72,9 @@ export class EventCertificatesComponent implements OnInit {
     '{atividade.nome}': 'Nome da atividade',
     '{atividade.local}': 'Local da atividade',
     '{atividade.carga_horaria}': 'Carga horária da atividade',
-    '{evento.organizacao}': 'Organização (ainda não disponível)',
+    '{evento.organizacao}': 'Organização',
+    '{ministrante.nome}': 'Nome do ministrante', '{ministrante.carga_horaria}': 'Carga horária ministrada',
+    '{equipe.nome}': 'Nome do integrante da equipe', '{equipe.carga_horaria}': 'Carga horária da equipe',
     '{validacao.codigo}': 'Código de validação',
     '{validacao.url}': 'Link de validação',
   };
@@ -77,8 +82,11 @@ export class EventCertificatesComponent implements OnInit {
   readonly previewUrl = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
+  readonly settings = this.fb.group({ organization: ['', Validators.maxLength(255)], team_certificate_workload_hours: this.fb.control<number | null>(null, Validators.min(0)) });
   readonly forms = {
     event: this.fb.group({ boxes: new FormArray<ReturnType<EventCertificatesComponent['boxForm']>>([]) }),
+    instructor: this.fb.group({ boxes: new FormArray<ReturnType<EventCertificatesComponent['boxForm']>>([]) }),
+    team: this.fb.group({ boxes: new FormArray<ReturnType<EventCertificatesComponent['boxForm']>>([]) }),
     activity: this.fb.group({ boxes: new FormArray<ReturnType<EventCertificatesComponent['boxForm']>>([]) }),
   };
   private readonly feedback = autoDismissFeedback(this.error, this.success, () => {
@@ -87,7 +95,7 @@ export class EventCertificatesComponent implements OnInit {
 
   get form() { return this.forms[this.scope()]; }
   get boxes() { return this.form.controls.boxes; }
-  get unsaved() { return this.forms.event.dirty || this.forms.activity.dirty; }
+  get unsaved() { return Object.values(this.forms).some(form => form.dirty) || this.settings.dirty; }
   get designBoxes(): CertificateBox[] { return this.boxes.getRawValue(); }
   get hasValidation(): boolean { return this.designBoxes.some(box => /\{validacao\.(codigo|url)\}/.test(box.text_template)); }
 
@@ -109,7 +117,7 @@ export class EventCertificatesComponent implements OnInit {
     }
     this.loading.set(true); this.loadError.set(null);
     this.events.getById(this.eventId).pipe(
-      tap(event => this.event.set(event)),
+      tap(event => { this.event.set(event); this.settings.reset({ organization: event.organization ?? '', team_certificate_workload_hours: event.team_certificate_workload_hours ?? null }); }),
       switchMap(event => this.canManage(event)),
       switchMap(allowed => {
         this.allowed.set(allowed);
@@ -117,21 +125,30 @@ export class EventCertificatesComponent implements OnInit {
         return forkJoin({
           event: this.api.template(this.eventId, 'event'),
           activity: this.api.template(this.eventId, 'activity'),
-          variables: this.api.variables(), cover: this.api.cover(this.eventId),
+          instructor: this.api.template(this.eventId, 'instructor'), team: this.api.template(this.eventId, 'team'),
+          variables: forkJoin({ event: this.api.variables('event'), activity: this.api.variables('activity'), instructor: this.api.variables('instructor'), team: this.api.variables('team') }), cover: this.api.cover(this.eventId),
         });
       }),
       takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false)),
     ).subscribe({
       next: result => {
-        for (const scope of ['event', 'activity'] as const) {
+        for (const scope of ['event', 'activity', 'instructor', 'team'] as const) {
           const boxes = this.forms[scope].controls.boxes;
           boxes.clear(); result[scope].boxes.forEach(box => boxes.push(this.boxForm(box)));
           this.forms[scope].markAsPristine();
         }
-        this.variables.set(result.variables); this.setImage(this.coverUrl, result.cover);
+        this.variablesByScope.set(result.variables); this.setImage(this.coverUrl, result.cover);
       },
       error: error => this.loadError.set(apiErrorMessage(error, 'Não foi possível carregar os certificados. Tente novamente.')),
     });
+  }
+
+  saveSettings(): void {
+    if (!this.allowed() || this.busy() || this.settings.invalid) return;
+    const value = this.settings.getRawValue();
+    this.run(this.events.update(this.eventId, { organization: value.organization.trim(),
+      ...(value.team_certificate_workload_hours !== null ? { team_certificate_workload_hours: value.team_certificate_workload_hours } : {}),
+    }), event => { this.event.set(event); this.settings.reset({ organization: event.organization ?? '', team_certificate_workload_hours: event.team_certificate_workload_hours ?? null }); }, 'Configurações salvas.');
   }
 
   selectScope(scope: CertificateScope): void {
@@ -150,7 +167,7 @@ export class EventCertificatesComponent implements OnInit {
     const presets: Record<typeof kind, Partial<CertificateBox>> = {
       text: { text_template: 'Seu texto aqui', y: Math.min(.8, .45 + this.boxes.length * .04) },
       title: { text_template: '**CERTIFICADO**', y: .2, font_size: Math.min(300, font * 2) },
-      participant: { text_template: '**{participante.nome}**', y: .38, font_size: Math.min(300, Math.round(font * 1.3)) },
+      participant: { text_template: this.scope() === 'instructor' ? '**{ministrante.nome}**' : this.scope() === 'team' ? '**{equipe.nome}**' : '**{participante.nome}**', y: .38, font_size: Math.min(300, Math.round(font * 1.3)) },
       // Including event title also supports the backend's activity validation lookup.
       validation: { text_template: 'Código de validação: {validacao.codigo}\n{evento.title}', y: .85, font_size: Math.max(8, Math.round(font * .55)) },
     };
@@ -302,7 +319,7 @@ export class EventCertificatesComponent implements OnInit {
   }
 
   variableAvailable(value: string): boolean {
-    return value !== '{evento.organizacao}' && (this.scope() === 'activity' || !value.startsWith('{atividade.'));
+    return this.variables().includes(value);
   }
 
   save(): void {

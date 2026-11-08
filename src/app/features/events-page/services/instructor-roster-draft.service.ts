@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 
-export interface InstructorRosterEntry { name: string; email: string; key?: string; mode?: 'invite' | 'direct'; description?: string; role?: 'INSTRUCTOR' | 'ASSISTANT'; }
+export interface InstructorRosterEntry { name: string; email: string; guest_id?: number; key?: string; mode?: 'invite' | 'direct'; description?: string; role?: 'INSTRUCTOR' | 'ASSISTANT'; }
 
 /** Preparation only: the API currently creates instructor records and invitations per activity. */
 @Injectable({ providedIn: 'root' })

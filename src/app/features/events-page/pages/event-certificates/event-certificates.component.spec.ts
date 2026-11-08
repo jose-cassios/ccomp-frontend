@@ -10,7 +10,7 @@ import { CertificateBox } from '../../models/certificate.model';
 describe('Event certificate customization', () => {
   const box: CertificateBox = { text_template: '{participante.nome}', x: .2, y: .5, width: .6, font_size: 25, font_color: null, alignment: null };
   const api = { template: vi.fn(), variables: vi.fn(), cover: vi.fn(), saveTemplate: vi.fn(), preview: vi.fn(), uploadCover: vi.fn(), deleteCover: vi.fn() };
-  const events = { getById: vi.fn(), getEditableEvents: vi.fn() };
+  const events = { update: vi.fn(), getById: vi.fn(), getEditableEvents: vi.fn() };
   const auth = { hasAnyRole: vi.fn(), currentUserState: vi.fn() };
   beforeEach(() => {
     vi.resetAllMocks();
@@ -200,4 +200,30 @@ describe('Event certificate customization', () => {
     expect(component.error()).toContain('backend');
     expect(component.designBoxes[0].text_template).toBe(text);
   });
+
+  it('offers all four templates and retains edits independently with scope-specific variables', () => {
+    api.variables.mockImplementation((scope: string) => of(scope === 'instructor' ? ['{ministrante.nome}'] : scope === 'team' ? ['{equipe.nome}'] : ['{participante.nome}']));
+    const fixture = create(); const component = fixture.componentInstance;
+    expect(fixture.nativeElement.querySelectorAll('.tabs button')).toHaveLength(4);
+    component.selectScope('instructor'); component.addBox('participant');
+    expect(component.designBoxes.at(-1)?.text_template).toBe('**{ministrante.nome}**');
+    expect(component.variables()).toEqual(['{ministrante.nome}']); component.save();
+    expect(api.saveTemplate).toHaveBeenLastCalledWith(9, 'instructor', expect.any(Array));
+    component.selectScope('team'); component.addBox('participant');
+    expect(component.designBoxes.at(-1)?.text_template).toBe('**{equipe.nome}**');
+    component.selectScope('instructor'); expect(component.boxes.length).toBe(2);
+    component.selectScope('event'); expect(component.boxes.length).toBe(1);
+  });
+
+
+  it('saves organization and team hours without mixing them with instructor workload', () => {
+    events.update.mockReturnValue(of({ id: 9, organization: 'IFMA', team_certificate_workload_hours: 12 }));
+    const component = create().componentInstance;
+    component.settings.setValue({ organization: ' IFMA ', team_certificate_workload_hours: -1 }); component.saveSettings();
+    expect(events.update).not.toHaveBeenCalled();
+    component.settings.controls.team_certificate_workload_hours.setValue(12); component.settings.markAsDirty(); component.saveSettings();
+    expect(events.update).toHaveBeenCalledWith(9, { organization: 'IFMA', team_certificate_workload_hours: 12 });
+    expect(component.settings.controls.organization.value).toBe('IFMA'); expect(component.settings.pristine).toBe(true);
+  });
+
 });

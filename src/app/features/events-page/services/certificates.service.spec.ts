@@ -69,4 +69,34 @@ describe('CertificatesService API contract', () => {
     expect(error.status).toBe(400);
     expect(error.error.message).toContain('check-in');
   });
+
+  for (const [scope, type] of [['instructor', 'INSTRUCTOR'], ['team', 'EDITOR']] as const) {
+    it('uses the ' + type + ' context for templates, variables and preview', () => {
+      service.template(9, scope).subscribe();
+      const template = http.expectOne(r => r.url.endsWith('/events/9/certificate-box-template'));
+      expect(template.request.params.get('type')).toBe(type); template.flush({ boxes: [], variables: [] });
+      service.saveTemplate(9, scope, [box]).subscribe();
+      const save = http.expectOne(r => r.method === 'POST');
+      expect(save.request.params.get('type')).toBe(type); expect(save.request.body).toEqual({ boxes: [box] }); save.flush({});
+      service.variables(scope).subscribe();
+      const vars = http.expectOne(r => r.url.endsWith('/certificate-variables'));
+      expect(vars.request.params.get('type')).toBe(type); vars.flush([]);
+      service.preview(9, scope).subscribe();
+      const preview = http.expectOne(r => r.url.endsWith('/certificate-preview'));
+      expect(preview.request.params.get('type')).toBe(type); preview.flush(new Blob());
+    });
+  }
+  it('downloads instructor certificates by the instructor record ID and team certificates by event ID', () => {
+    service.download(9, 'instructor', 42).subscribe();
+    const instructor = http.expectOne(r => r.url.endsWith('/events/9/instructors/42/certificate'));
+    expect(instructor.request.responseType).toBe('blob'); instructor.flush(new Blob());
+    service.download(9, 'team').subscribe();
+    http.expectOne(r => r.url.endsWith('/events/9/team-certificate')).flush(new Blob());
+    for (const id of [undefined, 0, -1, 1.5]) {
+      const error = vi.fn(); service.download(9, 'instructor', id).subscribe({ error });
+      expect(error).toHaveBeenCalled();
+    }
+    http.expectNone(() => true);
+  });
+
 });

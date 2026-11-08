@@ -1,3 +1,4 @@
+import { EventRoleCertificatesComponent } from '../../components/certificate-download/event-role-certificates.component';
 import { eventTimestamp } from '../../models/event-time';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -32,7 +33,7 @@ import { CertificateDownloadComponent } from '../../components/certificate-downl
 @Component({
   selector: 'app-event-details',
   standalone: true,
-  imports: [DatePipe, RouterLink, EventGuestsComponent, ActivityPeopleComponent, EventCoverDirective, CertificateDownloadComponent],
+  imports: [EventRoleCertificatesComponent, DatePipe, RouterLink, EventGuestsComponent, ActivityPeopleComponent, EventCoverDirective, CertificateDownloadComponent],
   templateUrl: './event-details.component.html',
   styleUrl: './event-details.component.css',
 })
@@ -67,6 +68,11 @@ export class EventDetailsComponent implements OnInit {
     const eventId = this.event()?.id;
     return this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES)
       || Boolean(eventId && this.editableEventIds().has(eventId));
+  });
+  readonly isTeamMember = computed(() => {
+    const event = this.event();
+    const userId = this.authService.currentUserState()?.id;
+    return !!event && !!userId && (event.owner_id === userId || this.editableEventIds().has(event.id));
   });
   readonly canManageCertificates = computed(() => {
     const event = this.event();

@@ -1,4 +1,4 @@
-export type CertificateScope = 'event' | 'activity';
+export type CertificateScope = 'event' | 'activity' | 'instructor' | 'team';
 export type CertificateAlignment = 'LEFT' | 'RIGHT' | 'CENTERED' | 'JUSTIFIED';
 
 /** The API uses Jackson SNAKE_CASE, including the nested text boxes. */
@@ -25,4 +25,5 @@ export interface CertificateValidation {
   activity_title: string | null;
   workload_hours: string | null;
   issued_at: string;
+  certificate_type?: 'EVENT' | 'ACTIVITY' | 'INSTRUCTOR' | 'EDITOR';
 }
