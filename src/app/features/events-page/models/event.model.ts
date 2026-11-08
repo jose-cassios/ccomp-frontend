@@ -46,6 +46,7 @@ export interface ActivityGuest {
 }
 
 export interface EventActivity {
+  time_zone?: string;
   id: number;
   event_id: number;
   title: string;
@@ -116,6 +117,7 @@ export interface EventEnrollmentsPage {
 
 /** Modelo normalizado para a interface, independente do formato da resposta da API. */
 export interface EventListItem {
+  time_zone?: string;
   id: number;
   title: string;
   slug: string;
@@ -164,6 +166,7 @@ export interface EventsFilter {
 
 /** Contrato de POST /events. */
 export interface CreateEventPayload {
+  time_zone: string;
   title: string;
   category: EventCategory;
   format: EventFormat;
@@ -173,6 +176,7 @@ export interface CreateEventPayload {
 
 /** Contrato de PATCH /events/{eventId}. */
 export interface UpdateEventPayload {
+  time_zone?: string;
   schedule_conflict_policy?: 'ALLOW' | 'PREVENT';
   title?: string;
   summary?: string;

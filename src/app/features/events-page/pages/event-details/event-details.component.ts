@@ -1,3 +1,4 @@
+import { eventTimestamp } from '../../models/event-time';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal, afterNextRender, DestroyRef } from '@angular/core';
@@ -98,8 +99,8 @@ export class EventDetailsComponent implements OnInit {
 
   activityHasStarted(activity: EventActivity): boolean {
     const now = Math.max(this.clock(), Date.now());
-    const start = Date.parse(activity.start_date ?? '');
-    const end = Date.parse(activity.end_date ?? '');
+    const start = eventTimestamp(activity.start_date, activity.time_zone ?? this.event()?.time_zone);
+    const end = eventTimestamp(activity.end_date, activity.time_zone ?? this.event()?.time_zone);
     return (Number.isFinite(start) && start <= now) || (Number.isFinite(end) && end <= now);
   }
 

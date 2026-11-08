@@ -203,6 +203,9 @@
           </div>
           }
           <div>
+            <dt>Fuso horário</dt><dd>{{ currentEvent.time_zone || 'America/Sao_Paulo' }}</dd>
+          </div>
+          <div>
             <dt>Data de início</dt>
             <dd>{{ currentEvent.start_date | date: 'dd/MM/yyyy, HH:mm' }}</dd>
           </div>

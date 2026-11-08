@@ -1,3 +1,4 @@
+import { DEFAULT_EVENT_TIME_ZONE } from '../models/event-time';
 import { HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { EMPTY, Observable, defer, expand, map, reduce, switchMap, throwError } from 'rxjs';
@@ -26,6 +27,8 @@ import {
 } from '../models/event.model';
 
 interface ApiEvent {
+  time_zone?: string;
+  timeZone?: string;
   scheduleConflictPolicy?: 'ALLOW' | 'PREVENT' | null;
   schedule_conflict_policy?: 'ALLOW' | 'PREVENT' | null;
   id: number;
@@ -64,6 +67,8 @@ interface ApiEvent {
 }
 
 interface ApiEventActivity {
+  time_zone?: string;
+  timeZone?: string;
   id: number;
   eventId?: number;
   event_id?: number;
@@ -453,6 +458,7 @@ export class EventsService {
 
   private toListItem(event: ApiEvent): EventListItem {
     return {
+      time_zone: event.time_zone ?? event.timeZone ?? DEFAULT_EVENT_TIME_ZONE,
       id: event.id,
       title: event.title,
       slug: event.slug,
@@ -486,7 +492,7 @@ export class EventsService {
       enrollment_end_date: event.enrollmentEndDate ?? event.enrollment_end_date ?? null,
       enrollment_paused: event.enrollmentPaused ?? event.enrollment_paused ?? null,
       enrollment_status: event.enrollmentStatus ?? event.enrollment_status ?? null,
-      activities: event.activities?.map((activity) => this.toActivity(activity)) ?? [],
+      activities: event.activities?.map((activity) => this.toActivity({ ...activity, time_zone: activity.time_zone ?? activity.timeZone ?? listItem.time_zone })) ?? [],
     };
   }
 
@@ -509,6 +515,7 @@ export class EventsService {
       ?? null;
 
     return {
+      time_zone: activity.time_zone ?? activity.timeZone,
       id: activity.id,
       event_id: activity.eventId ?? activity.event_id ?? Number(fallbackEventId),
       title: activity.title ?? activity.name ?? 'Atividade',

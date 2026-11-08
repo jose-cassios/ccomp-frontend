@@ -1,3 +1,4 @@
+import { eventTimestamp } from './models/event-time';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -211,10 +212,10 @@ export class EventsPageComponent implements OnInit {
   }
 
   private matchesExecutionStatus(event: EventListItem, status: EventExecutionStatus): boolean {
-    const start = event.start_date ? new Date(event.start_date).getTime() : Number.NaN;
+    const start = event.start_date ? eventTimestamp(event.start_date, event.time_zone) : Number.NaN;
     if (!Number.isFinite(start)) return false;
 
-    const suppliedEnd = event.end_date ? new Date(event.end_date).getTime() : Number.NaN;
+    const suppliedEnd = event.end_date ? eventTimestamp(event.end_date, event.time_zone) : Number.NaN;
     const end = Number.isFinite(suppliedEnd) ? suppliedEnd : start;
     const now = Date.now();
 

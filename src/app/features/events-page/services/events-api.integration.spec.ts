@@ -37,6 +37,19 @@ describe('Updated events API contracts', () => {
     http.expectOne(r => r.url.endsWith('/events/search')).flush({ content: [{ id: 7, coverImageUrl: 'events/7/cover/image.png' }] });
   });
 
+  it('normalizes snake and camel IANA zones and inherits the parent zone for embedded activities', () => {
+    events.getById(7).subscribe(event => {
+      expect(event.time_zone).toBe('America/Manaus');
+      expect(event.start_date).toBe('2026-11-08T09:05:00');
+      expect(event.activities?.[0].time_zone).toBe('America/Manaus');
+    });
+    http.expectOne(r => r.url.endsWith('/events/7')).flush({ id: 7, time_zone: 'America/Manaus', start_date: '2026-11-08T09:05:00', activities: [{id: 2}] });
+    events.search().subscribe(page => expect(page.content[0].time_zone).toBe('America/Fortaleza'));
+    http.expectOne(r => r.url.endsWith('/events/search')).flush({ content: [{ id: 7, timeZone: 'America/Fortaleza' }] });
+    events.getActivities(7).subscribe(page => expect(page.content[0].time_zone).toBe('America/Noronha'));
+    http.expectOne(r => r.url.endsWith('/events/7/activities')).flush({ content: [{ id: 2, time_zone: 'America/Noronha' }] });
+  });
+
   it('cancels activity registration at unsubscribe, independently of event registration', () => {
     events.unsubscribeActivity(7).subscribe();
     const request = http.expectOne(r => r.url.endsWith('/events/activities/7/unsubscribe'));

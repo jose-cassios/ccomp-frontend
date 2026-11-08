@@ -133,6 +133,7 @@ describe('EventsService', () => {
 
   it('should create and update events with the current API contracts', () => {
     service.create({
+      time_zone: 'America/Fortaleza',
       title: 'Semana da Computação',
       category: 'ACADEMIC_EDUCATIONAL',
       format: 'IN_PERSON',
@@ -155,6 +156,7 @@ describe('EventsService', () => {
     service.publish(12).subscribe();
 
     expect(api.post).toHaveBeenCalledWith('/events', {
+      time_zone: 'America/Fortaleza',
       title: 'Semana da Computação',
       category: 'ACADEMIC_EDUCATIONAL',
       format: 'IN_PERSON',

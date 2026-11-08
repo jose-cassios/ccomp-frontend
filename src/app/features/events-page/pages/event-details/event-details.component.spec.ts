@@ -77,6 +77,14 @@ describe('EventDetailsComponent', () => {
 
   afterEach(() => vi.restoreAllMocks());
 
+  it('uses the activity zone, with the parent event as fallback, when checking registration time', () => {
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-11-08T12:10:00Z'));
+    component.event.set({ ...event, time_zone: 'America/Fortaleza' });
+    const activity = { ...scheduleActivity, start_date: '2026-11-08T09:05', end_date: '2026-11-08T12:00' };
+    expect(component.activityHasStarted(activity)).toBe(true);
+    expect(component.activityHasStarted({ ...activity, time_zone: 'America/Manaus' })).toBe(false);
+  });
+
   it('blocks new registrations from the exact start time, including anonymous visitors', () => {
     const activity = { ...scheduleActivity, registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const, can_subscribe: true };
     for (const time of ['2026-09-12T14:00:00', '2026-09-12T14:30:00', '2026-09-12T16:00:00']) {

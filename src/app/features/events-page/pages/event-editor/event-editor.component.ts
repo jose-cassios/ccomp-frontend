@@ -1,3 +1,4 @@
+import { EVENT_TIME_ZONES, eventTimestamp, eventLocalInput, isEventTimeZone } from '../../models/event-time';
 import { DatePipe, Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, ElementRef, HostListener, ViewChild, computed, inject, OnInit, signal } from '@angular/core';
@@ -116,6 +117,9 @@ export class EventEditorComponent implements OnInit {
   readonly guestBusy = signal(false);
   readonly guestDirty = signal(false);
 
+  readonly timeZones = EVENT_TIME_ZONES;
+  readonly timeZone = this.fb.nonNullable.control('America/Fortaleza', control => isEventTimeZone(control.value) ? null : { timeZone: true });
+  readonly knownTimeZone = (zone: string) => EVENT_TIME_ZONES.some(item => item.value === zone);
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(255)]],
     category: this.fb.nonNullable.control<EventCategory>('ACADEMIC_EDUCATIONAL', Validators.required),
@@ -475,6 +479,7 @@ export class EventEditorComponent implements OnInit {
       this.successMessage.set(null);
     };
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
+    this.timeZone.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
     this.presentationForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
   }
 
@@ -514,6 +519,7 @@ export class EventEditorComponent implements OnInit {
           title: value.title,
           category: value.category,
           format: value.format,
+          time_zone: this.timeZone.value,
           start_date: value.start_date,
           end_date: value.end_date,
         } satisfies CreateEventPayload).pipe(
@@ -1006,8 +1012,8 @@ export class EventEditorComponent implements OnInit {
       return 'Selecione novamente os horários para o dia indicado no formulário.';
     }
 
-    const startTimestamp = new Date(start).getTime();
-    const endTimestamp = new Date(end).getTime();
+    const startTimestamp = eventTimestamp(start, this.timeZone.value);
+    const endTimestamp = eventTimestamp(end, this.timeZone.value);
     if (!Number.isFinite(startTimestamp) || !Number.isFinite(endTimestamp)) {
       return 'Informe um horário válido para a atividade.';
     }
@@ -1020,7 +1026,7 @@ export class EventEditorComponent implements OnInit {
     if (
       eventStart
       && eventEnd
-      && (startTimestamp < new Date(eventStart).getTime() || endTimestamp > new Date(eventEnd).getTime())
+      && (startTimestamp < eventTimestamp(eventStart, this.timeZone.value) || endTimestamp > eventTimestamp(eventEnd, this.timeZone.value))
     ) {
       return 'A atividade deve acontecer dentro do período do evento.';
     }
@@ -1206,6 +1212,7 @@ export class EventEditorComponent implements OnInit {
   private buildBasicUpdatePayload(): UpdateEventPayload {
     const value = this.form.getRawValue();
     return {
+      time_zone: this.timeZone.value,
       title: value.title,
       category: value.category,
       format: value.format,
@@ -1241,6 +1248,7 @@ export class EventEditorComponent implements OnInit {
       slug: event.slug ?? currentEvent?.slug ?? '',
       format: event.format ?? currentEvent?.format ?? formValue.format,
       category: event.category ?? currentEvent?.category ?? formValue.category,
+      time_zone: event.time_zone ?? currentEvent?.time_zone ?? this.timeZone.value,
       start_date: event.start_date ?? currentEvent?.start_date ?? formValue.start_date ?? null,
       end_date: event.end_date ?? currentEvent?.end_date ?? formValue.end_date ?? null,
       enrollment_start_date: event.enrollment_start_date
@@ -1263,6 +1271,7 @@ export class EventEditorComponent implements OnInit {
     if (this.event()?.id !== enrichedEvent.id) {
       this.instructorRoster.set(this.rosterDraft.read(enrichedEvent.id, this.authService.currentUserState()?.id ?? ''));
     }
+    this.timeZone.setValue(enrichedEvent.time_zone!, { emitEvent: false });
     this.event.set(enrichedEvent);
     this.activities.set(enrichedEvent.activities ?? []);
     this.ensureActiveActivityDay();
@@ -1293,7 +1302,7 @@ export class EventEditorComponent implements OnInit {
   private hasValidDates(): boolean {
     const start = this.form.controls.start_date.value;
     const end = this.form.controls.end_date.value;
-    return Boolean(start && end && new Date(start).getTime() <= new Date(end).getTime());
+    return this.timeZone.valid && Boolean(start && end && eventTimestamp(start, this.timeZone.value) <= eventTimestamp(end, this.timeZone.value));
   }
 
   private resetActivityForm(): void {
@@ -1345,10 +1354,11 @@ export class EventEditorComponent implements OnInit {
 
     if (!start && !end) return 'Defina a abertura e o encerramento das inscrições ou escolha acesso livre.';
     if (!start || !end) return 'Informe a abertura e o encerramento das inscrições.';
-    if (new Date(start).getTime() > new Date(end).getTime()) {
+    if (eventTimestamp(start, this.timeZone.value) > eventTimestamp(end, this.timeZone.value)) {
       return 'O encerramento deve ocorrer depois da abertura das inscrições.';
     }
-    if (eventEnd && new Date(end).getTime() > new Date(eventEnd).getTime()) {
+    if (![start, end].every(value => Number.isFinite(eventTimestamp(value, this.timeZone.value)))) return 'Revise o período de inscrições e o fuso do evento.';
+    if (eventEnd && eventTimestamp(end, this.timeZone.value) > eventTimestamp(eventEnd, this.timeZone.value)) {
       return 'As inscrições devem encerrar até o término do evento.';
     }
 
@@ -1377,13 +1387,7 @@ export class EventEditorComponent implements OnInit {
   }
 
   private toLocalInput(value: string | null): string {
-    if (!value) return '';
-    if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) return value.slice(0, 16);
-
-    const date = new Date(value);
-    if (!Number.isFinite(date.getTime())) return value.slice(0, 16);
-    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-    return localDate.toISOString().slice(0, 16);
+    return eventLocalInput(value, this.timeZone.value);
   }
 
   private getErrorMessage(error: unknown, fallback: string): string {

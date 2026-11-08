@@ -148,6 +148,7 @@ describe('EventEditorComponent', () => {
     component.save();
 
     expect(eventsService.create).toHaveBeenCalledWith({
+      time_zone: 'America/Fortaleza',
       title: createdEvent.title,
       category: createdEvent.category,
       format: createdEvent.format,
@@ -208,6 +209,7 @@ describe('EventEditorComponent', () => {
     component.savePresentation();
 
     expect(eventsService.update).toHaveBeenCalledWith(createdEvent.id, {
+      time_zone: 'America/Fortaleza',
       title: createdEvent.title,
       summary: 'Palestras e oficinas para a comunidade.',
       content: 'Uma programação completa com atividades para estudantes.',
@@ -463,6 +465,26 @@ describe('EventEditorComponent', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('retains the API timezone on load and sends it with unshifted wall-clock dates', () => {
+    const event = { ...createdEvent, time_zone: 'America/Manaus', owner_id: 'event-owner' };
+    eventsService.create.mockReturnValueOnce(of(event));
+    component.form.patchValue({ title: event.title, start_date: event.start_date!, end_date: event.end_date! });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS');
+    component.save();
+    expect(component.timeZone.value).toBe('America/Manaus');
+    expect(component.form.controls.start_date.value).toBe('2026-09-10T08:00');
+    component.save();
+    expect(eventsService.update).toHaveBeenLastCalledWith(event.id, expect.objectContaining({ time_zone: 'America/Manaus', start_date: '2026-09-10T08:00' }));
+  });
+
+  it('blocks an invalid IANA timezone instead of submitting an invalid event', () => {
+    component.form.patchValue({ title: createdEvent.title, start_date: '2026-11-08T09:05', end_date: '2026-11-08T12:00' });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS');
+    component.timeZone.setValue('Invalid/Zone'); component.save();
+    expect(eventsService.create).not.toHaveBeenCalled();
+    expect(component.errorMessage()).toBeTruthy();
   });
 
   it('completes creation as a draft and publishes only through the explicit publish action', () => {

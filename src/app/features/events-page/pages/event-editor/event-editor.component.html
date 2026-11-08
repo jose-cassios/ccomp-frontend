@@ -87,7 +87,15 @@
 </details>
 <details class="editor-section" id="event-dates" [open]="sectionOpen('event-dates')" (toggle)="rememberSection($event)">
   <summary><span><strong>Quando acontece</strong><small>{{ form.controls.start_date.value ? (form.controls.start_date.value | date:'dd/MM/yyyy HH:mm') : 'Defina o início e o término do evento' }}</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
-  <div class="editor-section__body"><div class="form-grid">            <label class="field">
+  <div class="editor-section__body"><div class="form-grid">
+            <label class="field field--wide"><span>Fuso horário do evento *</span>
+              <select [formControl]="timeZone">
+                @for (zone of timeZones; track zone.value) { <option [value]="zone.value">{{ zone.label }} · {{ zone.value }}</option> }
+                @if (!knownTimeZone(timeZone.value)) { <option [value]="timeZone.value">{{ timeZone.value }}</option> }
+              </select>
+              <small>Todos os horários do evento, inscrições e atividades seguem este fuso. Alterá-lo mantém os horários digitados.</small>
+            </label>
+            <label class="field">
               <span>Início *</span>
               <input type="datetime-local" formControlName="start_date" />
             </label>
@@ -529,6 +537,7 @@
   <div><dt>Formato</dt><dd>{{ formatLabel(form.controls.format.value) }}</dd></div>
   <div><dt>Execução</dt><dd>{{ executionStatusLabel(event()?.execution_status) }}</dd></div>
   <div><dt>Início do evento</dt><dd>{{ form.controls.start_date.value | date:'dd/MM/yyyy HH:mm' }}</dd></div>
+  <div><dt>Fuso horário</dt><dd>{{ timeZone.value }}</dd></div>
   <div><dt>Término do evento</dt><dd>{{ form.controls.end_date.value | date:'dd/MM/yyyy HH:mm' }}</dd></div>
   <div><dt>Participação</dt><dd>{{ eventRegistrationRequired() ? 'Inscrição obrigatória' : 'Acesso livre, sem inscrição' }}</dd></div>
   @if (eventRegistrationRequired()) {
