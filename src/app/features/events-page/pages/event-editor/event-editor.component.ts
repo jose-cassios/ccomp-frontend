@@ -91,7 +91,7 @@ export class EventEditorComponent implements OnInit {
       this.activeStep.set('details'); section = 'event-basics';
     } else if (!this.hasValidDates() || this.form.controls.start_date.invalid || this.form.controls.end_date.invalid) {
       this.activeStep.set('details'); section = 'event-dates';
-    } else if (!this.hasValidEnrollmentDates()) {
+    } else if (this.eventCapacity.invalid || !this.hasValidEnrollmentDates()) {
       this.activeStep.set('details'); section = 'event-registration';
     } else {
       this.activeStep.set('presentation'); section = this.presentationForm.controls.cover_image_url.invalid ? 'page-cover' : 'page-content';
@@ -489,8 +489,9 @@ export class EventEditorComponent implements OnInit {
 
   save(): void {
     if (this.isBusy()) return;
-    if (this.form.invalid || !this.hasValidDates() || !this.hasValidEnrollmentDates()) {
+    if (this.form.invalid || this.eventCapacity.invalid || !this.hasValidDates() || !this.hasValidEnrollmentDates()) {
       this.form.markAllAsTouched();
+      this.eventCapacity.markAsTouched();
       this.revealValidation();
       this.errorMessage.set('Revise os campos obrigatórios, as datas do evento e o período de inscrições.');
       return;
@@ -922,7 +923,7 @@ export class EventEditorComponent implements OnInit {
 
   cancelActivityEdit(): void {
     if (this.isBusy() || this.peopleBusy() || this.guestBusy()) return;
-    if ((this.activityForm.dirty || this.activityGuestId.dirty || this.instructorForm.dirty) && typeof window !== 'undefined'
+    if ((this.activityForm.dirty || this.activityCapacity.dirty || this.activityGuestId.dirty || this.instructorForm.dirty) && typeof window !== 'undefined'
       && !window.confirm('Descartar as alterações desta atividade?')) return;
     this.activityDialog?.nativeElement.close();
     this.activityDialogDay.set(null);
@@ -1109,13 +1110,13 @@ export class EventEditorComponent implements OnInit {
   }
 
   canDeactivate(): boolean {
-    if ((!this.hasUnsavedChanges() && !this.guestDirty() && !this.rosterForm.dirty && !(this.activityDialogDay() && (this.activityForm.dirty || this.activityGuestId.dirty || this.instructorForm.dirty))) || typeof window === 'undefined') return true;
+    if ((!this.hasUnsavedChanges() && !this.guestDirty() && !this.rosterForm.dirty && !(this.activityDialogDay() && (this.activityForm.dirty || this.activityCapacity.dirty || this.activityGuestId.dirty || this.instructorForm.dirty))) || typeof window === 'undefined') return true;
     return window.confirm('Há alterações não salvas. Deseja sair mesmo assim?');
   }
 
   @HostListener('window:beforeunload', ['$event'])
   preventUnsavedUnload(event: BeforeUnloadEvent): void {
-    if (this.hasUnsavedChanges() || this.guestDirty() || this.rosterForm.dirty || (this.activityDialogDay() && (this.activityForm.dirty || this.activityGuestId.dirty || this.instructorForm.dirty))) event.preventDefault();
+    if (this.hasUnsavedChanges() || this.guestDirty() || this.rosterForm.dirty || (this.activityDialogDay() && (this.activityForm.dirty || this.activityCapacity.dirty || this.activityGuestId.dirty || this.instructorForm.dirty))) event.preventDefault();
   }
 
   private loadEvent(id: string): void {
@@ -1280,6 +1281,7 @@ export class EventEditorComponent implements OnInit {
       this.instructorRoster.set(this.rosterDraft.read(enrichedEvent.id, this.authService.currentUserState()?.id ?? ''));
     }
     this.event.set(enrichedEvent);
+    this.eventCapacity.reset(enrichedEvent.max_capacity ?? null, { emitEvent: false });
     this.activities.set(enrichedEvent.activities ?? []);
     this.ensureActiveActivityDay();
     this.eventRegistrationPolicy.set(
@@ -1314,6 +1316,7 @@ export class EventEditorComponent implements OnInit {
 
   private resetActivityForm(): void {
     this.resumeActivity.set(false);
+    this.activityCapacity.reset();
     this.activityGuestId.reset(); this.activityGuestRole.reset();
     this.linkedGuests.set([]); this.linkedGuestsCursor.set(null);
     this.guestDirty.set(false);

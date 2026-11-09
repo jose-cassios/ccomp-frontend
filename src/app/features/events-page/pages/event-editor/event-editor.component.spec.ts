@@ -49,6 +49,7 @@ describe('EventEditorComponent', () => {
     })),
     publish: vi.fn(() => of({ ...createdEvent, status: 'PUBLISHED' as const })),
     getById: vi.fn(() => of(createdEvent)),
+    getEditableEvents: vi.fn(() => of({ content: [], next_cursor: null })),
     getAllActivities: vi.fn(() => of([])),
     getEditors: vi.fn(() => of({ content: [] as EventEditor[], next_cursor: null })),
     deleteEvent: vi.fn(() => of(void 0)),
@@ -705,33 +706,27 @@ describe('EventEditorComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Carregando informações do evento');
   });
 
-  it('reuses a guest as a confirmed instructor, keeping the guest association and account link', () => {
+  it('associates a guest and invites an instructor separately when saving an activity', () => {
     component.event.set({ ...createdEvent, owner_id: 'event-owner' });
-    component.prepareGuestInstructor({ id: 9, user_id: '', status: 'CONFIRMED', visibility: 'PUBLIC', name: 'Ana', description: 'Palestrante' });
-    component.rosterForm.controls.email.setValue('ana@ifma.edu.br');
-    component.addRosterInstructor();
-    const person = component.instructorRoster()[0];
-    expect(person.guest_id).toBe(9);
     component.openActivityDialog(); component.activityForm.patchValue(activityPayload);
-    component.instructorForm.controls.email.setValue(person.key!);
+    component.activityGuestId.setValue(9);
+    component.activityGuestRole.setValue('PRESENTER');
+    component.instructorForm.controls.email.setValue('ana@ifma.edu.br');
     component.saveActivity();
-    expect(guests.linkAccount).toHaveBeenCalledWith(14, 9, 'ana@ifma.edu.br', 21);
     expect(guests.associate).toHaveBeenCalledWith(14, 9, 21, 'PRESENTER');
-    expect(instructors.add).toHaveBeenCalledWith(21, { name: 'Ana', description: 'Palestrante', role: 'INSTRUCTOR', account_email: 'ana@ifma.edu.br' });
-    expect(instructors.invite).not.toHaveBeenCalled();
+    expect(instructors.invite).toHaveBeenCalledWith(21, 'ana@ifma.edu.br');
   });
-  it('keeps a failed guest account link selected for retry without duplicating the activity', () => {
+  it('keeps a failed instructor invitation selected for retry without duplicating the activity', () => {
     component.event.set({ ...createdEvent, owner_id: 'event-owner' });
-    component.prepareGuestInstructor({ id: 9, user_id: '', status: 'CONFIRMED', visibility: 'PUBLIC', name: 'Ana' });
-    component.rosterForm.controls.email.setValue('ana@ifma.edu.br'); component.addRosterInstructor();
     component.openActivityDialog(); component.activityForm.patchValue(activityPayload);
-    const key = component.instructorRoster()[0].key!; component.instructorForm.controls.email.setValue(key);
-    guests.linkAccount.mockReturnValueOnce(throwError(() => new Error('offline')));
+    component.instructorForm.controls.email.setValue('ana@ifma.edu.br');
+    instructors.invite.mockReturnValueOnce(throwError(() => new Error('offline')));
     component.saveActivity();
-    expect(instructors.add).not.toHaveBeenCalled(); expect(component.instructorForm.controls.email.value).toBe(key);
+    expect(component.instructorForm.controls.email.value).toBe('ana@ifma.edu.br');
     expect(component.peopleError()).toContain('A atividade foi salva');
     component.saveActivity();
-    expect(eventsService.createActivity).toHaveBeenCalledTimes(1); expect(instructors.add).toHaveBeenCalledTimes(1);
+    expect(eventsService.createActivity).toHaveBeenCalledTimes(1);
+    expect(instructors.invite).toHaveBeenCalledTimes(2);
     expect(component.instructorForm.controls.email.value).toBe('');
   });
   it('uses explicit workload hours and rejects negative values before saving', () => {
@@ -778,6 +773,17 @@ describe('EventEditorComponent', () => {
     expect(component.activityCapacity.value).toBe(12);
     component.activityCapacity.setValue(-1); eventsService.updateActivity.mockClear(); component.saveActivity();
     expect(eventsService.updateActivity).not.toHaveBeenCalled();
+  });
+
+  it('restores event capacity from the API and clears capacity for a new activity', () => {
+    Object.assign(TestBed.inject(ActivatedRoute).snapshot, { paramMap: convertToParamMap({ id: 14 }) });
+    eventsService.getById.mockReturnValueOnce(of({ ...createdEvent, owner_id: 'event-owner', max_capacity: 25 }));
+    component.ngOnInit();
+    expect(component.eventCapacity.value).toBe(25);
+    expect(component.eventCapacity.pristine).toBe(true);
+    component.editActivity({ id: 21, event_id: 14, ...activityPayload, max_capacity: 12 });
+    component.openActivityDialog();
+    expect(component.activityCapacity.value).toBeNull();
   });
 
 });
