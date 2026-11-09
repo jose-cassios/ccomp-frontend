@@ -1,17 +1,11 @@
 /** API dates are wall-clock values in the event's IANA zone, never browser-local instants. */
 export const DEFAULT_EVENT_TIME_ZONE = 'America/Sao_Paulo';
-const COMMON_TIME_ZONES = [
-  { value: 'America/Fortaleza', label: 'Maranhão / Fortaleza' },
-  { value: 'America/Sao_Paulo', label: 'Brasília / São Paulo' },
-  { value: 'America/Manaus', label: 'Manaus' },
-  { value: 'America/Rio_Branco', label: 'Rio Branco' },
-  { value: 'America/Noronha', label: 'Fernando de Noronha' },
-  { value: 'UTC', label: 'UTC' },
+export const EVENT_TIME_ZONES = [
+  { value: DEFAULT_EVENT_TIME_ZONE, label: 'Brasília (UTC−3)' },
+  { value: 'America/Noronha', label: 'Fernando de Noronha (UTC−2)' },
+  { value: 'America/Manaus', label: 'Manaus (UTC−4)' },
+  { value: 'America/Rio_Branco', label: 'Rio Branco (UTC−5)' },
 ];
-const supportedZones = (Intl as typeof Intl & { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf?.('timeZone') ?? [];
-export const EVENT_TIME_ZONES = [...COMMON_TIME_ZONES, ...supportedZones
-  .filter(zone => !COMMON_TIME_ZONES.some(item => item.value === zone))
-  .map(zone => ({ value: zone, label: zone.replaceAll('_', ' ') }))];
 const formatters = new Map<string, Intl.DateTimeFormat>();
 function formatter(zone: string): Intl.DateTimeFormat {
   if (!formatters.has(zone)) formatters.set(zone, new Intl.DateTimeFormat('en-CA', {

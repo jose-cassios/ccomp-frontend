@@ -1,5 +1,5 @@
 import { EventRoleCertificatesComponent } from '../../components/certificate-download/event-role-certificates.component';
-import { EVENT_TIME_ZONES, eventTimestamp, eventLocalInput, isEventTimeZone } from '../../models/event-time';
+import { DEFAULT_EVENT_TIME_ZONE, EVENT_TIME_ZONES, eventTimestamp, eventLocalInput, isEventTimeZone } from '../../models/event-time';
 import { DatePipe, Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, ElementRef, HostListener, ViewChild, computed, inject, OnInit, signal } from '@angular/core';
@@ -119,7 +119,7 @@ export class EventEditorComponent implements OnInit {
   readonly guestDirty = signal(false);
 
   readonly timeZones = EVENT_TIME_ZONES;
-  readonly timeZone = this.fb.nonNullable.control('America/Fortaleza', control => isEventTimeZone(control.value) ? null : { timeZone: true });
+  readonly timeZone = this.fb.nonNullable.control(DEFAULT_EVENT_TIME_ZONE, control => isEventTimeZone(control.value) ? null : { timeZone: true });
   readonly knownTimeZone = (zone: string) => EVENT_TIME_ZONES.some(item => item.value === zone);
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(255)]],

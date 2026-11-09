@@ -193,7 +193,7 @@
       </section>
 
       <aside class="info-card">
-        <app-event-guests [eventId]="currentEvent.id" [canView]="isAuthenticated() && (subscribed() || canManageCertificates())" />
+        <app-event-speakers [eventId]="currentEvent.id" [activities]="currentEvent.activities || []" [timeZone]="currentEvent.time_zone || 'America/Sao_Paulo'" />
         <h2>Informações</h2>
         @if (isAuthenticated()) { <app-event-role-certificates [eventId]="currentEvent.id" [teamMember]="isTeamMember()" /> }
         <dl>

@@ -25,7 +25,7 @@ import {
 import { EventsService } from '../../services/events.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
 import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
-import { EventGuestsComponent } from '../../components/event-guests/event-guests.component';
+import { EventSpeakersComponent } from '../../components/event-speakers/event-speakers.component';
 import { ActivityPeopleComponent } from '../../components/activity-people/activity-people.component';
 import { EventCoverDirective } from '../../components/event-cover.directive';
 import { CertificateDownloadComponent } from '../../components/certificate-download/certificate-download.component';
@@ -33,7 +33,7 @@ import { CertificateDownloadComponent } from '../../components/certificate-downl
 @Component({
   selector: 'app-event-details',
   standalone: true,
-  imports: [EventRoleCertificatesComponent, DatePipe, RouterLink, EventGuestsComponent, ActivityPeopleComponent, EventCoverDirective, CertificateDownloadComponent],
+  imports: [EventRoleCertificatesComponent, DatePipe, RouterLink, EventSpeakersComponent, ActivityPeopleComponent, EventCoverDirective, CertificateDownloadComponent],
   templateUrl: './event-details.component.html',
   styleUrl: './event-details.component.css',
 })

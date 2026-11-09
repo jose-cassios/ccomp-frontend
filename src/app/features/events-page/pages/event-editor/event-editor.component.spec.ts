@@ -148,7 +148,7 @@ describe('EventEditorComponent', () => {
     component.save();
 
     expect(eventsService.create).toHaveBeenCalledWith({
-      time_zone: 'America/Fortaleza',
+      time_zone: 'America/Sao_Paulo',
       title: createdEvent.title,
       category: createdEvent.category,
       format: createdEvent.format,
@@ -209,7 +209,7 @@ describe('EventEditorComponent', () => {
     component.savePresentation();
 
     expect(eventsService.update).toHaveBeenCalledWith(createdEvent.id, {
-      time_zone: 'America/Fortaleza',
+      time_zone: 'America/Sao_Paulo',
       title: createdEvent.title,
       summary: 'Palestras e oficinas para a comunidade.',
       content: 'Uma programação completa com atividades para estudantes.',

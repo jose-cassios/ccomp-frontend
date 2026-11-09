@@ -64,4 +64,11 @@ describe('Guest API contract', () => {
     service.removeImage(1, 7).subscribe();
     const remove = http.expectOne('/api/events/1/guests/7/image'); expect(remove.request.method).toBe('DELETE'); remove.flush(null);
   });
+
+  it('keeps the activity route throughout guest pagination', () => {
+    let ids: number[] = []; service.allGuests(1, 3).subscribe(rows => ids = rows.map(row => row.event_guest_id!));
+    http.expectOne(r => r.url === '/api/events/activities/3/guests' && !r.params.has('cursor')).flush({ content: [{ id: 99, event_guest_id: 7 }], next_cursor: 'next' });
+    http.expectOne(r => r.url === '/api/events/activities/3/guests' && r.params.get('cursor') === 'next').flush({ content: [{ id: 100, event_guest_id: 8 }], next_cursor: null });
+    expect(ids).toEqual([7, 8]);
+  });
 });

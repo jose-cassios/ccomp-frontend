@@ -58,3 +58,10 @@
   .activity-modal .activity-form-actions button { flex: 1 1 130px; white-space: normal; }
 }
 @media (prefers-reduced-motion: reduce) { .section-chevron { transition: none; } }
+
+/* Keep the profile fields aligned; the description has its own full-width row. */
+.editor-section__body .instructor-profile-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:14px}
+.instructor-profile-form .field{min-width:0;margin:0}.instructor-profile-form .instructor-description{grid-column:1/-1;order:1}
+.instructor-profile-form .instructor-description textarea{min-height:80px;height:80px;max-width:100%;resize:vertical}
+.instructor-profile-form .card-copy{grid-column:1/-1;order:2;margin:0}.instructor-profile-form button[type=submit]{order:3;grid-column:1/-1;justify-self:start}
+@media(max-width:600px){.editor-section__body .instructor-profile-form{grid-template-columns:minmax(0,1fr)}.instructor-profile-form button[type=submit]{width:100%}}

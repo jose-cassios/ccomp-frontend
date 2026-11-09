@@ -45,13 +45,13 @@ export class EventGuestsService {
   create(eventId: number, profile: GuestProfile) {
     return this.api.post<GuestCreatedResponse>(`/events/${eventId}/guests`, profile);
   }
-  allGuests(eventId: number) {
+  allGuests(eventId: number, activityId?: number) {
     const cursors = new Set<string>();
-    return this.guests(eventId).pipe(
+    return this.guests(eventId, undefined, activityId).pipe(
       expand(page => {
         if (!page.next_cursor || cursors.has(page.next_cursor)) return EMPTY;
         cursors.add(page.next_cursor);
-        return this.guests(eventId, page.next_cursor);
+        return this.guests(eventId, page.next_cursor, activityId);
       }),
       reduce((rows, page) => [...rows, ...page.content], [] as EventGuest[]),
     );

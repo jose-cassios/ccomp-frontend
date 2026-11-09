@@ -68,7 +68,7 @@ describe('EventDetailsComponent', () => {
         },
         { provide: EventsService, useValue: eventsService },
         { provide: ActivityInstructorsService, useValue: { forEvent: () => of([]) } },
-        { provide: EventGuestsService, useValue: { guests: () => of({ content: [], next_cursor: null }) } },
+        { provide: EventGuestsService, useValue: { guests: () => of({ content: [], next_cursor: null }), allGuests: () => of([]) } },
       ],
     }).compileComponents();
 
