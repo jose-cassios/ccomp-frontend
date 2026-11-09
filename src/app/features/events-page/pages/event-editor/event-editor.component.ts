@@ -3,7 +3,7 @@ import { DEFAULT_EVENT_TIME_ZONE, EVENT_TIME_ZONES, eventTimestamp, eventLocalIn
 import { DatePipe, Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, ElementRef, HostListener, ViewChild, computed, inject, OnInit, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, finalize, forkJoin, map, Observable, of, switchMap } from 'rxjs';
@@ -354,8 +354,11 @@ export class EventEditorComponent implements OnInit {
   readonly activityPolicyLabel = activityRegistrationPolicyLabel;
   readonly activityPolicyDescription = activityRegistrationPolicyDescription;
   readonly activityPolicyMenuOpen = signal(false);
+  private readonly activityPolicyValue = toSignal(this.activityForm.controls.registration_policy.valueChanges, {
+    initialValue: this.activityForm.controls.registration_policy.value,
+  });
   readonly selectedActivityPolicy = computed(() => this.activityRegistrationPolicies.find(
-    (policy) => policy.value === this.activityForm.controls.registration_policy.value,
+    (policy) => policy.value === this.activityPolicyValue(),
   ) ?? this.activityRegistrationPolicies[1]);
   readonly steps = EDITOR_STEPS;
   readonly isBusy = computed(() => this.operation() !== 'idle');
