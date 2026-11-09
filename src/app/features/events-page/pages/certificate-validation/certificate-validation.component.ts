@@ -26,7 +26,8 @@ import { CertificatesService } from '../../services/certificates.service';
         <section aria-labelledby="validation-result" role="status">
           <h2 id="validation-result">Certificado válido</h2>
           <dl>
-            <dt>Participante</dt><dd>{{ certificate.participant_name }}</dd>
+            <dt>Titular</dt><dd>{{ certificate.participant_name }}</dd>
+            @if (certificate.certificate_type) { <dt>Tipo</dt><dd>{{ certificateTypes[certificate.certificate_type] }}</dd> }
             <dt>Evento</dt><dd>{{ certificate.event_title }}</dd>
             @if (certificate.activity_title) { <dt>Atividade</dt><dd>{{ certificate.activity_title }}</dd> }
             <dt>Carga horária</dt><dd>{{ certificate.workload_hours ?? 'Não informada' }}</dd>
@@ -62,6 +63,7 @@ export class CertificateValidationComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  readonly certificateTypes = { EVENT: 'Participação no evento', ACTIVITY: 'Participação em atividade', INSTRUCTOR: 'Ministrante ou auxiliar', EDITOR: 'Equipe do evento' };
   readonly code = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(64), Validators.pattern(/^[a-zA-Z0-9]+$/)] });
   readonly loading = signal(false);
   readonly result = signal<CertificateValidation | null>(null);

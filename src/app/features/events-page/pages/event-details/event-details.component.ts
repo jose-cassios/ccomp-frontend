@@ -1,3 +1,5 @@
+import { EventRoleCertificatesComponent } from '../../components/certificate-download/event-role-certificates.component';
+import { eventTimestamp } from '../../models/event-time';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal, afterNextRender, DestroyRef } from '@angular/core';
@@ -23,7 +25,7 @@ import {
 import { EventsService } from '../../services/events.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
 import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
-import { EventGuestsComponent } from '../../components/event-guests/event-guests.component';
+import { EventSpeakersComponent } from '../../components/event-speakers/event-speakers.component';
 import { ActivityPeopleComponent } from '../../components/activity-people/activity-people.component';
 import { EventCoverDirective } from '../../components/event-cover.directive';
 import { CertificateDownloadComponent } from '../../components/certificate-download/certificate-download.component';
@@ -31,7 +33,7 @@ import { CertificateDownloadComponent } from '../../components/certificate-downl
 @Component({
   selector: 'app-event-details',
   standalone: true,
-  imports: [DatePipe, RouterLink, EventGuestsComponent, ActivityPeopleComponent, EventCoverDirective, CertificateDownloadComponent],
+  imports: [EventRoleCertificatesComponent, DatePipe, RouterLink, EventSpeakersComponent, ActivityPeopleComponent, EventCoverDirective, CertificateDownloadComponent],
   templateUrl: './event-details.component.html',
   styleUrl: './event-details.component.css',
 })
@@ -67,6 +69,11 @@ export class EventDetailsComponent implements OnInit {
     return this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES)
       || Boolean(eventId && this.editableEventIds().has(eventId));
   });
+  readonly isTeamMember = computed(() => {
+    const event = this.event();
+    const userId = this.authService.currentUserState()?.id;
+    return !!event && !!userId && (event.owner_id === userId || this.editableEventIds().has(event.id));
+  });
   readonly canManageCertificates = computed(() => {
     const event = this.event();
     return this.authService.hasAnyRole(['ADM', 'MODERATOR'])
@@ -84,6 +91,14 @@ export class EventDetailsComponent implements OnInit {
     const schedule = this.activitySchedule();
     return schedule.find((day) => day.key === this.activeActivityDay()) ?? schedule[0] ?? null;
   });
+  readonly expandedDescriptions = signal<ReadonlySet<number>>(new Set());
+  toggleDescription(id: number): void {
+    this.expandedDescriptions.update(ids => { const next = new Set(ids); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  }
+  activitySoldOut(activity: EventActivity): boolean {
+    const capacity = activity.max_capacity !== undefined ? activity.max_capacity : activity.capacity;
+    return capacity != null && (capacity === 0 || (activity.enrollment_count != null && activity.enrollment_count >= capacity));
+  }
   readonly activityTypeLabel = eventActivityTypeLabel;
   readonly activityWeekdayLabel = eventActivityWeekdayLabel;
 
@@ -98,8 +113,8 @@ export class EventDetailsComponent implements OnInit {
 
   activityHasStarted(activity: EventActivity): boolean {
     const now = Math.max(this.clock(), Date.now());
-    const start = Date.parse(activity.start_date ?? '');
-    const end = Date.parse(activity.end_date ?? '');
+    const start = eventTimestamp(activity.start_date, activity.time_zone ?? this.event()?.time_zone);
+    const end = eventTimestamp(activity.end_date, activity.time_zone ?? this.event()?.time_zone);
     return (Number.isFinite(start) && start <= now) || (Number.isFinite(end) && end <= now);
   }
 
@@ -180,18 +195,20 @@ export class EventDetailsComponent implements OnInit {
   }
 
   activityRequiresRegistration(activity: EventActivity): boolean {
-    return activity.registration_policy === 'ACTIVITY_REGISTRANTS_ONLY'
+    return (activity.max_capacity !== undefined ? activity.max_capacity : activity.capacity) != null
+      || activity.registration_policy === 'ACTIVITY_REGISTRANTS_ONLY'
       || (!activity.registration_policy && activity.registration_mode === 'REQUIRED');
   }
 
   activityIsIncludedWithEvent(activity: EventActivity): boolean {
-    return activity.registration_policy === 'INHERITED_FROM_EVENT';
+    return activity.registration_policy === 'INHERITED_FROM_EVENT'
+      && (activity.max_capacity !== undefined ? activity.max_capacity : activity.capacity) == null;
   }
 
   activityRegistrationBlocked(activity: EventActivity): boolean {
     if (this.activitySubscriptionsLoading() || this.activitySubscriptionsError()) return true;
     if (activity.subscribed) return false;
-    if (this.activityHasStarted(activity)) return true;
+    if (this.activityHasStarted(activity) || this.activitySoldOut(activity)) return true;
     if (!this.isAuthenticated()) return false;
     if (this.event()?.schedule_conflict_policy !== 'ALLOW' && this.activityConflict(activity)) return true;
     if (activity.can_subscribe !== null && activity.can_subscribe !== undefined) {
@@ -204,6 +221,7 @@ export class EventDetailsComponent implements OnInit {
   activityRegistrationHint(activity: EventActivity): string | null {
     if (activity.subscribed || !this.activityRequiresRegistration(activity)) return null;
     if (this.activityHasStarted(activity)) return 'Inscrições encerradas: esta atividade já começou.';
+    if (this.activitySoldOut(activity)) return 'Vagas esgotadas para esta atividade.';
     if (!this.isAuthenticated()) return null;
     const conflict = this.activityConflict(activity);
     if (conflict) return this.activityConflictMessage(conflict);
@@ -294,6 +312,11 @@ export class EventDetailsComponent implements OnInit {
   dismissFeedback(): void {
     this.errorMessage.set(null);
     this.successMessage.set(null);
+  }
+
+  refreshActivities(): void {
+    const eventId = this.event()?.id;
+    if (eventId) this.loadActivities(eventId);
   }
 
   private loadActivities(eventId: number): void {

@@ -1,0 +1,55 @@
+<section class="speakers-card" aria-labelledby="speakers-title" [attr.aria-busy]="loading()">
+  <h2 id="speakers-title">Ministrantes e convidados</h2>
+  @if (loading()) { <p role="status">Carregando perfis…</p> }
+  @if (error()) { <p role="status">{{ error() }}</p><button class="text-action" type="button" (click)="load()">Tentar novamente</button> }
+  <div class="avatar-stack" role="group" aria-label="Perfis dos ministrantes e convidados">
+    @for (person of visibleSpeakers(); track person.key) {
+      <button #profileButton class="person" [title]="person.name" type="button" aria-haspopup="dialog" (click)="open(person, profileButton)" [attr.aria-label]="'Ver perfil de ' + person.name">
+        @if (person.image) { <img [eventCover]="person.image" alt="" loading="lazy" /> }
+        @else { <span class="avatar" aria-hidden="true">{{ initials(person.name) }}</span> }
+      </button>
+    } @empty { @if (!loading() && !error()) { <p>Os perfis serão exibidos aqui quando estiverem disponíveis.</p> } }
+    @if (remainingCount()) {
+      <button #moreButton class="person more-people" type="button" aria-haspopup="dialog" [attr.aria-label]="'Ver todos os perfis, mais ' + remainingCount() + ' pessoas'" (click)="showDirectory(moreButton)">+{{ remainingCount() }}</button>
+    }
+  </div>
+</section>
+<dialog #profileDialog [attr.aria-labelledby]="selected() ? 'speaker-name' : 'speakers-directory-title'" tabindex="-1" (cancel)="close()" (click)="backdrop($event)">
+  @if (selected(); as person) {
+    <header class="profile-heading">
+      <div><span class="role-label">{{ person.label }}</span><h2 id="speaker-name">{{ person.name }}</h2></div>
+      <button type="button" class="close-icon" aria-label="Fechar perfil" (click)="close()" autofocus>×</button>
+    </header>
+    <div class="profile-body">
+      @if (person.image) { <img class="profile-photo" [eventCover]="person.image" [alt]="person.name" /> }
+      <h3>Sobre</h3>
+      <p class="biography">{{ person.description || 'Apresentação ainda não informada.' }}</p>
+      @if (profileActivities().length) {
+      <h3>Atividades no evento</h3>
+      @if (timeZone) { <p class="timezone">Horários em {{ timeZone }}</p> }
+      <ul class="profile-schedule">
+        @for (activity of profileActivities(); track activity.id) {
+          <li>
+            @if (activity.start_date) { <time>{{ activity.start_date | date:'dd/MM · HH:mm' }}@if (activity.end_date) { – {{ activity.end_date | date:'dd/MM · HH:mm' }} }</time> }
+            <strong>{{ activity.title }}</strong>
+            <small>{{ activityType(activity.type) }}@if (activity.location) { · {{ activity.location }} }</small>
+          </li>
+        }
+      </ul>
+      }
+    </div>
+    <footer>@if (directoryOpen()) { <button type="button" (click)="showDirectory()">Todos os perfis</button> }<button type="button" (click)="close()">Fechar</button></footer>
+  } @else if (directoryOpen()) {
+    <header class="profile-heading"><h2 id="speakers-directory-title">Ministrantes e convidados</h2><button type="button" class="close-icon" aria-label="Fechar perfis" (click)="close()" autofocus>×</button></header>
+    <div class="profile-directory">
+      @for (person of speakers(); track person.key) {
+        <button #directoryButton class="directory-person" type="button" (click)="open(person, directoryButton)" [attr.aria-label]="'Ver perfil de ' + person.name">
+          @if (person.image) { <img [eventCover]="person.image" alt="" loading="lazy" /> }
+          @else { <span class="avatar" aria-hidden="true">{{ initials(person.name) }}</span> }
+          <span>{{ person.name }}</span>
+        </button>
+      }
+    </div>
+    <footer><button type="button" (click)="close()">Fechar</button></footer>
+  }
+</dialog>

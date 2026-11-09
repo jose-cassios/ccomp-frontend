@@ -1,6 +1,7 @@
-import { HttpParams } from '@angular/common/http';
+import { DEFAULT_EVENT_TIME_ZONE } from '../models/event-time';
+import { HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { EMPTY, Observable, defer, expand, map, reduce, switchMap, throwError } from 'rxjs';
+import { EMPTY, Observable, catchError, of, defer, expand, map, reduce, switchMap, throwError } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
 import { ApiConfig } from '../../../core/api/api.config';
 import {
@@ -26,6 +27,13 @@ import {
 } from '../models/event.model';
 
 interface ApiEvent {
+  max_capacity?: number | null;
+  maxCapacity?: number | null;
+  organization?: string | null;
+  teamCertificateWorkloadHours?: number;
+  team_certificate_workload_hours?: number;
+  time_zone?: string;
+  timeZone?: string;
   scheduleConflictPolicy?: 'ALLOW' | 'PREVENT' | null;
   schedule_conflict_policy?: 'ALLOW' | 'PREVENT' | null;
   id: number;
@@ -64,6 +72,12 @@ interface ApiEvent {
 }
 
 interface ApiEventActivity {
+  max_capacity?: number | null;
+  maxCapacity?: number | null;
+  workload_hours?: number;
+  workloadHours?: number;
+  time_zone?: string;
+  timeZone?: string;
   id: number;
   eventId?: number;
   event_id?: number;
@@ -261,13 +275,29 @@ export class EventsService {
   }
 
   create(payload: CreateEventPayload): Observable<EventDetails> {
-    return this.api.post<ApiEvent>('/events', payload).pipe(map((event) => this.toDetails(event)));
+    return this.api.post<ApiEvent>('/events', payload).pipe(map((event) => ({ ...this.toDetails(event), max_capacity: event.max_capacity !== undefined ? event.max_capacity : event.maxCapacity !== undefined ? event.maxCapacity : payload.max_capacity })));
   }
 
   update(id: number | string, payload: UpdateEventPayload): Observable<EventDetails> {
-    return this.api.patch<ApiEvent>(`/events/${encodeURIComponent(id)}`, payload).pipe(
+    const { max_capacity, ...details } = payload;
+    return this.api.patch<ApiEvent>(`/events/${encodeURIComponent(id)}`, details).pipe(
       map((event) => this.toDetails(event)),
+      switchMap(event => max_capacity === undefined ? of(event) : this.setEventCapacity(id, max_capacity)),
     );
+  }
+
+  setEventCapacity(id: number | string, maxCapacity: number | null): Observable<EventDetails> {
+    return this.api.put<ApiEvent>(`/events/${encodeURIComponent(id)}/capacity`, { max_capacity: maxCapacity }).pipe(
+      map(event => ({ ...this.toDetails(event), max_capacity: maxCapacity })),
+      catchError(error => this.capacityError(error)),
+    );
+  }
+
+  private capacityError(error: unknown): Observable<never> {
+    if (error instanceof HttpErrorResponse && [404, 405, 501].includes(error.status)) {
+      return throwError(() => new HttpErrorResponse({ status: error.status, error: { message: 'A API ainda não disponibiliza esta alteração de limite de vagas. Os outros dados podem ter sido salvos; o limite não foi alterado. Seus campos foram mantidos para tentar novamente.' } }));
+    }
+    return throwError(() => error);
   }
 
   updateStatus(id: number | string, status: EventPublicationStatus): Observable<EventDetails> {
@@ -329,7 +359,7 @@ export class EventsService {
   createActivity(eventId: number | string, payload: CreateActivityPayload): Observable<EventActivity> {
     return this.api.post<ApiEventActivity>(
       `/events/${encodeURIComponent(eventId)}/activities`,
-      { title: payload.title, description: payload.description },
+      { title: payload.title, description: payload.description, ...(payload.max_capacity !== undefined ? { max_capacity: payload.max_capacity } : {}) },
     ).pipe(map((activity) => this.toActivity(activity, eventId)));
   }
 
@@ -409,10 +439,16 @@ export class EventsService {
     activityId: number | string,
     payload: UpdateActivityPayload,
   ): Observable<EventActivity> {
+    const { max_capacity, ...details } = payload;
     return this.api.patch<ApiEventActivity>(
       `/events/activities/${encodeURIComponent(activityId)}`,
-      payload,
-    ).pipe(map((activity) => this.toActivity(activity)));
+      { ...details, ...(max_capacity != null ? { max_capacity } : {}) },
+    ).pipe(
+      map(activity => this.toActivity(activity)),
+      switchMap(activity => max_capacity !== null ? of(activity) : this.api.put<ApiEventActivity>(
+        `/events/activities/${encodeURIComponent(activityId)}/capacity`, { max_capacity: null },
+      ).pipe(map(updated => ({ ...this.toActivity(updated), max_capacity: null, capacity: null })), catchError(error => this.capacityError(error)))),
+    );
   }
 
   getEnrollments(
@@ -453,6 +489,7 @@ export class EventsService {
 
   private toListItem(event: ApiEvent): EventListItem {
     return {
+      time_zone: event.time_zone ?? event.timeZone ?? DEFAULT_EVENT_TIME_ZONE,
       id: event.id,
       title: event.title,
       slug: event.slug,
@@ -473,6 +510,9 @@ export class EventsService {
     const listItem = this.toListItem(event);
     return {
       ...listItem,
+      max_capacity: event.max_capacity !== undefined ? event.max_capacity : event.maxCapacity,
+      organization: event.organization,
+      team_certificate_workload_hours: event.team_certificate_workload_hours ?? event.teamCertificateWorkloadHours,
       schedule_conflict_policy: event.schedule_conflict_policy ?? event.scheduleConflictPolicy ?? null,
       summary: event.summary ?? event.description ?? null,
       description: event.content ?? event.description ?? event.summary ?? null,
@@ -486,7 +526,7 @@ export class EventsService {
       enrollment_end_date: event.enrollmentEndDate ?? event.enrollment_end_date ?? null,
       enrollment_paused: event.enrollmentPaused ?? event.enrollment_paused ?? null,
       enrollment_status: event.enrollmentStatus ?? event.enrollment_status ?? null,
-      activities: event.activities?.map((activity) => this.toActivity(activity)) ?? [],
+      activities: event.activities?.map((activity) => this.toActivity({ ...activity, time_zone: activity.time_zone ?? activity.timeZone ?? listItem.time_zone })) ?? [],
     };
   }
 
@@ -509,6 +549,8 @@ export class EventsService {
       ?? null;
 
     return {
+      time_zone: activity.time_zone ?? activity.timeZone,
+      workload_hours: activity.workload_hours ?? activity.workloadHours,
       id: activity.id,
       event_id: activity.eventId ?? activity.event_id ?? Number(fallbackEventId),
       title: activity.title ?? activity.name ?? 'Atividade',
@@ -531,7 +573,8 @@ export class EventsService {
         ?? activity.subscription_unavailable_reason
         ?? null,
       enrollment_count: activity.enrollmentCount ?? activity.enrollment_count ?? null,
-      capacity: activity.capacity ?? null,
+      max_capacity: activity.max_capacity !== undefined ? activity.max_capacity : activity.maxCapacity,
+      capacity: activity.max_capacity !== undefined ? activity.max_capacity : activity.maxCapacity !== undefined ? activity.maxCapacity : activity.capacity ?? null,
     };
   }
 

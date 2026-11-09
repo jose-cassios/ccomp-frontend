@@ -133,6 +133,7 @@ describe('EventsService', () => {
 
   it('should create and update events with the current API contracts', () => {
     service.create({
+      time_zone: 'America/Fortaleza',
       title: 'Semana da Computação',
       category: 'ACADEMIC_EDUCATIONAL',
       format: 'IN_PERSON',
@@ -155,6 +156,7 @@ describe('EventsService', () => {
     service.publish(12).subscribe();
 
     expect(api.post).toHaveBeenCalledWith('/events', {
+      time_zone: 'America/Fortaleza',
       title: 'Semana da Computação',
       category: 'ACADEMIC_EDUCATIONAL',
       format: 'IN_PERSON',
@@ -358,4 +360,14 @@ describe('EventsService', () => {
       });
     },
   );
+
+  it('preserves certificate settings and activity workload returned by the API', () => {
+    api.get.mockReturnValueOnce(of({ id: 9, title: 'Evento', slug: 'evento', summary: '', format: 'ONLINE', category: 'ACADEMIC_EDUCATIONAL', startDate: '', endDate: '', organization: 'IFMA', team_certificate_workload_hours: 8,
+      activities: [{ id: 2, event_id: 9, title: 'Palestra', workload_hours: 1.5 }] }) as ReturnType<typeof api.get>);
+    service.getById(9).subscribe(event => {
+      expect(event.organization).toBe('IFMA'); expect(event.team_certificate_workload_hours).toBe(8);
+      expect(event.activities?.[0].workload_hours).toBe(1.5);
+    });
+  });
+
 });

@@ -46,6 +46,9 @@ export interface ActivityGuest {
 }
 
 export interface EventActivity {
+  max_capacity?: number | null;
+  workload_hours?: number | null;
+  time_zone?: string;
   id: number;
   event_id: number;
   title: string;
@@ -116,6 +119,7 @@ export interface EventEnrollmentsPage {
 
 /** Modelo normalizado para a interface, independente do formato da resposta da API. */
 export interface EventListItem {
+  time_zone?: string;
   id: number;
   title: string;
   slug: string;
@@ -133,6 +137,9 @@ export interface EventListItem {
 }
 
 export interface EventDetails extends EventListItem {
+  max_capacity?: number | null;
+  organization?: string | null;
+  team_certificate_workload_hours?: number | null;
   schedule_conflict_policy?: 'ALLOW' | 'PREVENT' | null;
   summary?: string | null;
   content?: string | null;
@@ -164,6 +171,8 @@ export interface EventsFilter {
 
 /** Contrato de POST /events. */
 export interface CreateEventPayload {
+  max_capacity?: number | null;
+  time_zone: string;
   title: string;
   category: EventCategory;
   format: EventFormat;
@@ -173,6 +182,11 @@ export interface CreateEventPayload {
 
 /** Contrato de PATCH /events/{eventId}. */
 export interface UpdateEventPayload {
+  /** Sent separately through PUT /events/{id}/capacity, never in the generic PATCH. */
+  max_capacity?: number | null;
+  organization?: string;
+  team_certificate_workload_hours?: number;
+  time_zone?: string;
   schedule_conflict_policy?: 'ALLOW' | 'PREVENT';
   title?: string;
   summary?: string;
@@ -188,11 +202,13 @@ export interface UpdateEventPayload {
 }
 
 export interface CreateActivityPayload {
+  max_capacity?: number | null;
   title: string;
   description?: string;
 }
 
 export interface ActivityPayload extends CreateActivityPayload {
+  workload_hours?: number;
   type: EventActivityType;
   location?: string;
   start_date: string;

@@ -128,7 +128,7 @@
                               }
                             </div>
                             <h3>{{ activity.title }}</h3>
-                            <app-activity-people [eventId]="currentEvent.id" [activityId]="activity.id" [canView]="isAuthenticated() && subscribed()" />
+                            <app-activity-people [eventId]="currentEvent.id" [activityId]="activity.id" [canView]="isAuthenticated() && subscribed()" [canViewInstructors]="isAuthenticated()" (activityChanged)="refreshActivities()" />
                             <p class="activity-meta">
                               @if (activity.end_date) {
                                 <span>Até {{ activity.end_date | date: 'HH:mm' }}</span>
@@ -138,7 +138,8 @@
                               }
                             </p>
                             @if (activity.description) {
-                              <p class="activity-description">{{ activity.description }}</p>
+                              <p class="activity-description" [id]="'activity-description-' + activity.id" [class.is-expanded]="expandedDescriptions().has(activity.id)">{{ activity.description }}</p>
+                              <button class="description-toggle" type="button" [attr.aria-expanded]="expandedDescriptions().has(activity.id)" [attr.aria-controls]="'activity-description-' + activity.id" (click)="toggleDescription(activity.id)">{{ expandedDescriptions().has(activity.id) ? 'Recolher descrição' : 'Ver descrição completa' }}</button>
                             }
                             @if ((isAuthenticated() && (subscribed() || canManageCertificates())) ? activity.guest : null; as guest) {
                               <div class="activity-guest">
@@ -193,8 +194,9 @@
       </section>
 
       <aside class="info-card">
-        <app-event-guests [eventId]="currentEvent.id" [canView]="isAuthenticated() && (subscribed() || canManageCertificates())" />
+        <app-event-speakers [eventId]="currentEvent.id" [activities]="currentEvent.activities || []" [timeZone]="currentEvent.time_zone || 'America/Sao_Paulo'" />
         <h2>Informações</h2>
+        @if (isAuthenticated()) { <app-event-role-certificates [eventId]="currentEvent.id" [teamMember]="isTeamMember()" /> }
         <dl>
           @if (isAuthenticated() && subscribed()) {
           <div>
@@ -202,6 +204,9 @@
             <dd><app-certificate-download [resourceId]="currentEvent.id" [asLink]="true" label="Solicitar certificado" /></dd>
           </div>
           }
+          <div>
+            <dt>Fuso horário</dt><dd>{{ currentEvent.time_zone || 'America/Sao_Paulo' }}</dd>
+          </div>
           <div>
             <dt>Data de início</dt>
             <dd>{{ currentEvent.start_date | date: 'dd/MM/yyyy, HH:mm' }}</dd>

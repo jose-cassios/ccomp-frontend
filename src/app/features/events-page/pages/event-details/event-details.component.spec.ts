@@ -1,3 +1,4 @@
+import { ActivityInstructorsService } from '../../services/activity-instructors.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
@@ -63,10 +64,11 @@ describe('EventDetailsComponent', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: event.id }) } } },
         {
           provide: AuthService,
-          useValue: { isAuthenticatedState: authenticated, hasAnyRole: () => false, getCurrentUser: () => null },
+          useValue: { isAuthenticatedState: authenticated, currentUserState: () => authenticated() ? { id: 'user' } : null, hasAnyRole: () => false, getCurrentUser: () => null },
         },
         { provide: EventsService, useValue: eventsService },
-        { provide: EventGuestsService, useValue: { guests: () => of({ content: [], next_cursor: null }) } },
+        { provide: ActivityInstructorsService, useValue: { forEvent: () => of([]) } },
+        { provide: EventGuestsService, useValue: { guests: () => of({ content: [], next_cursor: null }), allGuests: () => of([]) } },
       ],
     }).compileComponents();
 
@@ -76,6 +78,14 @@ describe('EventDetailsComponent', () => {
   });
 
   afterEach(() => vi.restoreAllMocks());
+
+  it('uses the activity zone, with the parent event as fallback, when checking registration time', () => {
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-11-08T12:10:00Z'));
+    component.event.set({ ...event, time_zone: 'America/Fortaleza' });
+    const activity = { ...scheduleActivity, start_date: '2026-11-08T09:05', end_date: '2026-11-08T12:00' };
+    expect(component.activityHasStarted(activity)).toBe(true);
+    expect(component.activityHasStarted({ ...activity, time_zone: 'America/Manaus' })).toBe(false);
+  });
 
   it('blocks new registrations from the exact start time, including anonymous visitors', () => {
     const activity = { ...scheduleActivity, registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const, can_subscribe: true };
@@ -299,4 +309,23 @@ describe('EventDetailsComponent', () => {
     expect(component.errorMessage()).toBe('Atividade não encontrada.');
     expect(component.activitySubscriptionBusyId()).toBeNull();
   });
+
+  it('expands and collapses the complete activity description without changing its content', () => {
+    const description = 'Descrição completa. '.repeat(50) + '\nÚltima linha.';
+    component.event.set({ ...event, activities: [{ ...scheduleActivity, description }] }); fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector('.description-toggle') as HTMLButtonElement;
+    const paragraph = fixture.nativeElement.querySelector('.activity-description') as HTMLElement;
+    expect(button.getAttribute('aria-expanded')).toBe('false'); button.click(); fixture.detectChanges();
+    expect(paragraph.textContent).toContain('Última linha.'); expect(paragraph.classList.contains('is-expanded')).toBe(true);
+    expect(button.getAttribute('aria-expanded')).toBe('true'); button.click(); fixture.detectChanges();
+    expect(paragraph.classList.contains('is-expanded')).toBe(false);
+  });
+  it('blocks exhausted activities but keeps cancellation available and never guesses unknown occupancy', () => {
+    const activity = { ...scheduleActivity, registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const, max_capacity: 0 };
+    expect(component.activityRegistrationBlocked(activity)).toBe(true); expect(component.activityRegistrationHint(activity)).toContain('Vagas esgotadas');
+    expect(component.activityRegistrationBlocked({ ...activity, subscribed: true })).toBe(false);
+    expect(component.activitySoldOut({ ...activity, max_capacity: 10 })).toBe(false);
+    expect(component.activitySoldOut({ ...activity, max_capacity: 10, enrollment_count: 10 })).toBe(true);
+  });
+
 });

@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, from, switchMap, throwError } from 'rxjs';
 import { ApiConfig } from '../../../core/api/api.config';
@@ -10,15 +10,15 @@ export class CertificatesService {
   private readonly config = inject(ApiConfig);
 
   template(eventId: number, scope: CertificateScope) {
-    return this.http.get<CertificateTemplate>(this.url(eventId, scope, 'box-template'));
+    return this.http.get<CertificateTemplate>(this.url(eventId, scope, 'box-template'), { params: this.params(scope) });
   }
 
   saveTemplate(eventId: number, scope: CertificateScope, boxes: CertificateBox[]) {
-    return this.http.post(this.url(eventId, scope, 'box-template'), { boxes });
+    return this.http.post(this.url(eventId, scope, 'box-template'), { boxes }, { params: this.params(scope) });
   }
 
-  variables() {
-    return this.http.get<string[]>(this.config.buildUrl('/events/certificate-variables'));
+  variables(scope: CertificateScope = 'event') {
+    return this.http.get<string[]>(this.config.buildUrl('/events/certificate-variables'), { params: new HttpParams().set('type', this.type(scope)) });
   }
 
   cover(eventId: number) {
@@ -36,10 +36,15 @@ export class CertificatesService {
   }
 
   preview(eventId: number, scope: CertificateScope) {
-    return this.image(this.url(eventId, scope, 'preview'));
+    return this.image(this.url(eventId, scope, 'preview'), this.params(scope));
   }
 
-  download(id: number, scope: CertificateScope) {
+  download(id: number, scope: CertificateScope, instructorId?: number) {
+    if (scope === 'instructor') {
+      if (!instructorId || instructorId <= 0 || !Number.isSafeInteger(instructorId)) return throwError(() => new Error('Selecione um ministrante confirmado.'));
+      return this.image(this.config.buildUrl(`/events/${id}/instructors/${instructorId}/certificate`));
+    }
+    if (scope === 'team') return this.image(this.config.buildUrl(`/events/${id}/team-certificate`));
     return this.image(this.config.buildUrl(scope === 'event'
       ? `/events/${id}/certificate` : `/events/activities/${id}/certificate`));
   }
@@ -53,10 +58,13 @@ export class CertificatesService {
     return this.config.buildUrl(`/events/${eventId}/${scope === 'activity' ? 'activity-' : ''}certificate-${suffix}`);
   }
 
-  private image(url: string) {
+  private type(scope: CertificateScope) { return { event: 'PARTICIPANT', activity: 'ACTIVITY', instructor: 'INSTRUCTOR', team: 'EDITOR' }[scope]; }
+  private params(scope: CertificateScope) { return scope === 'activity' ? new HttpParams() : new HttpParams().set('type', this.type(scope)); }
+
+  private image(url: string, params = new HttpParams()) {
     // HttpClient returns error JSON as a Blob when responseType is blob.
     // Decode it so enrollment/check-in errors remain readable to participants.
-    return this.http.get(url, { responseType: 'blob' }).pipe(catchError((error: unknown) => {
+    return this.http.get(url, { responseType: 'blob', params }).pipe(catchError((error: unknown) => {
       if (!(error instanceof HttpErrorResponse) || !(error.error instanceof Blob)) {
         return throwError(() => error);
       }

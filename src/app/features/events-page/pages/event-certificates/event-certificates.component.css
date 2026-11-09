@@ -18,7 +18,7 @@ button:hover:not(:disabled) { border-color: var(--brand-600); }
 .primary, .tabs [aria-pressed="true"] { background: var(--brand-600); color: var(--white); border-color: var(--brand-600); }
 .upload { position: relative; overflow: hidden; margin: 0; }
 .upload input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.tabs { display: flex; gap: .5rem; }
+.tabs { display: flex; gap: .5rem; flex-wrap: wrap; }
 .design-layout { display: grid; grid-template-columns: minmax(0, 1fr) 370px; gap: 1rem; align-items: start; }
 .live-panel { position: sticky; top: 1rem; }
 .live-panel app-certificate-canvas { display: block; border: 1px solid var(--border-primary); }

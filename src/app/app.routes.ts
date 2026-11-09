@@ -41,6 +41,11 @@ export const routes: Routes = [
           loadComponent: () => import('./features/events-page/pages/certificate-validation/certificate-validation.component').then(m => m.CertificateValidationComponent),
         },
         {
+          path: 'eventos/:id/credenciamento',
+          loadComponent: () => import('./features/events-page/components/event-credentials/event-reception.component').then(m => m.EventReceptionComponent),
+          canActivate: [authGuard],
+        },
+        {
           path: 'eventos/:id/certificados',
           loadComponent: () => import('./features/events-page/pages/event-certificates/event-certificates.component').then(m => m.EventCertificatesComponent),
           canActivate: [authGuard],

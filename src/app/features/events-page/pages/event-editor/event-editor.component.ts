@@ -1,3 +1,5 @@
+import { EventRoleCertificatesComponent } from '../../components/certificate-download/event-role-certificates.component';
+import { DEFAULT_EVENT_TIME_ZONE, EVENT_TIME_ZONES, eventTimestamp, eventLocalInput, isEventTimeZone } from '../../models/event-time';
 import { DatePipe, Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, ElementRef, HostListener, ViewChild, computed, inject, OnInit, signal } from '@angular/core';
@@ -42,6 +44,8 @@ import {
   buildEventActivityDays,
 } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
+import { ActivityInstructorsComponent } from '../../components/activity-people/activity-instructors.component';
+import { EventCredentialsComponent } from '../../components/event-credentials/event-credentials.component';
 import { ActivityPeopleComponent } from '../../components/activity-people/activity-people.component';
 import { ActivityInstructorsService, InstructorInvitation } from '../../services/activity-instructors.service';
 import { EventGuestManagerComponent } from '../../components/event-guest-manager/event-guest-manager.component';
@@ -114,6 +118,9 @@ export class EventEditorComponent implements OnInit {
   readonly guestBusy = signal(false);
   readonly guestDirty = signal(false);
 
+  readonly timeZones = EVENT_TIME_ZONES;
+  readonly timeZone = this.fb.nonNullable.control(DEFAULT_EVENT_TIME_ZONE, control => isEventTimeZone(control.value) ? null : { timeZone: true });
+  readonly knownTimeZone = (zone: string) => EVENT_TIME_ZONES.some(item => item.value === zone);
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(255)]],
     category: this.fb.nonNullable.control<EventCategory>('ACADEMIC_EDUCATIONAL', Validators.required),
@@ -129,6 +136,9 @@ export class EventEditorComponent implements OnInit {
     content: ['', [Validators.minLength(4), Validators.maxLength(5000)]],
     cover_image_url: ['', Validators.pattern(/^https?:\/\/.+/)],
   });
+  readonly eventCapacity = this.fb.control<number | null>(null, [Validators.min(0), Validators.max(2147483647), Validators.pattern(/^\d+$/)]);
+  readonly activityCapacity = this.fb.control<number | null>(null, [Validators.min(0), Validators.max(2147483647), Validators.pattern(/^\d+$/)]);
+  readonly activityWorkload = this.fb.control<number | null>(null, [Validators.min(0)]);
   readonly activityForm = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
     description: ['', Validators.maxLength(1000)],
@@ -457,7 +467,9 @@ export class EventEditorComponent implements OnInit {
       this.hasUnsavedChanges.set(true);
       this.successMessage.set(null);
     };
+    this.eventCapacity.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
+    this.timeZone.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
     this.presentationForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
   }
 
@@ -494,15 +506,24 @@ export class EventEditorComponent implements OnInit {
     const request: Observable<EventDetails> = currentEvent
       ? this.eventsService.update(currentEvent.id, this.buildBasicUpdatePayload())
       : this.eventsService.create({
+          ...(this.eventCapacity.value !== null ? { max_capacity: this.eventCapacity.value } : {}),
           title: value.title,
           category: value.category,
           format: value.format,
+          time_zone: this.timeZone.value,
           start_date: value.start_date,
           end_date: value.end_date,
         } satisfies CreateEventPayload).pipe(
-          switchMap((createdEvent) => this.hasEnrollmentSettings()
-            ? this.eventsService.update(createdEvent.id, this.buildBasicUpdatePayload())
-            : of(createdEvent)),
+          switchMap((createdEvent) => {
+            // Preserve the created ID if saving enrollment settings fails: retry must not duplicate it.
+            this.event.set(createdEvent); this.eventCapacity.markAsPristine();
+            this.ownedEventIds.update(ids => new Set(ids).add(createdEvent.id));
+            this.editorAccessResolved.set(true); this.editingExisting.set(true);
+            this.location.replaceState(`/eventos/${createdEvent.id}/editar`);
+            return this.hasEnrollmentSettings()
+              ? this.eventsService.update(createdEvent.id, this.buildBasicUpdatePayload()).pipe(map(saved => ({ ...saved, max_capacity: saved.max_capacity !== undefined ? saved.max_capacity : createdEvent.max_capacity })))
+              : of(createdEvent);
+          }),
         );
 
     request.pipe(finalize(() => this.operation.set('idle'))).subscribe({
@@ -534,11 +555,12 @@ export class EventEditorComponent implements OnInit {
     if (!currentEvent || this.isBusy()) return;
     if (
       this.form.invalid
+      || this.eventCapacity.invalid
       || this.presentationForm.invalid
       || !this.hasValidDates()
       || !this.hasValidEnrollmentDates()
     ) {
-      this.form.markAllAsTouched();
+      this.form.markAllAsTouched(); this.eventCapacity.markAsTouched();
       this.presentationForm.markAllAsTouched();
       this.revealValidation();
       this.errorMessage.set('Revise as informações e as datas de inscrição antes de continuar.');
@@ -605,11 +627,12 @@ export class EventEditorComponent implements OnInit {
     if (!currentEvent || this.isBusy()) return;
     if (
       this.form.invalid
+      || this.eventCapacity.invalid
       || this.presentationForm.invalid
       || !this.hasValidDates()
       || !this.hasValidEnrollmentDates()
     ) {
-      this.form.markAllAsTouched();
+      this.form.markAllAsTouched(); this.eventCapacity.markAsTouched();
       this.presentationForm.markAllAsTouched();
       this.revealValidation();
       this.errorMessage.set('Revise as informações do evento antes de concluir.');
@@ -645,11 +668,12 @@ export class EventEditorComponent implements OnInit {
     if (!currentEvent || !this.canPublish() || this.isBusy()) return;
     if (
       this.form.invalid
+      || this.eventCapacity.invalid
       || this.presentationForm.invalid
       || !this.hasValidDates()
       || !this.hasValidEnrollmentDates()
     ) {
-      this.form.markAllAsTouched();
+      this.form.markAllAsTouched(); this.eventCapacity.markAsTouched();
       this.presentationForm.markAllAsTouched();
       this.revealValidation();
       this.errorMessage.set('Revise as informações do evento antes de publicar.');
@@ -717,15 +741,16 @@ export class EventEditorComponent implements OnInit {
       this.errorMessage.set('Você não tem permissão para alterar a programação deste evento.');
       return;
     }
-    if (this.activityForm.invalid || this.activityDatesError()) {
-      this.activityForm.markAllAsTouched();
-      this.errorMessage.set(this.activityDatesError() ?? 'Revise os dados obrigatórios e os horários da atividade.');
+    if (this.activityForm.invalid || this.activityCapacity.invalid || this.activityWorkload.invalid || this.activityDatesError()) {
+      this.activityForm.markAllAsTouched(); this.activityWorkload.markAsTouched(); this.activityCapacity.markAsTouched();
+      this.errorMessage.set(this.activityCapacity.invalid ? 'Informe um limite de vagas inteiro, igual ou maior que zero.' : this.activityDatesError() ?? 'Revise os dados obrigatórios e os horários da atividade.');
       return;
     }
 
     const value = this.activityForm.getRawValue();
     const activityId = this.editingActivityId();
     const payload: ActivityPayload = {
+      ...((this.activityCapacity.value !== null || this.activityCapacity.dirty) ? { max_capacity: this.activityCapacity.value } : {}),
       title: value.title.trim(),
       description: value.description.trim(),
       type: value.type,
@@ -733,6 +758,7 @@ export class EventEditorComponent implements OnInit {
       start_date: value.start_date,
       end_date: value.end_date,
       registration_policy: value.registration_policy,
+      workload_hours: this.activityWorkload.value ?? Math.round((eventTimestamp(value.end_date, currentEvent.time_zone) - eventTimestamp(value.start_date, currentEvent.time_zone)) / 36000) / 100,
     };
     this.operation.set('activity');
     this.errorMessage.set(null);
@@ -742,6 +768,7 @@ export class EventEditorComponent implements OnInit {
       ? this.eventsService.updateActivity(activityId, payload)
       : this.eventsService.createActivity(currentEvent.id, {
           title: payload.title, description: payload.description,
+          ...(payload.max_capacity != null ? { max_capacity: payload.max_capacity } : {}),
         }).pipe(
           switchMap((created) => {
             // Keep the persisted ID and input when PATCH fails: retry must not create duplicates.
@@ -814,6 +841,8 @@ export class EventEditorComponent implements OnInit {
     this.activeActivityDay.set(day);
     this.activityDialogDay.set(day);
     // Do not silently shorten an existing activity spanning multiple days.
+    this.activityCapacity.reset(activity.max_capacity ?? activity.capacity ?? null);
+    this.activityWorkload.reset(activity.workload_hours ?? null);
     const endDay = this.toLocalInput(activity.end_date ?? null).slice(0, 10);
     this.activityDialogEndDay.set(this.canAddActivityOnDay(endDay) && endDay >= day ? endDay : day);
     this.editingActivityId.set(activity.id);
@@ -989,8 +1018,8 @@ export class EventEditorComponent implements OnInit {
       return 'Selecione novamente os horários para o dia indicado no formulário.';
     }
 
-    const startTimestamp = new Date(start).getTime();
-    const endTimestamp = new Date(end).getTime();
+    const startTimestamp = eventTimestamp(start, this.timeZone.value);
+    const endTimestamp = eventTimestamp(end, this.timeZone.value);
     if (!Number.isFinite(startTimestamp) || !Number.isFinite(endTimestamp)) {
       return 'Informe um horário válido para a atividade.';
     }
@@ -1003,7 +1032,7 @@ export class EventEditorComponent implements OnInit {
     if (
       eventStart
       && eventEnd
-      && (startTimestamp < new Date(eventStart).getTime() || endTimestamp > new Date(eventEnd).getTime())
+      && (startTimestamp < eventTimestamp(eventStart, this.timeZone.value) || endTimestamp > eventTimestamp(eventEnd, this.timeZone.value))
     ) {
       return 'A atividade deve acontecer dentro do período do evento.';
     }
@@ -1189,6 +1218,8 @@ export class EventEditorComponent implements OnInit {
   private buildBasicUpdatePayload(): UpdateEventPayload {
     const value = this.form.getRawValue();
     return {
+      ...(this.eventCapacity.dirty ? { max_capacity: this.eventCapacity.value } : {}),
+      time_zone: this.timeZone.value,
       title: value.title,
       category: value.category,
       format: value.format,
@@ -1220,10 +1251,12 @@ export class EventEditorComponent implements OnInit {
     const enrichedEvent: EventDetails = {
       ...(currentEvent ?? {}),
       ...event,
+      max_capacity: event.max_capacity !== undefined ? event.max_capacity : currentEvent?.max_capacity,
       title: event.title ?? currentEvent?.title ?? formValue.title,
       slug: event.slug ?? currentEvent?.slug ?? '',
       format: event.format ?? currentEvent?.format ?? formValue.format,
       category: event.category ?? currentEvent?.category ?? formValue.category,
+      time_zone: event.time_zone ?? currentEvent?.time_zone ?? this.timeZone.value,
       start_date: event.start_date ?? currentEvent?.start_date ?? formValue.start_date ?? null,
       end_date: event.end_date ?? currentEvent?.end_date ?? formValue.end_date ?? null,
       enrollment_start_date: event.enrollment_start_date
@@ -1276,7 +1309,7 @@ export class EventEditorComponent implements OnInit {
   private hasValidDates(): boolean {
     const start = this.form.controls.start_date.value;
     const end = this.form.controls.end_date.value;
-    return Boolean(start && end && new Date(start).getTime() <= new Date(end).getTime());
+    return this.timeZone.valid && Boolean(start && end && eventTimestamp(start, this.timeZone.value) <= eventTimestamp(end, this.timeZone.value));
   }
 
   private resetActivityForm(): void {
@@ -1316,7 +1349,8 @@ export class EventEditorComponent implements OnInit {
       && (!payload.location || activity.location?.trim() === payload.location)
       && sameDate(activity.start_date, payload.start_date)
       && sameDate(activity.end_date, payload.end_date)
-      && activity.registration_policy === payload.registration_policy;
+      && activity.registration_policy === payload.registration_policy
+      && (payload.max_capacity === undefined || activity.max_capacity === payload.max_capacity);
   }
 
   enrollmentDatesError(): string | null {
@@ -1328,10 +1362,11 @@ export class EventEditorComponent implements OnInit {
 
     if (!start && !end) return 'Defina a abertura e o encerramento das inscrições ou escolha acesso livre.';
     if (!start || !end) return 'Informe a abertura e o encerramento das inscrições.';
-    if (new Date(start).getTime() > new Date(end).getTime()) {
+    if (eventTimestamp(start, this.timeZone.value) > eventTimestamp(end, this.timeZone.value)) {
       return 'O encerramento deve ocorrer depois da abertura das inscrições.';
     }
-    if (eventEnd && new Date(end).getTime() > new Date(eventEnd).getTime()) {
+    if (![start, end].every(value => Number.isFinite(eventTimestamp(value, this.timeZone.value)))) return 'Revise o período de inscrições e o fuso do evento.';
+    if (eventEnd && eventTimestamp(end, this.timeZone.value) > eventTimestamp(eventEnd, this.timeZone.value)) {
       return 'As inscrições devem encerrar até o término do evento.';
     }
 
@@ -1360,13 +1395,7 @@ export class EventEditorComponent implements OnInit {
   }
 
   private toLocalInput(value: string | null): string {
-    if (!value) return '';
-    if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) return value.slice(0, 16);
-
-    const date = new Date(value);
-    if (!Number.isFinite(date.getTime())) return value.slice(0, 16);
-    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-    return localDate.toISOString().slice(0, 16);
+    return eventLocalInput(value, this.timeZone.value);
   }
 
   private getErrorMessage(error: unknown, fallback: string): string {

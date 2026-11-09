@@ -1,3 +1,4 @@
+import { eventTimestamp } from '../../../events-page/models/event-time';
 import { isPlatformBrowser } from '@angular/common';
 import { AfterViewInit, Component, computed, effect, inject, input, OnDestroy, output, PLATFORM_ID, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
@@ -37,12 +38,12 @@ export class BannerComponent implements AfterViewInit, OnDestroy {
     const nextDay = day ? new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1).getTime() : 0;
     return this.events().filter(event => {
       if (!event.start_date || event.status === 'CANCELED') return false;
-      const start = new Date(event.start_date).getTime();
-      const rawEnd = event.end_date ? new Date(event.end_date).getTime() : start;
+      const start = day ? new Date(event.start_date).getTime() : eventTimestamp(event.start_date, event.time_zone);
+      const rawEnd = event.end_date ? (day ? new Date(event.end_date).getTime() : eventTimestamp(event.end_date, event.time_zone)) : start;
       const end = Number.isFinite(rawEnd) ? Math.max(start, rawEnd) : start;
       if (!Number.isFinite(start)) return false;
       return day ? start < nextDay && (end > day.getTime() || start === day.getTime()) : end >= now;
-    }).sort((a, b) => Date.parse(a.start_date!) - Date.parse(b.start_date!));
+    }).sort((a, b) => eventTimestamp(a.start_date, a.time_zone) - eventTimestamp(b.start_date, b.time_zone));
   });
   openEvent(id: number): void {
     void this.router.navigate(['/eventos', id]);

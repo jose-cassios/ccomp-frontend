@@ -45,6 +45,7 @@ import { CertificatesService } from '../../services/certificates.service';
 export class CertificateDownloadComponent {
   readonly resourceId = input.required<number>();
   readonly scope = input<CertificateScope>('event');
+  readonly instructorId = input<number>();
   readonly label = input('Baixar certificado');
   readonly asLink = input(false);
   private readonly api = inject(CertificatesService);
@@ -70,7 +71,7 @@ export class CertificateDownloadComponent {
       return;
     }
     this.busy.set(true); this.error.set(null); this.success.set(null);
-    this.api.download(this.resourceId(), this.scope()).pipe(
+    (this.scope() === 'instructor' ? this.api.download(this.resourceId(), this.scope(), this.instructorId()) : this.api.download(this.resourceId(), this.scope())).pipe(
       takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(false)),
     ).subscribe({
       next: blob => {
@@ -78,12 +79,12 @@ export class CertificateDownloadComponent {
         this.downloadUrl = URL.createObjectURL(blob);
         const link = this.document.createElement('a');
         link.href = this.downloadUrl;
-        link.download = `certificado-${this.scope() === 'event' ? 'evento' : 'atividade'}-${this.resourceId()}.png`;
+        link.download = `certificado-${{ event: 'evento', activity: 'atividade', instructor: 'ministrante', team: 'equipe' }[this.scope()]}-${this.resourceId()}.png`;
         this.document.body.appendChild(link); link.click(); link.remove();
         this.success.set('Certificado gerado. O download foi iniciado.');
       },
       error: error => this.error.set(apiErrorMessage(error,
-        'Não foi possível emitir o certificado. É necessário estar inscrito e ter realizado o check-in. Tente novamente.')),
+        'Não foi possível emitir o certificado. Verifique os requisitos de participação, vínculo e encerramento do evento.')),
     });
   }
 }

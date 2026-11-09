@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../../auth/services/auth.service';
 import { EventDetails, EventEditor } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
@@ -147,6 +148,7 @@ describe('EventEditorComponent', () => {
     component.save();
 
     expect(eventsService.create).toHaveBeenCalledWith({
+      time_zone: 'America/Sao_Paulo',
       title: createdEvent.title,
       category: createdEvent.category,
       format: createdEvent.format,
@@ -207,6 +209,7 @@ describe('EventEditorComponent', () => {
     component.savePresentation();
 
     expect(eventsService.update).toHaveBeenCalledWith(createdEvent.id, {
+      time_zone: 'America/Sao_Paulo',
       title: createdEvent.title,
       summary: 'Palestras e oficinas para a comunidade.',
       content: 'Uma programação completa com atividades para estudantes.',
@@ -292,7 +295,7 @@ describe('EventEditorComponent', () => {
     expect(eventsService.createActivity).toHaveBeenCalledWith(createdEvent.id, {
       title: activityPayload.title, description: activityPayload.description,
     });
-    expect(eventsService.updateActivity).toHaveBeenCalledWith(21, activityPayload);
+    expect(eventsService.updateActivity).toHaveBeenCalledWith(21, { ...activityPayload, workload_hours: 1 });
     expect(eventsService.getAllActivities).toHaveBeenCalledWith(createdEvent.id);
     expect(component.successMessage()).toContain('adicionada');
   });
@@ -336,7 +339,7 @@ describe('EventEditorComponent', () => {
     expect(component.activityForm.getRawValue()).toEqual(activityPayload);
     component.saveActivity();
     expect(eventsService.createActivity).toHaveBeenCalledTimes(1);
-    expect(eventsService.updateActivity).toHaveBeenLastCalledWith(22, activityPayload);
+    expect(eventsService.updateActivity).toHaveBeenLastCalledWith(22, { ...activityPayload, workload_hours: 1 });
   });
 
   it('should update an existing activity through the activity PATCH route', () => {
@@ -371,6 +374,7 @@ describe('EventEditorComponent', () => {
     component.saveActivity();
 
     expect(eventsService.updateActivity).toHaveBeenCalledWith(21, {
+      workload_hours: 1.5,
       title: 'Abertura atualizada',
       description: 'Boas-vindas',
       type: 'WORKSHOP',
@@ -700,4 +704,80 @@ describe('EventEditorComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Tentar novamente');
     expect(fixture.nativeElement.textContent).not.toContain('Carregando informações do evento');
   });
+
+  it('reuses a guest as a confirmed instructor, keeping the guest association and account link', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.prepareGuestInstructor({ id: 9, user_id: '', status: 'CONFIRMED', visibility: 'PUBLIC', name: 'Ana', description: 'Palestrante' });
+    component.rosterForm.controls.email.setValue('ana@ifma.edu.br');
+    component.addRosterInstructor();
+    const person = component.instructorRoster()[0];
+    expect(person.guest_id).toBe(9);
+    component.openActivityDialog(); component.activityForm.patchValue(activityPayload);
+    component.instructorForm.controls.email.setValue(person.key!);
+    component.saveActivity();
+    expect(guests.linkAccount).toHaveBeenCalledWith(14, 9, 'ana@ifma.edu.br', 21);
+    expect(guests.associate).toHaveBeenCalledWith(14, 9, 21, 'PRESENTER');
+    expect(instructors.add).toHaveBeenCalledWith(21, { name: 'Ana', description: 'Palestrante', role: 'INSTRUCTOR', account_email: 'ana@ifma.edu.br' });
+    expect(instructors.invite).not.toHaveBeenCalled();
+  });
+  it('keeps a failed guest account link selected for retry without duplicating the activity', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.prepareGuestInstructor({ id: 9, user_id: '', status: 'CONFIRMED', visibility: 'PUBLIC', name: 'Ana' });
+    component.rosterForm.controls.email.setValue('ana@ifma.edu.br'); component.addRosterInstructor();
+    component.openActivityDialog(); component.activityForm.patchValue(activityPayload);
+    const key = component.instructorRoster()[0].key!; component.instructorForm.controls.email.setValue(key);
+    guests.linkAccount.mockReturnValueOnce(throwError(() => new Error('offline')));
+    component.saveActivity();
+    expect(instructors.add).not.toHaveBeenCalled(); expect(component.instructorForm.controls.email.value).toBe(key);
+    expect(component.peopleError()).toContain('A atividade foi salva');
+    component.saveActivity();
+    expect(eventsService.createActivity).toHaveBeenCalledTimes(1); expect(instructors.add).toHaveBeenCalledTimes(1);
+    expect(component.instructorForm.controls.email.value).toBe('');
+  });
+  it('uses explicit workload hours and rejects negative values before saving', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.openActivityDialog(); component.activityForm.patchValue(activityPayload);
+    component.activityWorkload.setValue(-1); component.saveActivity();
+    expect(eventsService.createActivity).not.toHaveBeenCalled();
+    component.activityWorkload.setValue(2.5); component.saveActivity();
+    expect(eventsService.updateActivity).toHaveBeenCalledWith(21, { ...activityPayload, workload_hours: 2.5 });
+  });
+
+
+  it('validates capacity and includes it when creating an event', () => {
+    component.form.patchValue({ title: createdEvent.title, start_date: '2026-09-10T08:00', end_date: '2026-09-10T18:00' });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS');
+    for (const value of [-1, 1.5]) { component.eventCapacity.setValue(value); component.save(); expect(eventsService.create).not.toHaveBeenCalled(); }
+    eventsService.create.mockReturnValueOnce(of({ ...createdEvent, max_capacity: 20 }));
+    component.eventCapacity.setValue(20); component.save();
+    expect(eventsService.create).toHaveBeenCalledWith(expect.objectContaining({ max_capacity: 20 }));
+    expect(component.eventCapacity.value).toBe(20);
+    expect(component.activeStep()).toBe('presentation');
+  });
+  it('retains the created event ID if saving enrollment settings fails', () => {
+    component.form.patchValue({ title: createdEvent.title, start_date: '2026-09-10T08:00', end_date: '2026-09-10T18:00', enrollment_start_date: '2026-09-01T08:00', enrollment_end_date: '2026-09-10T08:00' });
+    eventsService.update.mockReturnValueOnce(throwError(() => new Error('offline')));
+    component.save(); expect(component.event()?.id).toBe(14);
+    component.save(); expect(eventsService.create).toHaveBeenCalledTimes(1);
+  });
+  it('retains an event capacity edit on failure, including removal of the limit', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner', max_capacity: 30 });
+    component.form.patchValue({ title: createdEvent.title, start_date: '2026-09-10T08:00', end_date: '2026-09-10T18:00' });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS'); component.eventCapacity.setValue(null); component.eventCapacity.markAsDirty();
+    eventsService.update.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 404, error: { message: 'Limite não atualizado.' } })));
+    component.save();
+    expect(eventsService.update).toHaveBeenLastCalledWith(14, expect.objectContaining({ max_capacity: null }));
+    expect(component.eventCapacity.dirty).toBe(true); expect(component.errorMessage()).toContain('Limite não atualizado');
+  });
+  it('creates an activity with capacity and restores it on editing', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' }); component.openActivityDialog(); component.activityForm.patchValue(activityPayload);
+    component.activityCapacity.setValue(12); component.saveActivity();
+    expect(eventsService.createActivity).toHaveBeenCalledWith(14, expect.objectContaining({ max_capacity: 12 }));
+    expect(eventsService.updateActivity).toHaveBeenLastCalledWith(21, expect.objectContaining({ max_capacity: 12 }));
+    component.editActivity({ id: 21, event_id: 14, ...activityPayload, max_capacity: 12 });
+    expect(component.activityCapacity.value).toBe(12);
+    component.activityCapacity.setValue(-1); eventsService.updateActivity.mockClear(); component.saveActivity();
+    expect(eventsService.updateActivity).not.toHaveBeenCalled();
+  });
+
 });
