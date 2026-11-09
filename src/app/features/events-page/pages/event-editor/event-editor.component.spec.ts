@@ -830,4 +830,41 @@ describe('EventEditorComponent', () => {
     expect(eventsService.updateActivity).toHaveBeenCalledWith(21, { ...activityPayload, workload_hours: 2.5 });
   });
 
+
+  it('validates capacity and includes it when creating an event', () => {
+    component.form.patchValue({ title: createdEvent.title, start_date: '2026-09-10T08:00', end_date: '2026-09-10T18:00' });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS');
+    for (const value of [-1, 1.5]) { component.eventCapacity.setValue(value); component.save(); expect(eventsService.create).not.toHaveBeenCalled(); }
+    eventsService.create.mockReturnValueOnce(of({ ...createdEvent, max_capacity: 20 }));
+    component.eventCapacity.setValue(20); component.save();
+    expect(eventsService.create).toHaveBeenCalledWith(expect.objectContaining({ max_capacity: 20 }));
+    expect(component.eventCapacity.value).toBe(20);
+    expect(component.activeStep()).toBe('presentation');
+  });
+  it('retains the created event ID if saving enrollment settings fails', () => {
+    component.form.patchValue({ title: createdEvent.title, start_date: '2026-09-10T08:00', end_date: '2026-09-10T18:00', enrollment_start_date: '2026-09-01T08:00', enrollment_end_date: '2026-09-10T08:00' });
+    eventsService.update.mockReturnValueOnce(throwError(() => new Error('offline')));
+    component.save(); expect(component.event()?.id).toBe(14);
+    component.save(); expect(eventsService.create).toHaveBeenCalledTimes(1);
+  });
+  it('retains an event capacity edit on failure, including removal of the limit', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner', max_capacity: 30 });
+    component.form.patchValue({ title: createdEvent.title, start_date: '2026-09-10T08:00', end_date: '2026-09-10T18:00' });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS'); component.eventCapacity.setValue(null); component.eventCapacity.markAsDirty();
+    eventsService.update.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 404, error: { message: 'Limite não atualizado.' } })));
+    component.save();
+    expect(eventsService.update).toHaveBeenLastCalledWith(14, expect.objectContaining({ max_capacity: null }));
+    expect(component.eventCapacity.dirty).toBe(true); expect(component.errorMessage()).toContain('Limite não atualizado');
+  });
+  it('creates an activity with capacity and restores it on editing', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' }); component.openActivityDialog(); component.activityForm.patchValue(activityPayload);
+    component.activityCapacity.setValue(12); component.saveActivity();
+    expect(eventsService.createActivity).toHaveBeenCalledWith(14, expect.objectContaining({ max_capacity: 12 }));
+    expect(eventsService.updateActivity).toHaveBeenLastCalledWith(21, expect.objectContaining({ max_capacity: 12 }));
+    component.editActivity({ id: 21, event_id: 14, ...activityPayload, max_capacity: 12 });
+    expect(component.activityCapacity.value).toBe(12);
+    component.activityCapacity.setValue(-1); eventsService.updateActivity.mockClear(); component.saveActivity();
+    expect(eventsService.updateActivity).not.toHaveBeenCalled();
+  });
+
 });

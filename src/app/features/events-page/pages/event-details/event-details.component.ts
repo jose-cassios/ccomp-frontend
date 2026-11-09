@@ -91,6 +91,14 @@ export class EventDetailsComponent implements OnInit {
     const schedule = this.activitySchedule();
     return schedule.find((day) => day.key === this.activeActivityDay()) ?? schedule[0] ?? null;
   });
+  readonly expandedDescriptions = signal<ReadonlySet<number>>(new Set());
+  toggleDescription(id: number): void {
+    this.expandedDescriptions.update(ids => { const next = new Set(ids); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  }
+  activitySoldOut(activity: EventActivity): boolean {
+    const capacity = activity.max_capacity !== undefined ? activity.max_capacity : activity.capacity;
+    return capacity != null && (capacity === 0 || (activity.enrollment_count != null && activity.enrollment_count >= capacity));
+  }
   readonly activityTypeLabel = eventActivityTypeLabel;
   readonly activityWeekdayLabel = eventActivityWeekdayLabel;
 
@@ -187,18 +195,20 @@ export class EventDetailsComponent implements OnInit {
   }
 
   activityRequiresRegistration(activity: EventActivity): boolean {
-    return activity.registration_policy === 'ACTIVITY_REGISTRANTS_ONLY'
+    return (activity.max_capacity !== undefined ? activity.max_capacity : activity.capacity) != null
+      || activity.registration_policy === 'ACTIVITY_REGISTRANTS_ONLY'
       || (!activity.registration_policy && activity.registration_mode === 'REQUIRED');
   }
 
   activityIsIncludedWithEvent(activity: EventActivity): boolean {
-    return activity.registration_policy === 'INHERITED_FROM_EVENT';
+    return activity.registration_policy === 'INHERITED_FROM_EVENT'
+      && (activity.max_capacity !== undefined ? activity.max_capacity : activity.capacity) == null;
   }
 
   activityRegistrationBlocked(activity: EventActivity): boolean {
     if (this.activitySubscriptionsLoading() || this.activitySubscriptionsError()) return true;
     if (activity.subscribed) return false;
-    if (this.activityHasStarted(activity)) return true;
+    if (this.activityHasStarted(activity) || this.activitySoldOut(activity)) return true;
     if (!this.isAuthenticated()) return false;
     if (this.event()?.schedule_conflict_policy !== 'ALLOW' && this.activityConflict(activity)) return true;
     if (activity.can_subscribe !== null && activity.can_subscribe !== undefined) {
@@ -211,6 +221,7 @@ export class EventDetailsComponent implements OnInit {
   activityRegistrationHint(activity: EventActivity): string | null {
     if (activity.subscribed || !this.activityRequiresRegistration(activity)) return null;
     if (this.activityHasStarted(activity)) return 'Inscrições encerradas: esta atividade já começou.';
+    if (this.activitySoldOut(activity)) return 'Vagas esgotadas para esta atividade.';
     if (!this.isAuthenticated()) return null;
     const conflict = this.activityConflict(activity);
     if (conflict) return this.activityConflictMessage(conflict);

@@ -130,6 +130,13 @@
                 }
               </div>
 
+              <label class="field">
+                <span>Limite de vagas no evento</span>
+                <input type="number" min="0" max="2147483647" step="1" [formControl]="eventCapacity" placeholder="Sem limite" />
+                <small>Deixe vazio para não limitar as inscrições. Zero fecha todas as vagas.</small>
+                @if (event() && event()!.max_capacity === undefined && !eventCapacity.dirty) { <small>A API não informou o limite atual. Altere este campo somente se desejar definir um novo limite.</small> }
+                @if (eventCapacity.touched && eventCapacity.invalid) { <strong>Informe um número inteiro de vagas, igual ou maior que zero.</strong> }
+              </label>
               @if (eventRegistrationRequired()) {
                 <div class="form-grid enrollment-settings__dates">
                   <label class="field">
@@ -545,6 +552,7 @@
   <div><dt>Execução</dt><dd>{{ executionStatusLabel(event()?.execution_status) }}</dd></div>
   <div><dt>Início do evento</dt><dd>{{ form.controls.start_date.value | date:'dd/MM/yyyy HH:mm' }}</dd></div>
   <div><dt>Fuso horário</dt><dd>{{ timeZone.value }}</dd></div>
+  <div><dt>Limite de vagas</dt><dd>{{ eventCapacity.value === null ? (event()?.max_capacity === undefined ? 'Não informado pela API' : 'Sem limite') : eventCapacity.value }}</dd></div>
   <div><dt>Término do evento</dt><dd>{{ form.controls.end_date.value | date:'dd/MM/yyyy HH:mm' }}</dd></div>
   <div><dt>Participação</dt><dd>{{ eventRegistrationRequired() ? 'Inscrição obrigatória' : 'Acesso livre, sem inscrição' }}</dd></div>
   @if (eventRegistrationRequired()) {
@@ -661,6 +669,11 @@
                   <small>Entre {{ activityTimeBounds(activityDialogEndDay()).min }} e {{ activityTimeBounds(activityDialogEndDay()).max }}</small>
                 </label>
 
+                <label class="field field--wide"><span>Limite de vagas na atividade</span>
+                  <input type="number" min="0" max="2147483647" step="1" [formControl]="activityCapacity" placeholder="Sem limite" />
+                  <small>Limite das inscrições individuais desta atividade, independente do evento. Vazio significa sem limite; zero fecha as vagas.</small>
+                  @if (activityCapacity.touched && activityCapacity.invalid) { <strong>Informe um número inteiro de vagas, igual ou maior que zero.</strong> }
+                </label>
                 <label class="field field--wide"><span>Carga horária para certificados</span>
                   <input type="number" min="0" step="0.25" [formControl]="activityWorkload" placeholder="Automática pela duração" />
                   <small>Deixe vazio para usar a duração da atividade. Você pode informar outro total em horas, descontando intervalos.</small>

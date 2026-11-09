@@ -138,7 +138,8 @@
                               }
                             </p>
                             @if (activity.description) {
-                              <p class="activity-description">{{ activity.description }}</p>
+                              <p class="activity-description" [id]="'activity-description-' + activity.id" [class.is-expanded]="expandedDescriptions().has(activity.id)">{{ activity.description }}</p>
+                              <button class="description-toggle" type="button" [attr.aria-expanded]="expandedDescriptions().has(activity.id)" [attr.aria-controls]="'activity-description-' + activity.id" (click)="toggleDescription(activity.id)">{{ expandedDescriptions().has(activity.id) ? 'Recolher descrição' : 'Ver descrição completa' }}</button>
                             }
                             @if ((isAuthenticated() && (subscribed() || canManageCertificates())) ? activity.guest : null; as guest) {
                               <div class="activity-guest">

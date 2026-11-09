@@ -91,7 +91,7 @@ export class EventEditorComponent implements OnInit {
       this.activeStep.set('details'); section = 'event-basics';
     } else if (!this.hasValidDates() || this.form.controls.start_date.invalid || this.form.controls.end_date.invalid) {
       this.activeStep.set('details'); section = 'event-dates';
-    } else if (!this.hasValidEnrollmentDates()) {
+    } else if (this.eventCapacity.invalid || !this.hasValidEnrollmentDates()) {
       this.activeStep.set('details'); section = 'event-registration';
     } else {
       this.activeStep.set('presentation'); section = this.presentationForm.controls.cover_image_url.invalid ? 'page-cover' : 'page-content';
@@ -136,6 +136,8 @@ export class EventEditorComponent implements OnInit {
     content: ['', [Validators.minLength(4), Validators.maxLength(5000)]],
     cover_image_url: ['', Validators.pattern(/^https?:\/\/.+/)],
   });
+  readonly eventCapacity = this.fb.control<number | null>(null, [Validators.min(0), Validators.max(2147483647), Validators.pattern(/^\d+$/)]);
+  readonly activityCapacity = this.fb.control<number | null>(null, [Validators.min(0), Validators.max(2147483647), Validators.pattern(/^\d+$/)]);
   readonly activityWorkload = this.fb.control<number | null>(null, [Validators.min(0)]);
   readonly activityForm = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
@@ -501,6 +503,7 @@ export class EventEditorComponent implements OnInit {
       this.hasUnsavedChanges.set(true);
       this.successMessage.set(null);
     };
+    this.eventCapacity.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
     this.timeZone.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
     this.presentationForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
@@ -522,10 +525,10 @@ export class EventEditorComponent implements OnInit {
 
   save(): void {
     if (this.isBusy()) return;
-    if (this.form.invalid || !this.hasValidDates() || !this.hasValidEnrollmentDates()) {
-      this.form.markAllAsTouched();
+    if (this.form.invalid || this.eventCapacity.invalid || !this.hasValidDates() || !this.hasValidEnrollmentDates()) {
+      this.form.markAllAsTouched(); this.eventCapacity.markAsTouched();
       this.revealValidation();
-      this.errorMessage.set('Revise os campos obrigatórios, as datas do evento e o período de inscrições.');
+      this.errorMessage.set(this.eventCapacity.invalid ? 'Informe um limite de vagas inteiro, igual ou maior que zero.' : 'Revise os campos obrigatórios, as datas do evento e o período de inscrições.');
       return;
     }
 
@@ -539,6 +542,7 @@ export class EventEditorComponent implements OnInit {
     const request: Observable<EventDetails> = currentEvent
       ? this.eventsService.update(currentEvent.id, this.buildBasicUpdatePayload())
       : this.eventsService.create({
+          ...(this.eventCapacity.value !== null ? { max_capacity: this.eventCapacity.value } : {}),
           title: value.title,
           category: value.category,
           format: value.format,
@@ -546,9 +550,16 @@ export class EventEditorComponent implements OnInit {
           start_date: value.start_date,
           end_date: value.end_date,
         } satisfies CreateEventPayload).pipe(
-          switchMap((createdEvent) => this.hasEnrollmentSettings()
-            ? this.eventsService.update(createdEvent.id, this.buildBasicUpdatePayload())
-            : of(createdEvent)),
+          switchMap((createdEvent) => {
+            // Preserve the created ID if saving enrollment settings fails: retry must not duplicate it.
+            this.event.set(createdEvent); this.eventCapacity.markAsPristine();
+            this.ownedEventIds.update(ids => new Set(ids).add(createdEvent.id));
+            this.editorAccessResolved.set(true); this.editingExisting.set(true);
+            this.location.replaceState(`/eventos/${createdEvent.id}/editar`);
+            return this.hasEnrollmentSettings()
+              ? this.eventsService.update(createdEvent.id, this.buildBasicUpdatePayload()).pipe(map(saved => ({ ...saved, max_capacity: saved.max_capacity !== undefined ? saved.max_capacity : createdEvent.max_capacity })))
+              : of(createdEvent);
+          }),
         );
 
     request.pipe(finalize(() => this.operation.set('idle'))).subscribe({
@@ -580,11 +591,12 @@ export class EventEditorComponent implements OnInit {
     if (!currentEvent || this.isBusy()) return;
     if (
       this.form.invalid
+      || this.eventCapacity.invalid
       || this.presentationForm.invalid
       || !this.hasValidDates()
       || !this.hasValidEnrollmentDates()
     ) {
-      this.form.markAllAsTouched();
+      this.form.markAllAsTouched(); this.eventCapacity.markAsTouched();
       this.presentationForm.markAllAsTouched();
       this.revealValidation();
       this.errorMessage.set('Revise as informações e as datas de inscrição antes de continuar.');
@@ -651,11 +663,12 @@ export class EventEditorComponent implements OnInit {
     if (!currentEvent || this.isBusy()) return;
     if (
       this.form.invalid
+      || this.eventCapacity.invalid
       || this.presentationForm.invalid
       || !this.hasValidDates()
       || !this.hasValidEnrollmentDates()
     ) {
-      this.form.markAllAsTouched();
+      this.form.markAllAsTouched(); this.eventCapacity.markAsTouched();
       this.presentationForm.markAllAsTouched();
       this.revealValidation();
       this.errorMessage.set('Revise as informações do evento antes de concluir.');
@@ -691,11 +704,12 @@ export class EventEditorComponent implements OnInit {
     if (!currentEvent || !this.canPublish() || this.isBusy()) return;
     if (
       this.form.invalid
+      || this.eventCapacity.invalid
       || this.presentationForm.invalid
       || !this.hasValidDates()
       || !this.hasValidEnrollmentDates()
     ) {
-      this.form.markAllAsTouched();
+      this.form.markAllAsTouched(); this.eventCapacity.markAsTouched();
       this.presentationForm.markAllAsTouched();
       this.revealValidation();
       this.errorMessage.set('Revise as informações do evento antes de publicar.');
@@ -763,15 +777,16 @@ export class EventEditorComponent implements OnInit {
       this.errorMessage.set('Você não tem permissão para alterar a programação deste evento.');
       return;
     }
-    if (this.activityForm.invalid || this.activityWorkload.invalid || this.activityDatesError()) {
-      this.activityForm.markAllAsTouched(); this.activityWorkload.markAsTouched();
-      this.errorMessage.set(this.activityDatesError() ?? 'Revise os dados obrigatórios e os horários da atividade.');
+    if (this.activityForm.invalid || this.activityCapacity.invalid || this.activityWorkload.invalid || this.activityDatesError()) {
+      this.activityForm.markAllAsTouched(); this.activityWorkload.markAsTouched(); this.activityCapacity.markAsTouched();
+      this.errorMessage.set(this.activityCapacity.invalid ? 'Informe um limite de vagas inteiro, igual ou maior que zero.' : this.activityDatesError() ?? 'Revise os dados obrigatórios e os horários da atividade.');
       return;
     }
 
     const value = this.activityForm.getRawValue();
     const activityId = this.editingActivityId();
     const payload: ActivityPayload = {
+      ...((this.activityCapacity.value !== null || this.activityCapacity.dirty) ? { max_capacity: this.activityCapacity.value } : {}),
       title: value.title.trim(),
       description: value.description.trim(),
       type: value.type,
@@ -789,6 +804,7 @@ export class EventEditorComponent implements OnInit {
       ? this.eventsService.updateActivity(activityId, payload)
       : this.eventsService.createActivity(currentEvent.id, {
           title: payload.title, description: payload.description,
+          ...(payload.max_capacity != null ? { max_capacity: payload.max_capacity } : {}),
         }).pipe(
           switchMap((created) => {
             // Keep the persisted ID and input when PATCH fails: retry must not create duplicates.
@@ -861,6 +877,7 @@ export class EventEditorComponent implements OnInit {
     this.activeActivityDay.set(day);
     this.activityDialogDay.set(day);
     // Do not silently shorten an existing activity spanning multiple days.
+    this.activityCapacity.reset(activity.max_capacity ?? activity.capacity ?? null);
     this.activityWorkload.reset(activity.workload_hours ?? null);
     const endDay = this.toLocalInput(activity.end_date ?? null).slice(0, 10);
     this.activityDialogEndDay.set(this.canAddActivityOnDay(endDay) && endDay >= day ? endDay : day);
@@ -941,7 +958,7 @@ export class EventEditorComponent implements OnInit {
 
   cancelActivityEdit(): void {
     if (this.isBusy() || this.peopleBusy() || this.guestBusy()) return;
-    if ((this.activityForm.dirty || this.activityWorkload.dirty || this.activityGuestId.dirty || this.instructorForm.dirty) && typeof window !== 'undefined'
+    if ((this.activityForm.dirty || this.activityWorkload.dirty || this.activityCapacity.dirty || this.activityGuestId.dirty || this.instructorForm.dirty) && typeof window !== 'undefined'
       && !window.confirm('Descartar as alterações desta atividade?')) return;
     this.activityDialog?.nativeElement.close();
     this.activityDialogDay.set(null);
@@ -1128,13 +1145,13 @@ export class EventEditorComponent implements OnInit {
   }
 
   canDeactivate(): boolean {
-    if ((!this.hasUnsavedChanges() && !this.guestDirty() && !this.rosterDirty() && !(this.activityDialogDay() && (this.activityForm.dirty || this.activityWorkload.dirty || this.activityGuestId.dirty || this.instructorForm.dirty))) || typeof window === 'undefined') return true;
+    if ((!this.hasUnsavedChanges() && !this.guestDirty() && !this.rosterDirty() && !(this.activityDialogDay() && (this.activityForm.dirty || this.activityWorkload.dirty || this.activityCapacity.dirty || this.activityGuestId.dirty || this.instructorForm.dirty))) || typeof window === 'undefined') return true;
     return window.confirm('Há alterações não salvas. Deseja sair mesmo assim?');
   }
 
   @HostListener('window:beforeunload', ['$event'])
   preventUnsavedUnload(event: BeforeUnloadEvent): void {
-    if (this.hasUnsavedChanges() || this.guestDirty() || this.rosterDirty() || (this.activityDialogDay() && (this.activityForm.dirty || this.activityWorkload.dirty || this.activityGuestId.dirty || this.instructorForm.dirty))) event.preventDefault();
+    if (this.hasUnsavedChanges() || this.guestDirty() || this.rosterDirty() || (this.activityDialogDay() && (this.activityForm.dirty || this.activityWorkload.dirty || this.activityCapacity.dirty || this.activityGuestId.dirty || this.instructorForm.dirty))) event.preventDefault();
   }
 
   private loadEvent(id: string): void {
@@ -1237,6 +1254,7 @@ export class EventEditorComponent implements OnInit {
   private buildBasicUpdatePayload(): UpdateEventPayload {
     const value = this.form.getRawValue();
     return {
+      ...(this.eventCapacity.dirty ? { max_capacity: this.eventCapacity.value } : {}),
       time_zone: this.timeZone.value,
       title: value.title,
       category: value.category,
@@ -1269,6 +1287,7 @@ export class EventEditorComponent implements OnInit {
     const enrichedEvent: EventDetails = {
       ...(currentEvent ?? {}),
       ...event,
+      max_capacity: event.max_capacity !== undefined ? event.max_capacity : currentEvent?.max_capacity,
       title: event.title ?? currentEvent?.title ?? formValue.title,
       slug: event.slug ?? currentEvent?.slug ?? '',
       format: event.format ?? currentEvent?.format ?? formValue.format,
@@ -1296,6 +1315,7 @@ export class EventEditorComponent implements OnInit {
     if (this.event()?.id !== enrichedEvent.id) {
       this.instructorRoster.set(this.rosterDraft.read(enrichedEvent.id, this.authService.currentUserState()?.id ?? ''));
     }
+    this.eventCapacity.reset(enrichedEvent.max_capacity ?? null, { emitEvent: false });
     this.timeZone.setValue(enrichedEvent.time_zone!, { emitEvent: false });
     this.event.set(enrichedEvent);
     this.activities.set(enrichedEvent.activities ?? []);
@@ -1331,6 +1351,7 @@ export class EventEditorComponent implements OnInit {
   }
 
   private resetActivityForm(): void {
+    this.activityCapacity.reset();
     this.activityWorkload.reset();
     this.resumeActivity.set(false);
     this.activityGuestId.reset(); this.activityGuestRole.reset();
@@ -1368,7 +1389,8 @@ export class EventEditorComponent implements OnInit {
       && (!payload.location || activity.location?.trim() === payload.location)
       && sameDate(activity.start_date, payload.start_date)
       && sameDate(activity.end_date, payload.end_date)
-      && activity.registration_policy === payload.registration_policy;
+      && activity.registration_policy === payload.registration_policy
+      && (payload.max_capacity === undefined || activity.max_capacity === payload.max_capacity);
   }
 
   enrollmentDatesError(): string | null {

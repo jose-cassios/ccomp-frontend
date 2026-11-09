@@ -309,4 +309,23 @@ describe('EventDetailsComponent', () => {
     expect(component.errorMessage()).toBe('Atividade não encontrada.');
     expect(component.activitySubscriptionBusyId()).toBeNull();
   });
+
+  it('expands and collapses the complete activity description without changing its content', () => {
+    const description = 'Descrição completa. '.repeat(50) + '\nÚltima linha.';
+    component.event.set({ ...event, activities: [{ ...scheduleActivity, description }] }); fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector('.description-toggle') as HTMLButtonElement;
+    const paragraph = fixture.nativeElement.querySelector('.activity-description') as HTMLElement;
+    expect(button.getAttribute('aria-expanded')).toBe('false'); button.click(); fixture.detectChanges();
+    expect(paragraph.textContent).toContain('Última linha.'); expect(paragraph.classList.contains('is-expanded')).toBe(true);
+    expect(button.getAttribute('aria-expanded')).toBe('true'); button.click(); fixture.detectChanges();
+    expect(paragraph.classList.contains('is-expanded')).toBe(false);
+  });
+  it('blocks exhausted activities but keeps cancellation available and never guesses unknown occupancy', () => {
+    const activity = { ...scheduleActivity, registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const, max_capacity: 0 };
+    expect(component.activityRegistrationBlocked(activity)).toBe(true); expect(component.activityRegistrationHint(activity)).toContain('Vagas esgotadas');
+    expect(component.activityRegistrationBlocked({ ...activity, subscribed: true })).toBe(false);
+    expect(component.activitySoldOut({ ...activity, max_capacity: 10 })).toBe(false);
+    expect(component.activitySoldOut({ ...activity, max_capacity: 10, enrollment_count: 10 })).toBe(true);
+  });
+
 });
