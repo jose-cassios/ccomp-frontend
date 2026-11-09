@@ -23,6 +23,15 @@ describe('Guest API contract', () => {
       .flush({ content: [{ id: 8, name: 'Another' }], next_cursor: null });
     expect(ids).toEqual([7, 8]);
   });
+  it('keeps the activity filter on every guest page', () => {
+    let ids: number[] = [];
+    service.allGuests(1, 3).subscribe(rows => ids = rows.map(row => row.id));
+    http.expectOne(r => r.url === '/api/events/activities/3/guests' && !r.params.has('cursor'))
+      .flush({ content: [{ id: 7 }], next_cursor: 'page2' });
+    http.expectOne(r => r.url === '/api/events/activities/3/guests' && r.params.get('cursor') === 'page2')
+      .flush({ content: [{ id: 8 }], next_cursor: null });
+    expect(ids).toEqual([7, 8]);
+  });
   it('normalizes flat activity guests using the event guest ID for images', () => {
     service.guests(1, undefined, 3).subscribe(page => {
       expect(page.content[0].id).toBe(99);
