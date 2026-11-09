@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../../auth/services/auth.service';
 import { EventDetails, EventEditor } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
@@ -150,6 +151,7 @@ describe('EventEditorComponent', () => {
 
     expect(eventsService.create).toHaveBeenCalledWith({
       time_zone: 'America/Sao_Paulo',
+      time_zone: 'America/Sao_Paulo',
       title: createdEvent.title,
       category: createdEvent.category,
       format: createdEvent.format,
@@ -210,6 +212,7 @@ describe('EventEditorComponent', () => {
     component.savePresentation();
 
     expect(eventsService.update).toHaveBeenCalledWith(createdEvent.id, {
+      time_zone: 'America/Sao_Paulo',
       time_zone: 'America/Sao_Paulo',
       title: createdEvent.title,
       summary: 'Palestras e oficinas para a comunidade.',
@@ -297,6 +300,7 @@ describe('EventEditorComponent', () => {
       title: activityPayload.title, description: activityPayload.description,
     });
     expect(eventsService.updateActivity).toHaveBeenCalledWith(21, { ...activityPayload, workload_hours: 1 });
+    expect(eventsService.updateActivity).toHaveBeenCalledWith(21, { ...activityPayload, workload_hours: 1 });
     expect(eventsService.getAllActivities).toHaveBeenCalledWith(createdEvent.id);
     expect(component.successMessage()).toContain('adicionada');
   });
@@ -341,6 +345,7 @@ describe('EventEditorComponent', () => {
     component.saveActivity();
     expect(eventsService.createActivity).toHaveBeenCalledTimes(1);
     expect(eventsService.updateActivity).toHaveBeenLastCalledWith(22, { ...activityPayload, workload_hours: 1 });
+    expect(eventsService.updateActivity).toHaveBeenLastCalledWith(22, { ...activityPayload, workload_hours: 1 });
   });
 
   it('should update an existing activity through the activity PATCH route', () => {
@@ -375,6 +380,7 @@ describe('EventEditorComponent', () => {
     component.saveActivity();
 
     expect(eventsService.updateActivity).toHaveBeenCalledWith(21, {
+      workload_hours: 1.5,
       workload_hours: 1.5,
       title: 'Abertura atualizada',
       description: 'Boas-vindas',
