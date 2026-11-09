@@ -11,9 +11,8 @@ export interface InstructorInvitation {
   expires_at?: string;
 }
 interface WireInvitation { id: number; emailAddress?: string; email_address?: string; status: string; expires_at?: string; expiresAt?: string; }
-export interface Instructor {
-  id: number; activity_id: number; user_id?: string | null; status: string; name?: string; description?: string;
-  role?: 'INSTRUCTOR' | 'ASSISTANT'; is_guest: boolean;
+interface Instructor {
+  id: number; activityId?: number; activity_id?: number; status: string; name?: string; image_url?: string;
 }
 interface WireInstructor extends Partial<Instructor> { id: number; activityId?: number; userId?: string | null; isGuest?: boolean; }
 export interface InstructorProfile { name: string; description?: string; role: 'INSTRUCTOR' | 'ASSISTANT'; account_email?: string; }

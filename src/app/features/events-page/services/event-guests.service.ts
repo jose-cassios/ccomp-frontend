@@ -17,8 +17,8 @@ export interface EventGuest {
   event_guest_id?: number;
   role?: GuestRole;
 }
-export type GuestRole = 'PRESENTER' | 'SPECIAL_GUEST' | 'MODERATOR' | 'ASSISTANT' | 'LISTENER';
-export interface GuestProfile { name: string; description: string; account_email?: string; }
+export type GuestRole = 'PRESENTER' | 'SPECIAL_GUEST' | 'MODERATOR' | 'LISTENER';
+export interface GuestProfile { name: string; description: string; }
 export interface GuestCreatedResponse extends ApiMessage { id?: number; }
 export interface GuestInvitation {
   id: number;
@@ -45,19 +45,17 @@ export class EventGuestsService {
   create(eventId: number, profile: GuestProfile) {
     return this.api.post<GuestCreatedResponse>(`/events/${eventId}/guests`, profile);
   }
-  allGuests(eventId: number, activityId?: number) {
+  allGuests(eventId: number) {
     const cursors = new Set<string>();
-    return this.guests(eventId, undefined, activityId).pipe(
+    return this.guests(eventId).pipe(
       expand(page => {
         if (!page.next_cursor || cursors.has(page.next_cursor)) return EMPTY;
         cursors.add(page.next_cursor);
-        return this.guests(eventId, page.next_cursor, activityId);
+        return this.guests(eventId, page.next_cursor);
       }),
       reduce((rows, page) => [...rows, ...page.content], [] as EventGuest[]),
     );
   }
-  remove(eventId: number, guestId: number) { return this.api.delete<void>(`/events/${eventId}/guests/${guestId}`); }
-  linkAccount(eventId: number, guestId: number, email: string, activityId: number) { return this.api.patch<ApiMessage>(`/events/${eventId}/guests/${guestId}/account`, { email: email.trim(), activity_id: activityId }); }
   profile(eventId: number, guestId: number, profile: GuestProfile) {
     return this.api.patch<ApiMessage>(`/events/${eventId}/guests/${guestId}/profile`, profile);
   }

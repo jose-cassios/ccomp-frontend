@@ -7,7 +7,7 @@ import { EventGuest, EventGuestsService, GuestInvitation, GuestRole, GuestProfil
 import { EventCoverDirective } from '../event-cover.directive';
 import { AuthService } from '../../../auth/services/auth.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
-import { ApiMessage, EventActivity, apiMessage } from '../../models/event.model';
+import { ApiMessage, apiMessage } from '../../models/event.model';
 
 @Component({
   selector: 'app-event-guest-manager', standalone: true,
@@ -17,10 +17,8 @@ import { ApiMessage, EventActivity, apiMessage } from '../../models/event.model'
 })
 export class EventGuestManagerComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) eventId!: number;
-  @Input() activities: EventActivity[] = [];
   @Input() activityId: number | null = null;
   @Input() disabled = false;
-  @Output() prepareInstructor = new EventEmitter<EventGuest>();
   @Output() busyChange = new EventEmitter<boolean>();
   @Output() dirtyChange = new EventEmitter<boolean>();
   private readonly service = inject(EventGuestsService);
@@ -32,8 +30,6 @@ export class EventGuestManagerComponent implements OnChanges, OnDestroy {
     description: ['', Validators.maxLength(5000)],
   });
   readonly email = this.fb.nonNullable.control('', [Validators.required, Validators.email]);
-  readonly accountEmail = this.fb.nonNullable.control('', Validators.email);
-  readonly accountActivity = this.fb.nonNullable.control(0);
   readonly role = this.fb.nonNullable.control<GuestRole>('PRESENTER');
   readonly guests = signal<EventGuest[]>([]);
   readonly linked = signal<EventGuest[]>([]);
@@ -55,12 +51,11 @@ export class EventGuestManagerComponent implements OnChanges, OnDestroy {
   readonly preview = signal('');
   readonly roles: ReadonlyArray<{ value: GuestRole; label: string }> = [
     { value: 'PRESENTER', label: 'Palestrante convidado' }, { value: 'SPECIAL_GUEST', label: 'Convidado especial' },
-    { value: 'MODERATOR', label: 'Mediador da atividade' }, { value: 'ASSISTANT', label: 'Auxiliar' }, { value: 'LISTENER', label: 'Ouvinte convidado' },
+    { value: 'MODERATOR', label: 'Mediador da atividade' }, { value: 'LISTENER', label: 'Ouvinte convidado' },
   ];
   readonly invitationStatus: Record<string, string> = { PENDING: 'Aguardando aceite', ACCEPTED: 'Aceito', DECLINED: 'Recusado', CANCELLED: 'Cancelado' };
   constructor() {
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.reportDirty());
-    this.accountEmail.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.reportDirty());
     this.email.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.reportDirty());
     this.role.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.reportDirty());
   }
@@ -69,7 +64,7 @@ export class EventGuestManagerComponent implements OnChanges, OnDestroy {
     if (changes['eventId'] || changes['activityId']) this.loadLinked();
   }
   ngOnDestroy(): void { if (this.preview()) URL.revokeObjectURL(this.preview()); }
-  private reportDirty(): void { this.dirtyChange.emit(this.form.dirty || this.accountEmail.dirty || this.email.dirty || this.role.dirty || !!this.file() || !!this.pendingPhoto()); }
+  private reportDirty(): void { this.dirtyChange.emit(this.form.dirty || this.email.dirty || this.role.dirty || !!this.file() || !!this.pendingPhoto()); }
   preventImplicitSubmit(event: Event): void {
     // This panel sits inside the activity form. Enter must not submit that form.
     if (event.target instanceof HTMLInputElement && event.target.type !== 'file') event.preventDefault();
@@ -95,9 +90,9 @@ export class EventGuestManagerComponent implements OnChanges, OnDestroy {
   }
   choose(id: number): void {
     if (this.busy() || this.disabled || this.pendingPhoto()) return;
-    if ((this.form.dirty || this.accountEmail.dirty || this.role.dirty || this.file()) && !window.confirm('Descartar as alterações do convidado?')) return;
+    if ((this.form.dirty || this.role.dirty || this.file()) && !window.confirm('Descartar as alterações do convidado?')) return;
     const guest = this.guests().find(row => row.id === id) ?? null;
-    this.editing.set(true); this.accountEmail.reset(); this.accountActivity.reset(); this.selected.set(guest); this.clearFile();
+    this.editing.set(true); this.selected.set(guest); this.clearFile();
     this.form.reset({ name: guest?.name ?? '', description: guest?.description ?? '' });
     this.role.reset(this.linked().find(row => row.event_guest_id === id)?.role ?? 'PRESENTER');
     this.error.set(''); this.message.set(''); this.reportDirty();
@@ -108,21 +103,19 @@ export class EventGuestManagerComponent implements OnChanges, OnDestroy {
   }
   cancelEdit(): void {
     if (this.busy() || this.disabled) return;
-    if ((this.form.dirty || this.accountEmail.dirty || this.file() || this.pendingPhoto()) && !window.confirm('Descartar as alterações e a foto pendente? O perfil já cadastrado será mantido.')) return;
+    if ((this.form.dirty || this.file() || this.pendingPhoto()) && !window.confirm('Descartar as alterações e a foto pendente? O perfil já cadastrado será mantido.')) return;
     this.finishEditing();
   }
   private finishEditing(): void {
     this.pendingPhoto.set(null); this.photoCandidates.set([]);
-    this.selected.set(null); this.form.reset(); this.role.reset(); this.accountEmail.reset(); this.accountActivity.reset();
+    this.selected.set(null); this.form.reset(); this.role.reset();
     this.clearFile(); this.editing.set(false); this.reportDirty();
   }
   save(): void {
     if (this.busy() || this.disabled || this.pendingPhoto()) return;
     this.form.markAllAsTouched();
-    this.accountEmail.markAsTouched();
-    if (!this.selected() && this.accountEmail.invalid) { this.error.set('Informe um email válido para vincular a conta ou deixe o campo vazio.'); return; }
     if (this.form.invalid) { this.error.set('Informe o nome do convidado (até 255 caracteres) e uma apresentação de até 5.000 caracteres.'); return; }
-    const profile = { name: this.form.controls.name.value.trim(), description: this.form.controls.description.value.trim(), ...(!this.selected() && this.accountEmail.value.trim() ? { account_email: this.accountEmail.value.trim() } : {}) };
+    const profile = { name: this.form.controls.name.value.trim(), description: this.form.controls.description.value.trim() };
     const guest = this.selected();
     let profileSaved = false;
     // Snapshot all pages before creating when a photo will need a profile ID.
@@ -187,17 +180,6 @@ export class EventGuestManagerComponent implements OnChanges, OnDestroy {
     this.finishEditing(); this.message.set('Convidado cadastrado sem foto. Você pode adicioná-la em Editar.'); this.load();
   }
   private setBusy(value: boolean): void { this.busy.set(value); this.busyChange.emit(value); }
-  removeGuest(): void {
-    const guest = this.selected();
-    if (!guest || this.busy() || this.disabled || !window.confirm('Excluir ' + guest.name + ' do evento? A foto e todos os vínculos com atividades também serão removidos.')) return;
-    this.run(this.service.remove(this.eventId, guest.id), 'Convidado excluído do evento.', () => { this.finishEditing(); this.load(); this.loadLinked(); });
-  }
-  linkAccount(): void {
-    const guest = this.selected(); const activityId = this.activityId ?? this.accountActivity.value;
-    this.accountEmail.markAsTouched();
-    if (!guest || !activityId || this.accountEmail.invalid || !this.accountEmail.value.trim()) { this.error.set('Informe o email de uma conta ativa e selecione a atividade.'); return; }
-    this.run(this.service.linkAccount(this.eventId, guest.id, this.accountEmail.value, activityId), 'Conta vinculada. Ela poderá editar esta atividade enquanto o vínculo estiver confirmado.', () => { this.accountEmail.reset(); this.accountActivity.reset(); this.reportDirty(); this.loadLinked(); });
-  }
   selectPhoto(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0]; input.value = '';

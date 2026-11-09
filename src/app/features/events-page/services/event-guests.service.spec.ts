@@ -14,16 +14,6 @@ describe('Guest API contract', () => {
     service = TestBed.inject(EventGuestsService); http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
-  it('links an active account to an activity and deletes a whole guest profile', () => {
-    service.linkAccount(1, 7, ' person@ifma.edu.br ', 3).subscribe();
-    const account = http.expectOne('/api/events/1/guests/7/account');
-    expect(account.request.method).toBe('PATCH');
-    expect(account.request.body).toEqual({ email: 'person@ifma.edu.br', activity_id: 3 });
-    account.flush({});
-    service.remove(1, 7).subscribe();
-    const remove = http.expectOne('/api/events/1/guests/7');
-    expect(remove.request.method).toBe('DELETE'); remove.flush(null);
-  });
   it('reads all cursor pages to distinguish existing profiles before registration', () => {
     let ids: number[] = [];
     service.allGuests(1).subscribe(rows => ids = rows.map(row => row.id));
@@ -63,12 +53,5 @@ describe('Guest API contract', () => {
     const edit = http.expectOne('/api/events/1/guests/7/profile'); expect(edit.request.method).toBe('PATCH'); edit.flush({});
     service.removeImage(1, 7).subscribe();
     const remove = http.expectOne('/api/events/1/guests/7/image'); expect(remove.request.method).toBe('DELETE'); remove.flush(null);
-  });
-
-  it('keeps the activity route throughout guest pagination', () => {
-    let ids: number[] = []; service.allGuests(1, 3).subscribe(rows => ids = rows.map(row => row.event_guest_id!));
-    http.expectOne(r => r.url === '/api/events/activities/3/guests' && !r.params.has('cursor')).flush({ content: [{ id: 99, event_guest_id: 7 }], next_cursor: 'next' });
-    http.expectOne(r => r.url === '/api/events/activities/3/guests' && r.params.get('cursor') === 'next').flush({ content: [{ id: 100, event_guest_id: 8 }], next_cursor: null });
-    expect(ids).toEqual([7, 8]);
   });
 });

@@ -15,8 +15,7 @@
           @if (guest.image_url) { <img [eventCover]="guest.image_url" [alt]="'Foto de ' + guest.name" /> }
           @else { <span class="avatar" aria-hidden="true">{{ guest.name?.charAt(0) || '?' }}</span> }
           <div><strong>{{ guest.name || 'Convidado' }}</strong><small>{{ guest.status === 'CONFIRMED' ? 'Confirmado' : 'Presença cancelada' }} · {{ guest.visibility === 'PUBLIC' ? 'Público' : 'Privado' }}</small></div>
-          <div class="actions guest-card-actions"><button type="button" [disabled]="busy() || disabled" (click)="choose(guest.id)" [attr.aria-label]="'Editar convidado ' + guest.name">Editar</button>
-          <button type="button" [disabled]="busy() || disabled" (click)="prepareInstructor.emit(guest)">Usar como ministrante</button></div>
+          <button type="button" [disabled]="busy() || disabled" (click)="choose(guest.id)" [attr.aria-label]="'Editar convidado ' + guest.name">Editar</button>
         </article>
       } @empty {
         @if (!loading() && !listError()) { <p class="empty">Nenhum convidado cadastrado. Use “Novo convidado” para adicionar nome, apresentação e foto.</p> }
@@ -29,10 +28,6 @@
       <label>Nome *<input type="text" maxlength="255" [formControl]="form.controls.name" placeholder="Nome do convidado" /></label>
       @if (form.controls.name.touched && form.controls.name.invalid) { <small class="error">Informe o nome do convidado.</small> }
       <label>Apresentação (opcional)<textarea rows="3" maxlength="5000" [formControl]="form.controls.description" placeholder="Uma breve apresentação de quem vai participar."></textarea></label>
-      @if (!selected()) {
-        <label>Vincular conta existente (opcional)<input type="email" [formControl]="accountEmail" placeholder="Email de uma conta ativa" /><small>A conta poderá editar o próprio perfil e as atividades confirmadas às quais o convidado for associado. Não é um convite por email.</small></label>
-        @if (accountEmail.invalid && accountEmail.touched) { <p class="error">Informe um email válido.</p> }
-      }
       <div class="photo">
         @if (preview()) { <img [src]="preview()" alt="Prévia da foto selecionada" /> }
         @else if (selected()?.image_url; as imageUrl) { <img [eventCover]="imageUrl" [alt]="'Foto de ' + selected()!.name" /> }
@@ -79,13 +74,6 @@
             <button type="button" (click)="toggle('visibility')">{{ guest.visibility === 'PUBLIC' ? 'Tornar privado' : 'Tornar público' }}</button>
             <button type="button" (click)="toggle('status')">{{ guest.status === 'CONFIRMED' ? 'Cancelar presença no evento' : 'Confirmar presença no evento' }}</button>
           </div>
-          <details><summary>Vincular conta a uma atividade</summary>
-            <p>A conta ativa poderá editar o perfil e a atividade selecionada. Esta ação não envia convite.</p>
-            <label>Email da conta<input type="email" [formControl]="accountEmail" /></label>
-            @if (!activityId) { <label>Atividade<select [formControl]="accountActivity"><option [ngValue]="0">Selecione uma atividade</option>@for (activity of activities; track activity.id) { <option [ngValue]="activity.id">{{ activity.title }}</option> }</select></label> }
-            <button type="button" (click)="linkAccount()">Vincular conta</button>
-          </details>
-          <button type="button" class="error" (click)="removeGuest()">Excluir convidado do evento</button>
           <small>Estas alterações valem para todas as atividades deste evento.</small>
           @if (activityId) {
             <label>Participação nesta atividade<select [formControl]="role">@for (item of roles; track item.value) { <option [value]="item.value">{{ item.label }}</option> }</select></label>

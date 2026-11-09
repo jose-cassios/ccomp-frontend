@@ -44,6 +44,6 @@ button.primary { background: var(--brand-600); border-color: var(--brand-600); c
   .photo label { min-width: 0; width: 100%; flex-basis: 100%; }
   .guest-card { grid-template-columns: 36px minmax(0, 1fr); gap: 8px; }
   .guest-card img, .guest-card .avatar { width: 36px; height: 36px; }
-  .guest-card-actions { grid-column: 2; }
+  .guest-card button { grid-column: 2; }
   .list-heading > .primary { width: 100%; }
 }

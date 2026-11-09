@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 
-export interface InstructorRosterEntry { name: string; email: string; guest_id?: number; key?: string; mode?: 'invite' | 'direct'; description?: string; role?: 'INSTRUCTOR' | 'ASSISTANT'; }
+export interface InstructorRosterEntry { name: string; email: string; }
 
-/** Preparation only: the API currently creates instructor records and invitations per activity. */
+/** Preparation only: the API currently creates instructor invitations per activity. */
 @Injectable({ providedIn: 'root' })
 export class InstructorRosterDraftService {
   private readonly memory = new Map<string, InstructorRosterEntry[]>();
@@ -13,7 +13,7 @@ export class InstructorRosterDraftService {
     try {
       const rows: unknown = JSON.parse(sessionStorage.getItem(key) ?? '[]');
       return Array.isArray(rows) ? rows.filter((row): row is InstructorRosterEntry =>
-        typeof row?.name === 'string' && typeof row?.email === 'string' && (row.mode === 'direct' ? !!row.name.trim() : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email))) : [];
+        typeof row?.name === 'string' && typeof row?.email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) : [];
     } catch { return []; }
   }
   save(eventId: number, userId: string, rows: InstructorRosterEntry[]): boolean {

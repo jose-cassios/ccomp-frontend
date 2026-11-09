@@ -87,15 +87,7 @@
 </details>
 <details class="editor-section" id="event-dates" [open]="sectionOpen('event-dates')" (toggle)="rememberSection($event)">
   <summary><span><strong>Quando acontece</strong><small>{{ form.controls.start_date.value ? (form.controls.start_date.value | date:'dd/MM/yyyy HH:mm') : 'Defina o início e o término do evento' }}</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
-  <div class="editor-section__body"><div class="form-grid">
-            <label class="field field--wide"><span>Fuso horário do evento *</span>
-              <select [formControl]="timeZone">
-                @for (zone of timeZones; track zone.value) { <option [value]="zone.value">{{ zone.label }}</option> }
-                @if (!knownTimeZone(timeZone.value)) { <option [value]="timeZone.value">{{ timeZone.value }}</option> }
-              </select>
-              <small>Todos os horários do evento, inscrições e atividades seguem este fuso. Alterá-lo mantém os horários digitados.</small>
-            </label>
-            <label class="field">
+  <div class="editor-section__body"><div class="form-grid">            <label class="field">
               <span>Início *</span>
               <input type="datetime-local" formControlName="start_date" />
             </label>
@@ -484,7 +476,7 @@
 
               <p class="card-copy">Cadastre os convidados e suas fotos aqui. Na programação, selecione quem participa de cada atividade.</p>
               @if (event(); as currentEvent) {
-                <app-event-guest-manager (prepareInstructor)="prepareGuestInstructor($event)" [activities]="activities()" [eventId]="currentEvent.id" [disabled]="isBusy() || peopleBusy()"
+                <app-event-guest-manager [eventId]="currentEvent.id" [disabled]="isBusy() || peopleBusy()"
                   (busyChange)="guestBusy.set($event)" (dirtyChange)="guestDirty.set($event)" />
               }
             </section></div>
@@ -494,38 +486,24 @@
   <div class="editor-section__body"><section class="review-enrollments" aria-labelledby="instructor-roster-title">
 
               <p class="card-copy">Prepare a lista de alunos e servidores responsáveis pelas atividades. Depois, selecione-os na programação.</p>
-              <p class="access-note">Por enquanto, esta lista de preparação fica salva somente nesta aba do navegador. O cadastro direto ou envio do convite acontece ao vincular a pessoa a uma atividade. A API ainda não mantém uma lista independente de ministrantes no evento.</p>
-              <label class="field"><span>Como adicionar</span><select [formControl]="rosterMode" (change)="preparedGuestId.set(undefined)"><option value="invite">Convidar por email</option><option value="direct">Cadastrar diretamente, com ou sem conta</option></select></label>
-              @if (preparedGuestId()) { <p class="access-note">Reutilizando o perfil de convidado. <button type="button" class="text-button" (click)="preparedGuestId.set(undefined)">Cadastrar como pessoa independente</button></p> }
-              <form class="inline-form instructor-profile-form" [formGroup]="rosterForm" (ngSubmit)="addRosterInstructor()">
-                <label class="field field--grow"><span>{{ rosterMode.value === 'direct' ? 'Nome *' : 'Nome (opcional)' }}</span><input type="text" formControlName="name" maxlength="255" /></label>
-                <label class="field field--grow"><span>{{ rosterMode.value === 'direct' ? 'Conta ativa (email opcional)' : 'Email do ministrante *' }}</span><input type="email" formControlName="email" placeholder="pessoa@ifma.edu.br" />
+              <p class="access-note">Por enquanto, esta lista de preparação fica salva somente nesta aba do navegador. O convite por email será enviado ao vincular o ministrante a uma atividade. O cadastro compartilhado no evento ainda depende da API.</p>
+              <form class="inline-form" [formGroup]="rosterForm" (ngSubmit)="addRosterInstructor()">
+                <label class="field field--grow"><span>Nome (opcional)</span><input type="text" formControlName="name" maxlength="255" /></label>
+                <label class="field field--grow"><span>Email do ministrante *</span><input type="email" formControlName="email" placeholder="pessoa@ifma.edu.br" />
                   @if (rosterForm.controls.email.touched && rosterForm.controls.email.invalid) { <strong>Informe um email válido.</strong> }
                 </label>
-                @if (rosterMode.value === 'direct') {
-                  <label class="field instructor-description"><span>Apresentação</span><textarea [formControl]="rosterDescription" maxlength="5000" rows="2"></textarea></label>
-                  <label class="field"><span>Função</span><select [formControl]="rosterRole"><option value="INSTRUCTOR">Ministrante</option><option value="ASSISTANT">Auxiliar</option></select></label>
-                  <p class="card-copy">Sem conta ativa, o perfil será exibido, mas o certificado de ministrante não poderá ser emitido. Com conta ativa vinculada, a pessoa poderá editar a atividade e solicitar seu certificado ao fim do evento, sem precisar aceitar convite.</p>
-                }
                 <button class="button button--primary" type="submit" [disabled]="isBusy()">Adicionar à lista</button>
               </form>
               @if (rosterMessage()) { <p class="access-note" role="status">{{ rosterMessage() }}</p> }
               <div class="team-list roster-list">
-                @for (person of instructorRoster(); track person.key || person.email) {
+                @for (person of instructorRoster(); track person.email) {
                   <article><span><strong>{{ person.name || person.email }}</strong>@if (person.name) { <small>{{ person.email }}</small> }</span>
-                    <button type="button" class="text-button text-button--danger" [disabled]="isBusy()" (click)="removeRosterInstructor(person.key || person.email)">Remover da lista</button>
+                    <button type="button" class="text-button text-button--danger" [disabled]="isBusy()" (click)="removeRosterInstructor(person.email)">Remover da lista</button>
                   </article>
                 } @empty { <p class="empty-inline">Nenhum ministrante preparado. A participação é opcional.</p> }
               </div>
             </section></div>
 </details>
-          }
-          @if (canManageActivities() && event()) { <details class="editor-section" id="team-reception" [open]="sectionOpen('team-reception')" (toggle)="rememberSection($event)"><summary><span><strong>Credenciamento e recepção</strong><small>Buscar inscritos, registrar chegada e autorizar operadores</small></span><span class="section-chevron" aria-hidden="true"></span></summary><div class="editor-section__body">@if (sectionOpen('team-reception')) { <app-event-credentials [eventId]="event()!.id" [manage]="true" /> }</div></details> }
-          @if (canManageActivities() && event()) {
-            <details class="editor-section" id="team-certificates" [open]="sectionOpen('team-certificates')" (toggle)="rememberSection($event)">
-              <summary><span><strong>Certificados de ministrantes e equipe</strong><small>Certificados conforme os vínculos confirmados</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
-              <div class="editor-section__body">@if (sectionOpen('team-certificates')) { <app-event-role-certificates [eventId]="event()!.id" [manage]="true" [teamMember]="isOwner() || isAssignedEditor()" /> }</div>
-            </details>
           }
           <footer class="form-footer">
             <span>Você pode incluir colaboradores nesta etapa sempre que precisar.</span>
@@ -551,8 +529,6 @@
   <div><dt>Formato</dt><dd>{{ formatLabel(form.controls.format.value) }}</dd></div>
   <div><dt>Execução</dt><dd>{{ executionStatusLabel(event()?.execution_status) }}</dd></div>
   <div><dt>Início do evento</dt><dd>{{ form.controls.start_date.value | date:'dd/MM/yyyy HH:mm' }}</dd></div>
-  <div><dt>Fuso horário</dt><dd>{{ timeZone.value }}</dd></div>
-  <div><dt>Limite de vagas</dt><dd>{{ eventCapacity.value === null ? (event()?.max_capacity === undefined ? 'Não informado pela API' : 'Sem limite') : eventCapacity.value }}</dd></div>
   <div><dt>Término do evento</dt><dd>{{ form.controls.end_date.value | date:'dd/MM/yyyy HH:mm' }}</dd></div>
   <div><dt>Participação</dt><dd>{{ eventRegistrationRequired() ? 'Inscrição obrigatória' : 'Acesso livre, sem inscrição' }}</dd></div>
   @if (eventRegistrationRequired()) {
@@ -740,7 +716,7 @@
                   </label>
                   @if (activityGuestId.value) {
                     <label class="field"><span>Participação</span><select [formControl]="activityGuestRole">
-                      <option value="PRESENTER">Palestrante</option><option value="SPECIAL_GUEST">Convidado especial</option><option value="MODERATOR">Mediador</option><option value="ASSISTANT">Auxiliar</option><option value="LISTENER">Ouvinte</option>
+                      <option value="PRESENTER">Palestrante</option><option value="SPECIAL_GUEST">Convidado especial</option><option value="MODERATOR">Mediador</option><option value="LISTENER">Ouvinte</option>
                     </select></label>
                   }
                   @if (guestOptionsLoading()) { <p role="status">Carregando convidados…</p> }
@@ -752,13 +728,13 @@
                 </fieldset>
                 <fieldset class="activity-settings field--wide" [disabled]="isBusy() || peopleBusy()">
                   <legend>Ministrantes desta atividade <small>Opcional</small></legend>
-                  <p>Selecione uma pessoa preparada. Ao salvar, será feito o cadastro direto ou enviado o convite, conforme a opção escolhida na etapa anterior.</p>
+                  <p>Selecione uma pessoa da lista. Ao salvar a atividade, ela receberá um convite por email e poderá editar esta atividade após aceitá-lo.</p>
                   <label class="field"><span>Selecionar ministrante</span><select [formControl]="instructorForm.controls.email">
                     <option value="">Não adicionar outro ministrante</option>
-                    @for (person of instructorRoster(); track person.key || person.email) { <option [value]="person.key || person.email" [disabled]="person.mode !== 'direct' && hasInstructorInvitation(person.email)">{{ person.name ? person.name + ' · ' : '' }}{{ person.email }}{{ person.mode === 'direct' ? ' (cadastro direto)' : ' (convite)' }}</option> }
+                    @for (person of instructorRoster(); track person.email) { <option [value]="person.email" [disabled]="hasInstructorInvitation(person.email)">{{ person.name ? person.name + ' · ' : '' }}{{ person.email }}</option> }
                   </select></label>
                   <button type="button" class="button button--outline" (click)="addMorePeople('instructors')">+ Preparar mais ministrantes</button>
-                  @if (editingActivityId(); as activityId) { <app-activity-instructors [eventId]="event()!.id" [activityId]="activityId" [manage]="true" [revision]="peopleRevision()" /><button type="button" class="text-button" (click)="loadInstructorInvitations(activityId)">Atualizar convites</button> }
+                  @if (editingActivityId(); as activityId) { <button type="button" class="text-button" (click)="loadInstructorInvitations(activityId)">Atualizar convites</button> }
                   @for (invitation of instructorInvitations(); track invitation.id) {
                     <div class="team-list"><article><span><strong>{{ invitation.email }}</strong><small>{{ instructorStatus[invitation.status] || invitation.status }} @if (invitation.expires_at) { · Expira {{ invitation.expires_at | date:'dd/MM/yyyy HH:mm' }} }</small></span>
                     @if (invitation.status === 'SENT') { <button type="button" class="text-button text-button--danger" (click)="cancelInstructorInvitation(invitation)">Cancelar convite</button> }</article></div>

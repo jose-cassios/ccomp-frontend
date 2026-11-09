@@ -24,18 +24,6 @@ describe('Guest registration workflow', () => {
     fixture.detectChanges(); component = fixture.componentInstance;
   });
   afterEach(() => vi.restoreAllMocks());
-  it('sends an optional active account email during direct guest registration', () => {
-    component.form.setValue({ name: 'Guest', description: '' });
-    component.accountEmail.setValue('person@ifma.edu.br');
-    component.save();
-    expect(service.create).toHaveBeenCalledWith(1, { name: 'Guest', description: '', account_email: 'person@ifma.edu.br' });
-  });
-  it('keeps the guest form when an invalid account email is entered', () => {
-    component.newGuest(); component.form.setValue({ name: 'Guest', description: '' });
-    component.accountEmail.setValue('invalid'); component.save();
-    expect(service.create).not.toHaveBeenCalled(); expect(component.editing()).toBe(true);
-    expect(component.accountEmail.touched).toBe(true); expect(component.error()).toContain('email válido');
-  });
   it('does not infer a new guest ID from the create message or associate another profile', () => {
     component.form.setValue({ name: 'Guest', description: 'Speaker' }); component.save();
     expect(service.create).toHaveBeenCalledWith(1, { name: 'Guest', description: 'Speaker' });
