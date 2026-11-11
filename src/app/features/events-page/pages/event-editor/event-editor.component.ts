@@ -1,3 +1,4 @@
+import { ActivityCapacityComponent } from '../../components/activity-people/activity-capacity.component';
 import { EventRoleCertificatesComponent } from '../../components/certificate-download/event-role-certificates.component';
 import { DEFAULT_EVENT_TIME_ZONE, EVENT_TIME_ZONES, eventTimestamp, eventLocalInput, isEventTimeZone } from '../../models/event-time';
 import { DatePipe, Location } from '@angular/common';
@@ -66,7 +67,7 @@ const EDITOR_STEPS: ReadonlyArray<{ value: EventEditorStep; label: string; short
 @Component({
   selector: 'app-event-editor',
   standalone: true,
-  imports: [DatePipe, ReactiveFormsModule, RouterLink, ActivityPeopleComponent, EventCoverDirective, EventGuestManagerComponent],
+  imports: [EventCredentialsComponent, ActivityCapacityComponent, DatePipe, ReactiveFormsModule, RouterLink, ActivityPeopleComponent, EventCoverDirective, EventGuestManagerComponent],
   templateUrl: './event-editor.component.html',
   styleUrls: ['./event-editor.component.css', './event-activity-dialog.css', './event-editor-sections.css'],
 })
@@ -93,6 +94,8 @@ export class EventEditorComponent implements OnInit {
       this.activeStep.set('details'); section = 'event-dates';
     } else if (this.eventCapacity.invalid || !this.hasValidEnrollmentDates()) {
       this.activeStep.set('details'); section = 'event-registration';
+    } else if (this.certificateHours.invalid) {
+      this.activeStep.set('presentation'); section = 'page-certificates';
     } else {
       this.activeStep.set('presentation'); section = this.presentationForm.controls.cover_image_url.invalid ? 'page-cover' : 'page-content';
     }
@@ -138,6 +141,10 @@ export class EventEditorComponent implements OnInit {
   });
   readonly eventCapacity = this.fb.control<number | null>(null, [Validators.min(0), Validators.max(2147483647), Validators.pattern(/^\d+$/)]);
   readonly activityCapacity = this.fb.control<number | null>(null, [Validators.min(0), Validators.max(2147483647), Validators.pattern(/^\d+$/)]);
+  readonly certificateHours = this.fb.group({
+    workload_hours: this.fb.control<number | null>(null, [Validators.min(0)]),
+    team_certificate_workload_hours: this.fb.control<number | null>(null, [Validators.min(0)]),
+  });
   readonly activityWorkload = this.fb.control<number | null>(null, [Validators.min(0)]);
   readonly activityForm = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
@@ -434,9 +441,7 @@ export class EventEditorComponent implements OnInit {
     this.errorMessage.set(null);
   }
   readonly canManageTeam = computed(() => this.isOwner());
-  readonly canViewEnrollments = computed(() =>
-    this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES),
-  );
+  readonly canViewEnrollments = this.canEditEvent;
   readonly showOperationFeedback = computed(() =>
     this.operation() === 'loading' || this.operation() === 'deleting',
   );
@@ -470,6 +475,7 @@ export class EventEditorComponent implements OnInit {
       this.hasUnsavedChanges.set(true);
       this.successMessage.set(null);
     };
+    this.certificateHours.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
     this.eventCapacity.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
     this.timeZone.valueChanges.pipe(takeUntilDestroyed()).subscribe(registerChanges);
@@ -492,8 +498,8 @@ export class EventEditorComponent implements OnInit {
 
   save(): void {
     if (this.isBusy()) return;
-    if (this.form.invalid || this.eventCapacity.invalid || !this.hasValidDates() || !this.hasValidEnrollmentDates()) {
-      this.form.markAllAsTouched();
+    if (this.form.invalid || this.certificateHours.invalid || this.eventCapacity.invalid || !this.hasValidDates() || !this.hasValidEnrollmentDates()) {
+      this.form.markAllAsTouched(); this.certificateHours.markAllAsTouched();
       this.eventCapacity.markAsTouched();
       this.revealValidation();
       this.errorMessage.set('Revise os campos obrigatórios, as datas do evento e o período de inscrições.');
@@ -559,12 +565,12 @@ export class EventEditorComponent implements OnInit {
     if (!currentEvent || this.isBusy()) return;
     if (
       this.form.invalid
-      || this.eventCapacity.invalid
+      || this.certificateHours.invalid || this.eventCapacity.invalid
       || this.presentationForm.invalid
       || !this.hasValidDates()
       || !this.hasValidEnrollmentDates()
     ) {
-      this.form.markAllAsTouched(); this.eventCapacity.markAsTouched();
+      this.form.markAllAsTouched(); this.certificateHours.markAllAsTouched(); this.eventCapacity.markAsTouched();
       this.presentationForm.markAllAsTouched();
       this.revealValidation();
       this.errorMessage.set('Revise as informações e as datas de inscrição antes de continuar.');
@@ -631,12 +637,12 @@ export class EventEditorComponent implements OnInit {
     if (!currentEvent || this.isBusy()) return;
     if (
       this.form.invalid
-      || this.eventCapacity.invalid
+      || this.certificateHours.invalid || this.eventCapacity.invalid
       || this.presentationForm.invalid
       || !this.hasValidDates()
       || !this.hasValidEnrollmentDates()
     ) {
-      this.form.markAllAsTouched(); this.eventCapacity.markAsTouched();
+      this.form.markAllAsTouched(); this.certificateHours.markAllAsTouched(); this.eventCapacity.markAsTouched();
       this.presentationForm.markAllAsTouched();
       this.revealValidation();
       this.errorMessage.set('Revise as informações do evento antes de concluir.');
@@ -672,12 +678,12 @@ export class EventEditorComponent implements OnInit {
     if (!currentEvent || !this.canPublish() || this.isBusy()) return;
     if (
       this.form.invalid
-      || this.eventCapacity.invalid
+      || this.certificateHours.invalid || this.eventCapacity.invalid
       || this.presentationForm.invalid
       || !this.hasValidDates()
       || !this.hasValidEnrollmentDates()
     ) {
-      this.form.markAllAsTouched(); this.eventCapacity.markAsTouched();
+      this.form.markAllAsTouched(); this.certificateHours.markAllAsTouched(); this.eventCapacity.markAsTouched();
       this.presentationForm.markAllAsTouched();
       this.revealValidation();
       this.errorMessage.set('Revise as informações do evento antes de publicar.');
@@ -1200,7 +1206,7 @@ export class EventEditorComponent implements OnInit {
     });
   }
 
-  private loadEnrollments(eventId: number): void {
+  loadEnrollments(eventId: number): void {
     if (!this.canViewEnrollments() || this.enrollmentsLoading()) return;
 
     this.enrollmentsLoading.set(true);
@@ -1223,6 +1229,8 @@ export class EventEditorComponent implements OnInit {
     const value = this.form.getRawValue();
     return {
       ...(this.eventCapacity.dirty ? { max_capacity: this.eventCapacity.value } : {}),
+      ...(this.certificateHours.controls.workload_hours.value !== null ? { workload_hours: this.certificateHours.controls.workload_hours.value } : {}),
+      ...(this.certificateHours.controls.team_certificate_workload_hours.value !== null ? { team_certificate_workload_hours: this.certificateHours.controls.team_certificate_workload_hours.value } : {}),
       time_zone: this.timeZone.value,
       title: value.title,
       category: value.category,
@@ -1284,6 +1292,8 @@ export class EventEditorComponent implements OnInit {
       this.instructorRoster.set(this.rosterDraft.read(enrichedEvent.id, this.authService.currentUserState()?.id ?? ''));
     }
     this.event.set(enrichedEvent);
+    this.certificateHours.reset({ workload_hours: enrichedEvent.workload_hours ?? null,
+      team_certificate_workload_hours: enrichedEvent.team_certificate_workload_hours ?? null }, { emitEvent: false });
     this.eventCapacity.reset(enrichedEvent.max_capacity ?? null, { emitEvent: false });
     this.activities.set(enrichedEvent.activities ?? []);
     this.ensureActiveActivityDay();

@@ -18,11 +18,11 @@ import { apiErrorMessage } from '../../../../core/api/api-error';
         @for (person of recipients(); track person.id) {
           <article><strong>{{ manage ? person.name : 'Minha atuação como ministrante' }}</strong>
             @if (person.user_id) {
-              <app-certificate-download [resourceId]="eventId" scope="instructor" [instructorId]="person.id" [asLink]="true" label="Solicitar certificado de ministrante" />
+              <app-certificate-download [unavailableReason]="unavailableReason" [resourceId]="eventId" scope="instructor" [instructorId]="person.id" [asLink]="true" label="Solicitar certificado de ministrante" />
             } @else { <small>Vincule uma conta ativa na programação para habilitar o certificado.</small> }
           </article>
         }
-        @if (teamMember) { <app-certificate-download [resourceId]="eventId" scope="team" [asLink]="true" label="Solicitar certificado da equipe" /> }
+        @if (teamMember) { <app-certificate-download [unavailableReason]="unavailableReason || (teamWorkload == null ? 'A organização ainda precisa configurar a carga horária da equipe.' : '')" [resourceId]="eventId" scope="team" [asLink]="true" label="Solicitar certificado da equipe" /> }
       </section>
     }
   `,
@@ -31,6 +31,8 @@ import { apiErrorMessage } from '../../../../core/api/api-error';
 export class EventRoleCertificatesComponent implements OnChanges {
   @Input({ required: true }) eventId!: number;
   @Input() manage = false;
+  @Input() unavailableReason = '';
+  @Input() teamWorkload: number | null | undefined;
   @Input() teamMember = false;
   private readonly api = inject(ActivityInstructorsService);
   private readonly auth = inject(AuthService);

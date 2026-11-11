@@ -23,6 +23,15 @@ describe('Certificate download', () => {
     fixture.componentRef.setInput('resourceId', 9); fixture.componentRef.setInput('scope', 'activity');
     fixture.detectChanges(); return fixture;
   }
+  it('does not request issuance while the event certificate is unavailable', () => {
+    const fixture = create();
+    fixture.componentRef.setInput('unavailableReason', 'Disponível após o encerramento do evento.');
+    fixture.componentRef.setInput('asLink', true); fixture.detectChanges();
+    fixture.nativeElement.querySelector('a').click();
+    expect(api.download).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Disponível após o encerramento');
+    expect(fixture.nativeElement.querySelector('a').getAttribute('aria-disabled')).toBe('true');
+  });
   it('asks anonymous participants to login with a return URL', () => {
     auth.isAuthenticatedState.mockReturnValue(false);
     const router = TestBed.inject(Router); const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);

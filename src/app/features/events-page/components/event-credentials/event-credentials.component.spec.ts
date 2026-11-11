@@ -17,6 +17,7 @@ describe('Event reception', () => {
     component.confirm({ ...row, credentialed: true });
     expect(api.credential).not.toHaveBeenCalled();
     const response = new Subject<CredentialResult>();
+    const changed = vi.fn(); component.credentialed.subscribe(changed);
     api.credential.mockReturnValueOnce(response);
     component.rows.set([row]);
     component.confirm(row); component.confirm(row);
@@ -24,6 +25,8 @@ describe('Event reception', () => {
     expect(component.busy()).toBe(true);
     response.next({} as CredentialResult); response.complete();
     expect(component.rows()[0].credentialed).toBe(true);
+    expect(component.rows()[0].enrollment.status).toBe('CHECKED_IN');
+    expect(changed).toHaveBeenCalledOnce();
     expect(component.busy()).toBe(false);
     expect(component.message()).toBeTruthy();
   });

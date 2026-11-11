@@ -128,7 +128,8 @@
                               }
                             </div>
                             <h3>{{ activity.title }}</h3>
-                            <app-activity-people [eventId]="currentEvent.id" [activityId]="activity.id" [canView]="isAuthenticated() && subscribed()" [canViewInstructors]="isAuthenticated()" (activityChanged)="refreshActivities()" />
+                            <app-activity-capacity [activityId]="activity.id" [revision]="capacityRevision()" (updated)="updateCapacity(activity.id, $event)" />
+                            <app-activity-people [manage]="canManageCertificates()" [eventId]="currentEvent.id" [activityId]="activity.id" [canView]="isAuthenticated() && subscribed()" [canViewInstructors]="isAuthenticated()" (activityChanged)="refreshActivities()" />
                             <p class="activity-meta">
                               @if (activity.end_date) {
                                 <span>Até {{ activity.end_date | date: 'HH:mm' }}</span>
@@ -196,12 +197,12 @@
       <aside class="info-card">
         <app-event-speakers [eventId]="currentEvent.id" [activities]="currentEvent.activities || []" [timeZone]="currentEvent.time_zone || 'America/Sao_Paulo'" />
         <h2>Informações</h2>
-        @if (isAuthenticated()) { <app-event-role-certificates [eventId]="currentEvent.id" [teamMember]="isTeamMember()" /> }
+        @if (isAuthenticated()) { <app-event-role-certificates [eventId]="currentEvent.id" [teamMember]="isTeamMember()" [unavailableReason]="certificateUnavailableReason()" [teamWorkload]="currentEvent.team_certificate_workload_hours" /> }
         <dl>
           @if (isAuthenticated() && subscribed()) {
           <div>
             <dt>Certificado</dt>
-            <dd><app-certificate-download [resourceId]="currentEvent.id" [asLink]="true" label="Solicitar certificado" /></dd>
+            <dd><app-certificate-download [resourceId]="currentEvent.id" [asLink]="true" [unavailableReason]="certificateUnavailableReason()" label="Solicitar certificado" /><small>Exige presença confirmada no evento. A carga horária soma a base do evento e as atividades em que você participou.</small></dd>
           </div>
           }
           <div>

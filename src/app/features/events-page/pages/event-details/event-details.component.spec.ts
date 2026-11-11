@@ -43,6 +43,8 @@ describe('EventDetailsComponent', () => {
     activities: [],
   };
   const eventsService = {
+    getActivityCapacity: vi.fn(() => of({ current_enrollments: 0, max_capacity: null })),
+
     getById: vi.fn(() => of(event)),
     getAllActivities: vi.fn(() => of([scheduleActivity])),
     getMyActivitySubscriptions: vi.fn(() => of([] as EventActivity[])),

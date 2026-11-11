@@ -11,7 +11,7 @@ export type EventFormat = 'IN_PERSON' | 'HYBRID' | 'ONLINE';
 export type EventPublicationStatus = 'DRAFT' | 'PUBLISHED' | 'UNLISTED' | 'CANCELED';
 export type EventExecutionStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'FINISHED';
 export type EventEnrollmentStatus = 'UPCOMING' | 'OPEN' | 'PAUSED' | 'SOLD_OUT' | 'CLOSED';
-export type EventEnrollmentState = 'CONFIRMED' | 'CHECKED_IN' | 'CANCELED';
+export type EventEnrollmentState = 'CONFIRMED' | 'CHECKED_IN' | 'CANCELED' | 'BANNED';
 export type EventEditorStatus = 'PENDING' | 'ACTIVE' | 'REVOKED';
 /** Escolha de UX do editor. A API atual a representa pelo período de inscrições. */
 export type EventRegistrationPolicy = 'REGISTRATION_REQUIRED' | 'OPEN_ACCESS';
@@ -137,6 +137,7 @@ export interface EventListItem {
 }
 
 export interface EventDetails extends EventListItem {
+  workload_hours?: number | null;
   max_capacity?: number | null;
   organization?: string | null;
   team_certificate_workload_hours?: number | null;
@@ -182,6 +183,7 @@ export interface CreateEventPayload {
 
 /** Contrato de PATCH /events/{eventId}. */
 export interface UpdateEventPayload {
+  workload_hours?: number;
   /** Sent separately through PUT /events/{id}/capacity, never in the generic PATCH. */
   max_capacity?: number | null;
   organization?: string;
@@ -491,6 +493,7 @@ export function eventEnrollmentStateLabel(state?: EventEnrollmentState | null): 
     CONFIRMED: 'Confirmada',
     CHECKED_IN: 'Presença confirmada',
     CANCELED: 'Cancelada',
+    BANNED: 'Bloqueada',
   };
   return state ? labels[state] : 'Não informado';
 }

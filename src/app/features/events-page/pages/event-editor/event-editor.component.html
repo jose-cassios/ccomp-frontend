@@ -230,6 +230,19 @@
 
 </div></div>
 </details>
+<details class="editor-section" id="page-certificates" [open]="sectionOpen('page-certificates')" (toggle)="rememberSection($event)">
+  <summary><span><strong>Certificados</strong><small>Carga horária de participantes e equipe</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+  <div class="editor-section__body">
+    <p>O certificado geral soma a carga horária base do evento às atividades com presença confirmada. A emissão exige presença no evento e acontece após seu encerramento.</p>
+    <div class="form-grid" [formGroup]="certificateHours">
+      <label class="field"><span>Carga horária base do evento</span><input type="number" min="0" step="0.25" formControlName="workload_hours" placeholder="Não configurada" /><small>Horas adicionais às atividades. Informe 0 para não acrescentar horas.</small></label>
+      <label class="field"><span>Carga horária da equipe</span><input type="number" min="0" step="0.25" formControlName="team_certificate_workload_hours" placeholder="Não configurada" /><small>Para o responsável e os editores. Necessária para emitir o certificado da equipe.</small></label>
+    </div>
+    <small>Deixe vazio para manter a configuração atual.</small>
+    @if (certificateHours.invalid && certificateHours.touched) { <p class="field-error" role="alert">Informe cargas horárias iguais ou maiores que zero.</p> }
+    @if (event(); as savedEvent) { <a class="text-button" [routerLink]="['/eventos', savedEvent.id, 'certificados']">Personalizar certificados</a> }
+  </div>
+</details>
 <footer class="form-footer">
             <span>Você poderá alterar estes dados sempre que precisar.</span>
             <button class="button button--primary" type="submit" [disabled]="isBusy() || uploadingCover()">Próximo: inscritos, equipe e convidados</button>
@@ -330,6 +343,7 @@
                               <span>{{ activityPolicyLabel(activity.registration_policy) }}</span>
                             </div>
                             <h3>{{ activity.title }}</h3>
+                            <app-activity-capacity [activityId]="activity.id" />
                             <app-activity-people [eventId]="event()!.id" [activityId]="activity.id" [manage]="canManageActivities()" />
                             <p class="activity-row__meta">
                               @if (activity.end_date) { até {{ activity.end_date | date: 'HH:mm' }} }
@@ -419,6 +433,12 @@
 </div>
 </details>
 @if (canViewEnrollments()) {
+  <details class="editor-section" id="team-credentials" [open]="sectionOpen('team-credentials')" (toggle)="rememberSection($event)">
+    <summary><span><strong>Credenciamento do evento</strong><small>Localize a inscrição e registre a chegada do participante</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
+    @if (sectionOpen('team-credentials')) {
+      <div class="editor-section__body"><app-event-credentials [eventId]="event()!.id" [manage]="canEditEvent()" (credentialed)="loadEnrollments(event()!.id)" /></div>
+    }
+  </details>
             <details class="editor-section" id="team-enrollments" [open]="sectionOpen('team-enrollments')" (toggle)="rememberSection($event)">
   <summary><span><strong id="enrollments-title">Inscritos</strong><small>{{ enrollments().length }} participante(s) carregado(s)</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
   <div class="editor-section__body"><section class="review-enrollments" aria-labelledby="enrollments-title">

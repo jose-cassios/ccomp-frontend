@@ -14,16 +14,17 @@ import { CertificatesService } from '../../services/certificates.service';
   standalone: true,
   template: `
     @if (asLink()) {
-      <a href="#" [attr.aria-disabled]="busy()" [attr.aria-busy]="busy()" (click)="$event.preventDefault(); download()">
+      <a href="#" [attr.aria-disabled]="busy() || !!unavailableReason()" [attr.aria-busy]="busy()" (click)="$event.preventDefault(); download()">
         @if (busy()) { <span class="spinner" aria-hidden="true"></span> Gerando certificado… }
         @else { {{ label() }} }
       </a>
     } @else {
-    <button type="button" [disabled]="busy()" [attr.aria-busy]="busy()" (click)="download()">
+    <button type="button" [disabled]="busy() || !!unavailableReason()" [attr.aria-busy]="busy()" (click)="download()">
       @if (busy()) { <span class="spinner" aria-hidden="true"></span> Gerando certificado… }
       @else { {{ label() }} }
     </button>
     }
+    @if (unavailableReason()) { <p>{{ unavailableReason() }}</p> }
     @if (error(); as message) { <p role="alert" class="error">{{ message }}</p> }
     @if (success(); as message) { <p role="status">{{ message }}</p> }
   `,
@@ -48,6 +49,7 @@ export class CertificateDownloadComponent {
   readonly instructorId = input<number>();
   readonly label = input('Baixar certificado');
   readonly asLink = input(false);
+  readonly unavailableReason = input('');
   private readonly api = inject(CertificatesService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
@@ -65,7 +67,7 @@ export class CertificateDownloadComponent {
   }
 
   download(): void {
-    if (this.busy()) return;
+    if (this.busy() || this.unavailableReason()) return;
     if (!this.auth.isAuthenticatedState()) {
       void this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
       return;

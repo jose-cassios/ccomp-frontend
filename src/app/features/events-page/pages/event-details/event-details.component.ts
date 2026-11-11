@@ -1,3 +1,4 @@
+import { ActivityCapacityComponent, ActivityCapacity } from '../../components/activity-people/activity-capacity.component';
 import { EventRoleCertificatesComponent } from '../../components/certificate-download/event-role-certificates.component';
 import { eventTimestamp } from '../../models/event-time';
 import { DatePipe } from '@angular/common';
@@ -33,7 +34,7 @@ import { CertificateDownloadComponent } from '../../components/certificate-downl
 @Component({
   selector: 'app-event-details',
   standalone: true,
-  imports: [EventRoleCertificatesComponent, DatePipe, RouterLink, EventSpeakersComponent, ActivityPeopleComponent, EventCoverDirective, CertificateDownloadComponent],
+  imports: [ActivityCapacityComponent, EventRoleCertificatesComponent, DatePipe, RouterLink, EventSpeakersComponent, ActivityPeopleComponent, EventCoverDirective, CertificateDownloadComponent],
   templateUrl: './event-details.component.html',
   styleUrl: './event-details.component.css',
 })
@@ -85,12 +86,25 @@ export class EventDetailsComponent implements OnInit {
   readonly publicationStatusLabel = eventPublicationStatusLabel;
   readonly executionStatusLabel = eventExecutionStatusLabel;
   readonly enrollmentStatusLabel = eventEnrollmentStatusLabel;
+  readonly certificateUnavailableReason = computed(() => {
+    const event = this.event();
+    if (!event) return '';
+    if (event.status === 'CANCELED') return 'Eventos cancelados não emitem certificados.';
+    const end = eventTimestamp(event.end_date, event.time_zone);
+    if (event.execution_status !== 'FINISHED' && (!Number.isFinite(end) || end > this.clock())) return 'Disponível após o encerramento do evento.';
+    return '';
+  });
   readonly canSubscribe = computed(() => this.event()?.enrollment_status === 'OPEN');
   readonly activitySchedule = computed(() => groupEventActivities(this.event()?.activities ?? []));
   readonly visibleActivityDay = computed(() => {
     const schedule = this.activitySchedule();
     return schedule.find((day) => day.key === this.activeActivityDay()) ?? schedule[0] ?? null;
   });
+  readonly capacityRevision = signal(0);
+  updateCapacity(activityId: number, capacity: ActivityCapacity): void {
+    this.event.update(event => event ? { ...event, activities: event.activities?.map(activity => activity.id === activityId
+      ? { ...activity, enrollment_count: capacity.current_enrollments, max_capacity: capacity.max_capacity, capacity: capacity.max_capacity } : activity) } : event);
+  }
   readonly expandedDescriptions = signal<ReadonlySet<number>>(new Set());
   toggleDescription(id: number): void {
     this.expandedDescriptions.update(ids => { const next = new Set(ids); if (next.has(id)) next.delete(id); else next.add(id); return next; });
@@ -272,6 +286,7 @@ export class EventDetailsComponent implements OnInit {
       next: (response: ApiMessage) => {
         const subscribed = !cancel;
         this.updateActivitySubscription(activity.id, subscribed);
+        this.capacityRevision.update(value => value + 1);
         this.successMessage.set(apiMessage(
           response,
           subscribed ? 'Inscrição na atividade confirmada.' : 'Inscrição na atividade cancelada.',
@@ -288,6 +303,7 @@ export class EventDetailsComponent implements OnInit {
           this.successMessage.set('Você já está inscrito nesta atividade.');
           return;
         }
+        if (error instanceof HttpErrorResponse && error.status === 409) this.capacityRevision.update(value => value + 1);
         this.errorMessage.set(error instanceof Error && !(error instanceof HttpErrorResponse)
           ? error.message : this.getErrorMessage(error, 'Não foi possível alterar a inscrição nesta atividade.'));
       },

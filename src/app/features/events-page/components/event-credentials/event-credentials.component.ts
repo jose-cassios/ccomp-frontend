@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, DestroyRef, inject, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, DestroyRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -16,6 +16,7 @@ import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
 export class EventCredentialsComponent implements OnInit {
   @Input({ required: true }) eventId!: number;
   @Input() manage = false;
+  @Output() credentialed = new EventEmitter<void>();
   private readonly api = inject(EventCredentialsService);
   private readonly destroy = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
@@ -72,7 +73,8 @@ export class EventCredentialsComponent implements OnInit {
     if (!window.confirm('Confirmar credenciamento de ' + row.enrollment.user.name + '?')) return;
     this.run(this.api.credential(this.eventId, row.enrollment.id, this.station.value), () => {
       this.message.set('Credenciamento confirmado.');
-      this.rows.update(rows => rows.map(r => r.enrollment.id === row.enrollment.id ? { ...r, credentialed: true } : r));
+      this.credentialed.emit();
+      this.rows.update(rows => rows.map(r => r.enrollment.id === row.enrollment.id ? { ...r, credentialed: true, enrollment: { ...r.enrollment, status: 'CHECKED_IN' } } : r));
       this.loadSummary();
     });
   }
