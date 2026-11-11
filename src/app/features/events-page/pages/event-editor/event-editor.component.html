@@ -344,7 +344,7 @@
                             </div>
                             <h3>{{ activity.title }}</h3>
                             <app-activity-capacity [activityId]="activity.id" [revision]="activityEnrollmentRevision()" />
-                            <app-activity-people (enrollmentChanged)="activityEnrollmentRevision.update(incrementRevision)" [eventId]="event()!.id" [activityId]="activity.id" [manage]="canManageActivities()" />
+                            <app-activity-people [activityTitle]="activity.title" (enrollmentChanged)="activityEnrollmentRevision.update(incrementRevision)" [eventId]="event()!.id" [activityId]="activity.id" [manage]="canManageActivities()" />
                             <p class="activity-row__meta">
                               @if (activity.end_date) { até {{ activity.end_date | date: 'HH:mm' }} }
                               @if (activity.location) { <span>• {{ activity.location }}</span> }

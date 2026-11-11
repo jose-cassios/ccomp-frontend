@@ -7,9 +7,10 @@ import { CredentialSearchItem, EventCredentialsService } from '../../services/ev
 
 describe('Manual activity enrollment', () => {
   const person: CredentialSearchItem = { enrollment: { id: 42, status: 'CONFIRMED', user: { id: 'u', name: 'Ana' } }, eligible: true, credentialed: false };
-  const api = { enrollActivityParticipant: vi.fn() }, lookup = { search: vi.fn() };
+  const api = { enrollActivityParticipant: vi.fn(), markActivityAttendance: vi.fn() }, lookup = { search: vi.fn() };
   beforeEach(() => {
     api.enrollActivityParticipant.mockReset().mockReturnValue(of({ message: 'Inscrição confirmada' }));
+    api.markActivityAttendance.mockReset().mockReturnValue(of({ message: 'Presença confirmada' }));
     lookup.search.mockReset().mockReturnValue(of([person]));
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     TestBed.configureTestingModule({ imports: [ActivityManualEnrollmentComponent], providers: [
@@ -38,5 +39,31 @@ describe('Manual activity enrollment', () => {
     component.enroll(person);
     expect(component.error()).toBe('Vagas esgotadas.'); expect(component.results()).toEqual([person]); expect(changed).not.toHaveBeenCalled();
     component.enroll(person); expect(changed).toHaveBeenCalledOnce();
+  });
+  it('confirms attendance separately after enrollment using the event enrollment ID', () => {
+    const component = setup(); const changed = vi.fn(); component.changed.subscribe(changed);
+    component.confirmAttendance(person);
+    expect(api.markActivityAttendance).not.toHaveBeenCalled();
+    component.enroll(person);
+    expect(api.markActivityAttendance).not.toHaveBeenCalled();
+    const pending = new Subject<{ message: string }>(); api.markActivityAttendance.mockReturnValueOnce(pending);
+    component.confirmAttendance(person); component.confirmAttendance(person);
+    expect(api.markActivityAttendance).toHaveBeenCalledOnce();
+    expect(api.markActivityAttendance).toHaveBeenCalledWith(3, 42);
+    expect(component.attended().has(42)).toBe(false);
+    pending.next({ message: 'Presença confirmada' }); pending.complete();
+    expect(component.attended().has(42)).toBe(true); expect(changed).toHaveBeenCalledTimes(2);
+    component.confirmAttendance(person); expect(api.markActivityAttendance).toHaveBeenCalledOnce();
+  });
+  it('keeps the enrollment and allows retry when attendance fails, respecting permissions', () => {
+    const component = setup(); component.enroll(person);
+    component.manage = false; component.confirmAttendance(person);
+    expect(api.markActivityAttendance).not.toHaveBeenCalled();
+    component.manage = true;
+    api.markActivityAttendance.mockReturnValueOnce(throwError(() => new Error('offline')));
+    component.confirmAttendance(person);
+    expect(component.added().has(42)).toBe(true); expect(component.attended().has(42)).toBe(false);
+    expect(component.error()).toBeTruthy(); expect(component.busy()).toBe(false);
+    component.confirmAttendance(person); expect(component.attended().has(42)).toBe(true);
   });
 });
