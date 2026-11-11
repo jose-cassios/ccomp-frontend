@@ -416,6 +416,37 @@ export class EventsService {
     );
   }
 
+  enrollActivityParticipant(activityId: number, eventEnrollmentId: number): Observable<ApiMessage> {
+    return this.api.post<ApiMessage>(`/events/activities/${activityId}/enrollments/${eventEnrollmentId}`, null);
+  }
+
+  markActivityAttendance(activityId: number, eventEnrollmentId: number): Observable<ApiMessage> {
+    return this.api.post<ApiMessage>(`/events/activity/${activityId}/enrollments/${eventEnrollmentId}/attendance`, null);
+  }
+
+  markEventAttendance(eventId: number, enrollmentId: number): Observable<ApiMessage> {
+    return this.api.put<ApiMessage>(`/events/${eventId}/enrollments/${enrollmentId}/status`, { status: 'CHECKED_IN' });
+  }
+
+  /** Activity list IDs identify activity links; attendance routes require the event enrollment ID. */
+  findEventEnrollment(eventId: number, userId: string): Observable<EventEnrollment> {
+    if (!userId) return throwError(() => new Error('Não foi possível identificar a conta do participante.'));
+    return defer(() => {
+      const cursors = new Set<string>();
+      return this.getEnrollments(eventId, undefined, 50).pipe(
+        expand(page => {
+          if (page.content.some(row => row.user?.id === userId) || !page.next_cursor) return EMPTY;
+          if (cursors.has(page.next_cursor)) return throwError(() => new Error('A consulta de inscrições repetiu uma página. Tente novamente.'));
+          cursors.add(page.next_cursor);
+          return this.getEnrollments(eventId, page.next_cursor, 50);
+        }),
+        reduce((found, page) => found ?? page.content.find(row => row.user?.id === userId), undefined as EventEnrollment | undefined),
+        switchMap(found => found && ['CONFIRMED', 'CHECKED_IN'].includes(found.status) ? of(found)
+          : throwError(() => new Error('A pessoa precisa ter uma inscrição ativa neste evento.'))),
+      );
+    });
+  }
+
   private activityPage(path: string, cursor?: string): Observable<EventActivitiesPage> {
     let params = new HttpParams().set('pageSize', '50');
     if (cursor) params = params.set('cursor', cursor);

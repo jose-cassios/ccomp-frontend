@@ -343,8 +343,8 @@
                               <span>{{ activityPolicyLabel(activity.registration_policy) }}</span>
                             </div>
                             <h3>{{ activity.title }}</h3>
-                            <app-activity-capacity [activityId]="activity.id" />
-                            <app-activity-people [eventId]="event()!.id" [activityId]="activity.id" [manage]="canManageActivities()" />
+                            <app-activity-capacity [activityId]="activity.id" [revision]="activityEnrollmentRevision()" />
+                            <app-activity-people (enrollmentChanged)="activityEnrollmentRevision.update(incrementRevision)" [eventId]="event()!.id" [activityId]="activity.id" [manage]="canManageActivities()" />
                             <p class="activity-row__meta">
                               @if (activity.end_date) { até {{ activity.end_date | date: 'HH:mm' }} }
                               @if (activity.location) { <span>• {{ activity.location }}</span> }
@@ -457,7 +457,13 @@
                         <strong>{{ enrollment.user?.name || 'Participante' }}</strong>
                         <small>{{ enrollment.user?.email_address || 'E-mail não informado' }}</small>
                       </span>
-                      <em>{{ enrollmentStateLabel(enrollment.status) }}</em>
+                      <span><em>{{ enrollmentStateLabel(enrollment.status) }}</em>
+                        @if (enrollment.status === 'CONFIRMED') {
+                          <button type="button" class="text-button" [disabled]="eventAttendanceBusyId() !== null" (click)="markEventAttendance(enrollment)">
+                            @if (eventAttendanceBusyId() === enrollment.id) { <span class="mini-spinner" aria-hidden="true"></span> Registrando… } @else { Confirmar presença }
+                          </button>
+                        }
+                      </span>
                     </article>
                   }
                 </div>
