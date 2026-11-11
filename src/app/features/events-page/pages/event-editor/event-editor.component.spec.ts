@@ -37,6 +37,9 @@ describe('EventEditorComponent', () => {
     registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const,
   };
   const eventsService = {
+    getEnrollments: vi.fn(() => of({ content: [], next_cursor: null })),
+    getActivityCapacity: vi.fn(() => of({ current_enrollments: 0, max_capacity: null })),
+
     uploadCover: vi.fn(() => of({ message: 'Enviada' })),
     removeCover: vi.fn(() => of(void 0)),
     coverUrl: (id: number) => `http://localhost:8080/api/events/${id}/images/cover`,
@@ -739,6 +742,17 @@ describe('EventEditorComponent', () => {
     expect(eventsService.createActivity).toHaveBeenCalledTimes(1);
     expect(instructors.invite).toHaveBeenCalledTimes(2);
     expect(component.instructorForm.controls.email.value).toBe('');
+  });
+  it('saves participant and team certificate hours and rejects negative hours', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    component.form.patchValue({ title: createdEvent.title, start_date: '2026-09-10T08:00', end_date: '2026-09-10T18:00' });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS');
+    component.certificateHours.patchValue({ workload_hours: -1 }); component.savePresentation();
+    expect(eventsService.update).not.toHaveBeenCalled();
+    component.certificateHours.patchValue({ workload_hours: 2.5, team_certificate_workload_hours: 8 });
+    component.savePresentation();
+    expect(eventsService.update).toHaveBeenCalledWith(14, expect.objectContaining({ workload_hours: 2.5, team_certificate_workload_hours: 8 }));
+    expect(component.canViewEnrollments()).toBe(true);
   });
   it('uses explicit workload hours and rejects negative values before saving', () => {
     component.event.set({ ...createdEvent, owner_id: 'event-owner' });

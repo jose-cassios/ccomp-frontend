@@ -17,7 +17,7 @@ import { AuthService } from '../../../auth/services/auth.service';
         <p role="alert">Este link está incompleto ou inválido. Leia novamente o QR Code apresentado pela organização.</p>
       } @else if (done()) {
         <p class="success" role="status">Presença confirmada com sucesso!</p>
-        <p>Seu credenciamento nesta atividade foi registrado.</p>
+        <p>A presença nesta atividade e o check-in do evento foram registrados. O certificado geral poderá ser solicitado na página do evento após seu encerramento.</p>
       } @else {
         <p>Você está confirmando a presença na atividade #{{ activityId }} como <strong>{{ user()?.name || user()?.email }}</strong>.</p>
         <p>É necessário estar inscrito na atividade e confirmar durante o horário em que ela acontece.</p>

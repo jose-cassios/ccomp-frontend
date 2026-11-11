@@ -12,6 +12,20 @@ describe('Event and activity capacity API contracts', () => {
     service = TestBed.inject(EventsService); http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+  it('reads public activity capacity without requesting private enrollments', () => {
+    service.getActivityCapacity(3).subscribe(value => expect(value).toEqual({ current_enrollments: 12, max_capacity: 20 }));
+    const req = http.expectOne('/api/events/activities/3/enrollments/summary');
+    expect(req.request.method).toBe('GET'); req.flush({ current_enrollments: 12, max_capacity: 20 });
+    service.getActivityCapacity(4).subscribe(value => expect(value).toEqual({ current_enrollments: 0, max_capacity: null }));
+    http.expectOne('/api/events/activities/4/enrollments/summary').flush({ currentEnrollments: 0, maxCapacity: null });
+  });
+  it('maps activity attendance and respects the enrollment cursor', () => {
+    service.getActivityEnrollments(3, 'next').subscribe(page => {
+      expect(page.content[0].status).toBe('CHECKED_IN'); expect(page.next_cursor).toBe('following');
+    });
+    const req = http.expectOne(r => r.url === '/api/events/activities/3/enrollments' && r.params.get('cursor') === 'next');
+    req.flush({ content: [{ id: 5, have_check_in: true, user: { id: 'u', name: 'Ana' } }], next_cursor: 'following' });
+  });
   it('sends max_capacity on creation, preserving zero when the old event response omits it', () => {
     service.create({ title: 'Evento', time_zone: 'America/Sao_Paulo', category: 'ACADEMIC_EDUCATIONAL', format: 'IN_PERSON', max_capacity: 0 }).subscribe(value => expect(value.max_capacity).toBe(0));
     const request = http.expectOne('/api/events'); expect(request.request.body.max_capacity).toBe(0); request.flush(event);

@@ -27,6 +27,8 @@ import {
 } from '../models/event.model';
 
 interface ApiEvent {
+  workload_hours?: number | null;
+  workloadHours?: number | null;
   max_capacity?: number | null;
   maxCapacity?: number | null;
   organization?: string | null;
@@ -154,6 +156,8 @@ interface ApiEventActivitiesPage {
 }
 
 interface ApiEnrollment {
+  have_check_in?: boolean;
+  haveCheckIn?: boolean;
   id: number;
   status: EventEnrollment['status'];
   createdAt?: string | null;
@@ -394,12 +398,19 @@ export class EventsService {
     ));
   }
 
+  getActivityCapacity(activityId: number) {
+    return this.api.get<{ current_enrollments?: number; currentEnrollments?: number; max_capacity?: number | null; maxCapacity?: number | null }>(
+      `/events/activities/${activityId}/enrollments/summary`,
+    ).pipe(map(row => ({ current_enrollments: row.current_enrollments ?? row.currentEnrollments ?? 0,
+      max_capacity: row.max_capacity !== undefined ? row.max_capacity : row.maxCapacity ?? null })));
+  }
+
   getActivityEnrollments(activityId: number, cursor?: string): Observable<EventEnrollmentsPage> {
     let params = new HttpParams().set('pageSize', '20');
     if (cursor) params = params.set('cursor', cursor);
     return this.api.get<ApiEnrollmentsPage>(`/events/activities/${activityId}/enrollments`, { params }).pipe(
       map((page) => ({
-        content: page.content.map((item) => this.toEnrollment({ ...item, status: item.status ?? 'CONFIRMED' })),
+        content: page.content.map((item) => this.toEnrollment({ ...item, status: (item.have_check_in ?? item.haveCheckIn) ? 'CHECKED_IN' : item.status ?? 'CONFIRMED' })),
         next_cursor: page.nextCursor ?? page.next_cursor ?? null,
       })),
     );
@@ -512,6 +523,7 @@ export class EventsService {
       ...listItem,
       max_capacity: event.max_capacity !== undefined ? event.max_capacity : event.maxCapacity,
       organization: event.organization,
+      workload_hours: event.workload_hours ?? event.workloadHours,
       team_certificate_workload_hours: event.team_certificate_workload_hours ?? event.teamCertificateWorkloadHours,
       schedule_conflict_policy: event.schedule_conflict_policy ?? event.scheduleConflictPolicy ?? null,
       summary: event.summary ?? event.description ?? null,
