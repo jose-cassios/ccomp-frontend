@@ -24,9 +24,13 @@ import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
         <span><strong>{{ row.enrollment.user.name }}</strong><small>{{ row.enrollment.user.email_address }}</small>
           @if (!row.eligible) { <small>Inscrição no evento inativa</small> }
         </span>
-        <button type="button" [disabled]="busy() || !row.eligible || added().has(row.enrollment.id)" (click)="enroll(row)">
-          {{ added().has(row.enrollment.id) ? 'Adicionado' : 'Inscrever na atividade' }}
-        </button>
+        @if (attended().has(row.enrollment.id)) {
+          <span>Presença confirmada</span>
+        } @else if (added().has(row.enrollment.id)) {
+          <div><small>Inscrição confirmada</small><button type="button" [disabled]="busy()" (click)="confirmAttendance(row)">Confirmar presença</button></div>
+        } @else {
+          <button type="button" [disabled]="busy() || !row.eligible" (click)="enroll(row)">Inscrever na atividade</button>
+        }
       </article>
     } @empty { @if (searched()) { <p>Nenhum participante encontrado. Confira a inscrição no evento.</p> } }
     @if (results().length >= 20) { <small>Mostrando até 20 resultados. Refine a busca pelo email.</small> }
@@ -46,6 +50,7 @@ export class ActivityManualEnrollmentComponent {
   readonly busy = signal(false);
   readonly searched = signal(false);
   readonly added = signal<ReadonlySet<number>>(new Set());
+  readonly attended = signal<ReadonlySet<number>>(new Set());
   readonly error = signal('');
   readonly message = signal('');
   private readonly feedback = autoDismissFeedback(this.error, this.message, () => { this.error.set(''); this.message.set(''); });
@@ -57,6 +62,19 @@ export class ActivityManualEnrollmentComponent {
     this.lookup.search(this.eventId, this.term.value).pipe(takeUntilDestroyed(this.destroy), finalize(() => this.busy.set(false))).subscribe({
       next: rows => { this.results.set(rows); this.searched.set(true); },
       error: error => this.error.set(apiErrorMessage(error, 'Não foi possível consultar os inscritos do evento.')),
+    });
+  }
+
+  confirmAttendance(row: CredentialSearchItem): void {
+    if (!this.manage || this.busy() || !row.eligible || !this.added().has(row.enrollment.id) || this.attended().has(row.enrollment.id)) return;
+    if (!window.confirm('Confirmar a presença de ' + row.enrollment.user.name + ' nesta atividade?')) return;
+    this.busy.set(true); this.error.set(''); this.message.set('');
+    this.api.markActivityAttendance(this.activityId, row.enrollment.id).pipe(takeUntilDestroyed(this.destroy), finalize(() => this.busy.set(false))).subscribe({
+      next: response => {
+        this.attended.update(ids => new Set([...ids, row.enrollment.id]));
+        this.message.set(apiMessage(response, 'Presença confirmada na atividade.')); this.changed.emit();
+      },
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível confirmar a presença.')),
     });
   }
 

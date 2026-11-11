@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 import { EventsService } from '../../services/events.service';
 import { ActivityPeopleComponent } from './activity-people.component';
+import { EventCredentialsService } from '../../services/event-credentials.service';
 
 describe('Private activity enrollment list', () => {
   const api = { getActivityEnrollments: vi.fn(), findEventEnrollment: vi.fn(), markActivityAttendance: vi.fn() };
@@ -10,18 +11,37 @@ describe('Private activity enrollment list', () => {
     api.findEventEnrollment.mockReset().mockReturnValue(of({ id: 42, status: 'CONFIRMED', user: { id: 'u' } }));
     api.markActivityAttendance.mockReset().mockReturnValue(of({ message: 'Confirmada' }));
     vi.spyOn(window, 'confirm').mockReturnValue(true);
-    TestBed.configureTestingModule({ imports: [ActivityPeopleComponent], providers: [{ provide: EventsService, useValue: api }] });
+    TestBed.configureTestingModule({ imports: [ActivityPeopleComponent], providers: [
+      { provide: EventsService, useValue: api }, { provide: EventCredentialsService, useValue: { search: vi.fn() } },
+    ] });
   });
   afterEach(() => vi.restoreAllMocks());
   function setup(manage: boolean) {
     const fixture = TestBed.createComponent(ActivityPeopleComponent);
     fixture.componentRef.setInput('eventId', 1); fixture.componentRef.setInput('activityId', 3);
+    fixture.componentRef.setInput('activityTitle', 'Oficina de programação');
     fixture.componentRef.setInput('manage', manage); fixture.detectChanges(); return fixture;
   }
   it('neither displays nor requests participant data for ordinary users', () => {
     const fixture = setup(false); fixture.componentInstance.load();
     expect(api.getActivityEnrollments).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.textContent).not.toContain('Inscritos da atividade');
+    expect(fixture.nativeElement.querySelector('.management-actions')).toBeNull();
+    fixture.componentInstance.showManagement(true);
+    expect(fixture.componentInstance.managementOpen()).toBe(false);
+  });
+  it('opens enrollment directly from the activity toolbar and switches to attendance', () => {
+    api.getActivityEnrollments.mockReturnValue(of({ content: [], next_cursor: null }));
+    const fixture = setup(true);
+    const actions = fixture.nativeElement.querySelectorAll('.management-actions button');
+    expect(actions[0].textContent).toContain('Inscrever participante');
+    actions[0].click(); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.management-panel').textContent).toContain('Oficina de programação');
+    expect(fixture.nativeElement.querySelector('app-activity-manual-enrollment')).not.toBeNull();
+    expect(api.getActivityEnrollments).toHaveBeenCalledWith(3, undefined);
+    actions[1].click(); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-activity-manual-enrollment')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.management-panel')).not.toBeNull();
+    expect(api.getActivityEnrollments).toHaveBeenCalledOnce();
   });
   it('resolves the event enrollment before attendance and prevents repeated confirmation', () => {
     const component = setup(true).componentInstance;
