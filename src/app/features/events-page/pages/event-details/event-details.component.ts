@@ -330,6 +330,10 @@ export class EventDetailsComponent implements OnInit {
     this.successMessage.set(null);
   }
 
+  refreshActivityEnrollments(): void {
+    this.capacityRevision.update(value => value + 1);
+    this.reloadActivitySubscriptions();
+  }
   refreshActivities(): void {
     const eventId = this.event()?.id;
     if (eventId) this.loadActivities(eventId);

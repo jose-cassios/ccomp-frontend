@@ -279,6 +279,22 @@ export class EventEditorComponent implements OnInit {
       this.loadActivities(event.id);
     });
   }
+  readonly eventAttendanceBusyId = signal<number | null>(null);
+  readonly incrementRevision = (value: number) => value + 1;
+  readonly activityEnrollmentRevision = signal(0);
+  markEventAttendance(enrollment: EventEnrollment): void {
+    const event = this.event();
+    if (!event || !this.canViewEnrollments() || this.eventAttendanceBusyId() !== null || enrollment.status !== 'CONFIRMED') return;
+    if (!window.confirm('Confirmar a presença de ' + (enrollment.user?.name || 'participante') + ' no evento?')) return;
+    this.eventAttendanceBusyId.set(enrollment.id); this.errorMessage.set(null); this.successMessage.set(null);
+    this.eventsService.markEventAttendance(event.id, enrollment.id).pipe(finalize(() => this.eventAttendanceBusyId.set(null))).subscribe({
+      next: response => {
+        this.enrollments.update(rows => rows.map(row => row.id === enrollment.id ? { ...row, status: 'CHECKED_IN' } : row));
+        this.successMessage.set(apiMessage(response, 'Presença confirmada no evento.'));
+      },
+      error: error => this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível confirmar a presença.')),
+    });
+  }
   readonly canAddEnrollment = computed(() => this.authService.hasAnyRole(['ADM', 'MODERATOR']));
   requestManualEnrollment(): void {
     if (!this.canAddEnrollment() || this.isBusy()) return;

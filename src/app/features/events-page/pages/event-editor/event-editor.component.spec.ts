@@ -37,6 +37,7 @@ describe('EventEditorComponent', () => {
     registration_policy: 'ACTIVITY_REGISTRANTS_ONLY' as const,
   };
   const eventsService = {
+    markEventAttendance: vi.fn(() => of({ message: 'Presença confirmada' })),
     getEnrollments: vi.fn(() => of({ content: [], next_cursor: null })),
     getActivityCapacity: vi.fn(() => of({ current_enrollments: 0, max_capacity: null })),
 
@@ -560,6 +561,16 @@ describe('EventEditorComponent', () => {
     expect(component.steps.map(step => step.value)).toEqual(['details', 'presentation', 'team', 'schedule', 'review']);
   });
 
+  it('records event attendance for active enrollments and blocks duplicate or unauthorized actions', () => {
+    component.event.set({ ...createdEvent, owner_id: 'event-owner' });
+    const row = { id: 42, status: 'CONFIRMED' as const, created_at: null, user: { id: 'u', name: 'Ana', email_address: '' } };
+    component.enrollments.set([row]); vi.spyOn(window, 'confirm').mockReturnValue(true);
+    component.markEventAttendance(row); expect(eventsService.markEventAttendance).toHaveBeenCalledWith(14, 42);
+    expect(component.enrollments()[0].status).toBe('CHECKED_IN'); component.markEventAttendance(component.enrollments()[0]);
+    expect(eventsService.markEventAttendance).toHaveBeenCalledOnce();
+    component.event.set({ ...createdEvent, owner_id: 'other' }); component.markEventAttendance(row);
+    expect(eventsService.markEventAttendance).toHaveBeenCalledOnce();
+  });
   it('moves enrollments to the team step and limits manual additions to moderators', () => {
     vi.spyOn(TestBed.inject(AuthService), 'hasAnyRole').mockImplementation(roles => roles.includes('MODERATOR'));
     component.activeStep.set('team'); fixture.detectChanges();
