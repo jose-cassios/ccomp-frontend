@@ -88,24 +88,7 @@
 
 .search-box input::placeholder { color: var(--text-tertiary); }
 
-.github-link {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid var(--border-primary);
-  border-radius: 7px;
-  color: var(--text-secondary);
-  transition: border-color .2s ease, color .2s ease, background-color .2s ease;
-}
 
-.github-link:hover {
-  border-color: var(--brand-border);
-  background: var(--brand-50);
-  color: var(--brand-700);
-}
-
-.github-link svg { width: 17px; height: 17px; fill: currentColor; }
 
 .header-navigation {
   border-top: 1px solid var(--border-subtle);
@@ -258,5 +241,5 @@
   .header-actions { flex: 1; min-width: 0; justify-content: flex-end; gap: 8px; }
   .search-box, .search-box:focus-within { width: min(100%, 230px); min-width: 0; }
   .search-box input { font-size: 16px; }
-  .github-link { flex-shrink: 0; width: 40px; height: 40px; }
+
 }

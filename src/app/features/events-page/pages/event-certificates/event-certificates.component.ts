@@ -6,17 +6,18 @@ import { EMPTY, Observable, expand, finalize, forkJoin, map, of, reduce, switchM
 import { apiErrorMessage } from '../../../../core/api/api-error';
 import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
 import { AuthService } from '../../../auth/services/auth.service';
-import { CertificateAlignment, CertificateBox, CertificateScope } from '../../models/certificate.model';
+import { CertificateAlignment, CertificateBox, CertificateTemplateScope } from '../../models/certificate.model';
 import { EventDetails } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 import { CertificatesService } from '../../services/certificates.service';
 import { CertificateCanvasComponent, CertificateGeometry, CertificateTransform } from '../../components/certificate-canvas/certificate-canvas.component';
+import { CertificateManualManagementComponent } from '../../components/certificate-manual-management/certificate-manual-management.component';
 import { certificateColor, certificateHex } from '../../models/certificate-design';
 
 @Component({
   selector: 'app-event-certificates',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, CertificateCanvasComponent],
+  imports: [CertificateManualManagementComponent, ReactiveFormsModule, RouterLink, CertificateCanvasComponent],
   templateUrl: './event-certificates.component.html',
   styleUrl: './event-certificates.component.css',
 })
@@ -34,7 +35,19 @@ export class EventCertificatesComponent implements OnInit {
   readonly loadError = signal<string | null>(null);
   readonly allowed = signal(false);
   readonly busy = signal(false);
-  readonly scope = signal<CertificateScope>('event');
+  readonly scope = signal<CertificateTemplateScope>('event');
+  readonly activityId = signal<number | undefined>(undefined);
+  readonly activities = signal<import('../../models/event.model').EventActivity[]>([]);
+  readonly manualOpen = signal(false);
+  readonly manualBusy = signal(false);
+  readonly isActivity = computed(() => this.scope().startsWith('activity'));
+  readonly targetActivityId = computed(() => this.isActivity() ? this.activityId() : undefined);
+  readonly scopes: { value: CertificateTemplateScope; label: string }[] = [
+    { value: 'event', label: 'Participantes do evento' }, { value: 'instructor', label: 'Ministrantes do evento' },
+    { value: 'guest', label: 'Convidados do evento' }, { value: 'team', label: 'Equipe' },
+    { value: 'activity', label: 'Participantes de atividades' }, { value: 'activity-instructor', label: 'Ministrantes de atividades' },
+    { value: 'activity-guest', label: 'Convidados de atividades' },
+  ];
   readonly selectedBox = signal(0);
   readonly undoStack = signal<CertificateTransform[]>([]);
   readonly redoStack = signal<CertificateTransform[]>([]);
@@ -53,6 +66,8 @@ export class EventCertificatesComponent implements OnInit {
     { color: '#ffffff', name: 'Branco' }, { color: '#8f5010', name: 'Dourado' },
   ];
   readonly samples = computed(() => ({
+    '{convidado.nome}': 'Convidado de exemplo', '{convidado.carga_horaria}': '4',
+    '{evento.data_inicio}': this.event()?.start_date?.slice(0, 10) ?? '', '{evento.data_fim}': this.event()?.end_date?.slice(0, 10) ?? '',
     '{participante.nome}': 'Maria da Silva', '{evento.title}': this.event()?.title ?? 'Nome do evento',
     '{evento.local}': this.event()?.address || 'Local do evento', '{evento.carga_horaria}': '20',
     '{atividade.nome}': 'Atividade de exemplo', '{atividade.local}': 'Local da atividade',
@@ -61,10 +76,12 @@ export class EventCertificatesComponent implements OnInit {
     '{ministrante.nome}': 'Ana Silva', '{ministrante.carga_horaria}': '8',
     '{equipe.nome}': 'João Santos', '{equipe.carga_horaria}': '12', '{evento.organizacao}': this.event()?.organization || 'CCOMP',
   }));
-  readonly removedBox = signal<{ scope: CertificateScope; index: number; box: CertificateBox } | null>(null);
-  private readonly variablesByScope = signal<Record<CertificateScope, string[]>>({ event: [], activity: [], instructor: [], team: [] });
+  readonly removedBox = signal<{ scope: CertificateTemplateScope; index: number; box: CertificateBox } | null>(null);
+  private readonly variablesByScope = signal<Record<CertificateTemplateScope, string[]>>({ event: [], activity: [], instructor: [], team: [], guest: [], 'activity-instructor': [], 'activity-guest': [] });
   readonly variables = computed(() => this.variablesByScope()[this.scope()]);
   readonly variableLabels: Record<string, string> = {
+    '{convidado.nome}': 'Nome do convidado', '{convidado.carga_horaria}': 'Carga horária do convidado',
+    '{evento.data_inicio}': 'Data de início', '{evento.data_fim}': 'Data de término',
     '{participante.nome}': 'Nome do participante',
     '{evento.title}': 'Nome do evento',
     '{evento.local}': 'Local do evento',
@@ -82,8 +99,11 @@ export class EventCertificatesComponent implements OnInit {
   readonly previewUrl = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
-  readonly settings = this.fb.group({ organization: ['', Validators.maxLength(255)], team_certificate_workload_hours: this.fb.control<number | null>(null, Validators.min(0)) });
+  readonly settings = this.fb.group({ workload_hours: this.fb.control<number | null>(null, Validators.min(0)), instructor_certificate_workload_hours: this.fb.control<number | null>(null, Validators.min(0)), guest_certificate_workload_hours: this.fb.control<number | null>(null, Validators.min(0)), organization: ['', Validators.maxLength(255)], team_certificate_workload_hours: this.fb.control<number | null>(null, Validators.min(0)) });
   readonly forms = {
+    guest: this.fb.group({ boxes: new FormArray<ReturnType<EventCertificatesComponent['boxForm']>>([]) }),
+    'activity-instructor': this.fb.group({ boxes: new FormArray<ReturnType<EventCertificatesComponent['boxForm']>>([]) }),
+    'activity-guest': this.fb.group({ boxes: new FormArray<ReturnType<EventCertificatesComponent['boxForm']>>([]) }),
     event: this.fb.group({ boxes: new FormArray<ReturnType<EventCertificatesComponent['boxForm']>>([]) }),
     instructor: this.fb.group({ boxes: new FormArray<ReturnType<EventCertificatesComponent['boxForm']>>([]) }),
     team: this.fb.group({ boxes: new FormArray<ReturnType<EventCertificatesComponent['boxForm']>>([]) }),
@@ -117,27 +137,29 @@ export class EventCertificatesComponent implements OnInit {
     }
     this.loading.set(true); this.loadError.set(null);
     this.events.getById(this.eventId).pipe(
-      tap(event => { this.event.set(event); this.settings.reset({ organization: event.organization ?? '', team_certificate_workload_hours: event.team_certificate_workload_hours ?? null }); }),
+      tap(event => { this.event.set(event); this.resetSettings(event); }),
       switchMap(event => this.canManage(event)),
       switchMap(allowed => {
         this.allowed.set(allowed);
         if (!allowed) return EMPTY;
         return forkJoin({
+          activities: this.events.getAllActivities(this.eventId),
+          guest: this.api.template(this.eventId, 'guest'), 'activity-instructor': this.api.template(this.eventId, 'activity-instructor'), 'activity-guest': this.api.template(this.eventId, 'activity-guest'),
           event: this.api.template(this.eventId, 'event'),
           activity: this.api.template(this.eventId, 'activity'),
           instructor: this.api.template(this.eventId, 'instructor'), team: this.api.template(this.eventId, 'team'),
-          variables: forkJoin({ event: this.api.variables('event'), activity: this.api.variables('activity'), instructor: this.api.variables('instructor'), team: this.api.variables('team') }), cover: this.api.cover(this.eventId),
+          variables: forkJoin({ guest: this.api.variables('guest'), 'activity-instructor': this.api.variables('activity-instructor'), 'activity-guest': this.api.variables('activity-guest'), event: this.api.variables('event'), activity: this.api.variables('activity'), instructor: this.api.variables('instructor'), team: this.api.variables('team') }), cover: this.api.cover(this.eventId),
         });
       }),
       takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false)),
     ).subscribe({
       next: result => {
-        for (const scope of ['event', 'activity', 'instructor', 'team'] as const) {
+        for (const scope of ['event', 'activity', 'instructor', 'team', 'guest', 'activity-instructor', 'activity-guest'] as const) {
           const boxes = this.forms[scope].controls.boxes;
           boxes.clear(); result[scope].boxes.forEach(box => boxes.push(this.boxForm(box)));
           this.forms[scope].markAsPristine();
         }
-        this.variablesByScope.set(result.variables); this.setImage(this.coverUrl, result.cover);
+        this.activities.set(result.activities); this.variablesByScope.set(result.variables); this.setImage(this.coverUrl, result.cover);
       },
       error: error => this.loadError.set(apiErrorMessage(error, 'Não foi possível carregar os certificados. Tente novamente.')),
     });
@@ -147,16 +169,54 @@ export class EventCertificatesComponent implements OnInit {
     if (!this.allowed() || this.busy() || this.settings.invalid) return;
     const value = this.settings.getRawValue();
     this.run(this.events.update(this.eventId, { organization: value.organization.trim(),
+      ...(value.workload_hours !== null ? { workload_hours: value.workload_hours } : {}),
+      ...(value.instructor_certificate_workload_hours !== null ? { instructor_certificate_workload_hours: value.instructor_certificate_workload_hours } : {}),
+      ...(value.guest_certificate_workload_hours !== null ? { guest_certificate_workload_hours: value.guest_certificate_workload_hours } : {}),
       ...(value.team_certificate_workload_hours !== null ? { team_certificate_workload_hours: value.team_certificate_workload_hours } : {}),
-    }), event => { this.event.set(event); this.settings.reset({ organization: event.organization ?? '', team_certificate_workload_hours: event.team_certificate_workload_hours ?? null }); }, 'Configurações salvas.');
+    }), event => { this.event.set(event); this.resetSettings(event); this.success.set('Configurações salvas.'); }, 'Não foi possível salvar as configurações.');
   }
 
-  selectScope(scope: CertificateScope): void {
+  private resetSettings(event: EventDetails): void {
+    this.settings.reset({ organization: event.organization ?? '', workload_hours: event.workload_hours ?? null,
+      instructor_certificate_workload_hours: event.instructor_certificate_workload_hours ?? null,
+      guest_certificate_workload_hours: event.guest_certificate_workload_hours ?? null,
+      team_certificate_workload_hours: event.team_certificate_workload_hours ?? null });
+  }
+
+  loadActivities(): void {
+    this.run(this.events.getAllActivities(this.eventId), rows => this.activities.set(rows), 'Não foi possível carregar as atividades.');
+  }
+
+  selectActivity(value: string): void {
     if (this.busy()) return;
-    this.scope.set(scope); this.setImage(this.previewUrl, null);
+    const id = value ? Number(value) : undefined;
+    if (id !== undefined && !this.activities().some(item => item.id === id)) return;
+    const scopes = ['activity', 'activity-instructor', 'activity-guest'] as const;
+    if (scopes.some(scope => this.forms[scope].dirty) && !window.confirm('Descartar as alterações não salvas dos modelos de atividade?')) return;
+    this.run(forkJoin({
+      templates: forkJoin(scopes.map(scope => this.api.template(this.eventId, scope, id))),
+      cover: this.api.cover(this.eventId, this.scope(), id),
+    }), result => {
+      this.activityId.set(id);
+      scopes.forEach((scope, i) => { const boxes = this.forms[scope].controls.boxes; boxes.clear(); result.templates[i].boxes.forEach(box => boxes.push(this.boxForm(box))); this.forms[scope].markAsPristine(); });
+      this.selectedBox.set(0); this.clearTransformHistory(); this.removedBox.set(null); this.setImage(this.previewUrl, null); this.setImage(this.coverUrl, result.cover);
+    }, 'Não foi possível carregar os modelos da atividade.');
+  }
+
+  restoreActivityTemplate(): void {
+    const id = this.targetActivityId();
+    if (!id || this.busy() || !window.confirm('Remover o modelo específico e seu fundo? Esta atividade voltará a usar o modelo compartilhado deste público.')) return;
+    this.run(this.api.deleteActivityTemplate(this.eventId, this.scope(), id).pipe(switchMap(() => forkJoin({ template: this.api.template(this.eventId, this.scope(), id), cover: this.api.cover(this.eventId, this.scope(), id) }))), result => {
+      this.boxes.clear(); result.template.boxes.forEach(box => this.boxes.push(this.boxForm(box))); this.form.markAsPristine(); this.selectedBox.set(0); this.clearTransformHistory(); this.removedBox.set(null); this.setImage(this.coverUrl, result.cover); this.setImage(this.previewUrl, null); this.success.set('Modelo compartilhado restaurado.');
+    }, 'Não foi possível restaurar o modelo compartilhado.');
+  }
+
+  selectScope(scope: CertificateTemplateScope): void {
+    if (this.busy()) return;
+    this.scope.set(scope); this.setImage(this.coverUrl, null);
+    this.run(this.api.cover(this.eventId, scope, this.targetActivityId()), blob => this.setImage(this.coverUrl, blob), 'Não foi possível carregar o fundo.'); this.setImage(this.previewUrl, null);
     this.selectedBox.set(0);
     this.clearTransformHistory();
-    this.error.set(null); this.success.set(null);
   }
 
   addBox(kind: 'text' | 'title' | 'participant' | 'validation' = 'text'): void {
@@ -167,7 +227,7 @@ export class EventCertificatesComponent implements OnInit {
     const presets: Record<typeof kind, Partial<CertificateBox>> = {
       text: { text_template: 'Seu texto aqui', y: Math.min(.8, .45 + this.boxes.length * .04) },
       title: { text_template: '**CERTIFICADO**', y: .2, font_size: Math.min(300, font * 2) },
-      participant: { text_template: this.scope() === 'instructor' ? '**{ministrante.nome}**' : this.scope() === 'team' ? '**{equipe.nome}**' : '**{participante.nome}**', y: .38, font_size: Math.min(300, Math.round(font * 1.3)) },
+      participant: { text_template: this.scope().includes('guest') ? '**{convidado.nome}**' : this.scope().includes('instructor') ? '**{ministrante.nome}**' : this.scope() === 'team' ? '**{equipe.nome}**' : '**{participante.nome}**', y: .38, font_size: Math.min(300, Math.round(font * 1.3)) },
       // Including event title also supports the backend's activity validation lookup.
       validation: { text_template: 'Código de validação: {validacao.codigo}\n{evento.title}', y: .85, font_size: Math.max(8, Math.round(font * .55)) },
     };
@@ -332,15 +392,15 @@ export class EventCertificatesComponent implements OnInit {
       return;
     }
     const form = this.form;
-    this.run(this.api.saveTemplate(this.eventId, this.scope(), form.getRawValue().boxes).pipe(
+    this.run(this.api.saveTemplate(this.eventId, this.scope(), form.getRawValue().boxes, this.targetActivityId()).pipe(
       tap(() => { form.markAsPristine(); this.clearTransformHistory(); this.removedBox.set(null); this.success.set('Modelo salvo. Gerando prévia…'); }),
-      switchMap(() => this.api.preview(this.eventId, this.scope())),
+      switchMap(() => this.api.preview(this.eventId, this.scope(), this.targetActivityId())),
     ), blob => { this.setImage(this.previewUrl, blob); this.success.set('Modelo salvo. Confira a prévia abaixo.'); },
     'Não foi possível concluir. Se o modelo já foi salvo, tente visualizar novamente.');
   }
 
   preview(): void {
-    this.run(this.api.preview(this.eventId, this.scope()), blob => this.setImage(this.previewUrl, blob),
+    this.run(this.api.preview(this.eventId, this.scope(), this.targetActivityId()), blob => this.setImage(this.previewUrl, blob),
       'Não foi possível gerar a prévia do modelo salvo.');
   }
 
@@ -351,30 +411,30 @@ export class EventCertificatesComponent implements OnInit {
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
       this.error.set('Selecione uma imagem PNG, JPEG ou WebP.'); return;
     }
-    this.run(this.api.uploadCover(this.eventId, file).pipe(
-      tap(() => this.setImage(this.previewUrl, null)), switchMap(() => this.api.cover(this.eventId)),
-    ), blob => { this.setImage(this.coverUrl, blob); this.success.set('Fundo atualizado para o evento e suas atividades.'); },
+    this.run(this.api.uploadCover(this.eventId, file, this.scope(), this.targetActivityId()).pipe(
+      tap(() => this.setImage(this.previewUrl, null)), switchMap(() => this.api.cover(this.eventId, this.scope(), this.targetActivityId())),
+    ), blob => { this.setImage(this.coverUrl, blob); this.success.set('Fundo atualizado para o contexto selecionado.'); },
     'Não foi possível atualizar ou carregar o fundo.');
   }
 
   restoreCover(): void {
     if (this.busy() || !window.confirm('Remover o fundo personalizado e voltar à imagem padrão?')) return;
-    this.run(this.api.deleteCover(this.eventId).pipe(
-      tap(() => this.setImage(this.previewUrl, null)), switchMap(() => this.api.cover(this.eventId)),
+    this.run(this.api.deleteCover(this.eventId, this.scope(), this.targetActivityId()).pipe(
+      tap(() => this.setImage(this.previewUrl, null)), switchMap(() => this.api.cover(this.eventId, this.scope(), this.targetActivityId())),
     ), blob => { this.setImage(this.coverUrl, blob); this.success.set('Fundo padrão restaurado.'); },
     'Não foi possível restaurar o fundo padrão.');
   }
 
   canDeactivate(): boolean {
-    if (!this.unsaved && !this.busy()) return true;
-    return window.confirm(this.busy()
+    if (!this.unsaved && !this.busy() && !this.manualBusy()) return true;
+    return window.confirm(this.busy() || this.manualBusy()
       ? 'Há uma operação em andamento. Ao sair, seu resultado pode não ser exibido. Deseja sair?'
       : 'Há alterações não salvas nos certificados. Deseja sair?');
   }
 
   @HostListener('window:beforeunload', ['$event'])
   beforeUnload(event: BeforeUnloadEvent): void {
-    if (this.unsaved || this.busy()) event.preventDefault();
+    if (this.unsaved || this.busy() || this.manualBusy()) event.preventDefault();
   }
 
   private boxForm(box?: CertificateBox) {

@@ -9,8 +9,8 @@ import { CertificateBox } from '../../models/certificate.model';
 
 describe('Event certificate customization', () => {
   const box: CertificateBox = { text_template: '{participante.nome}', x: .2, y: .5, width: .6, font_size: 25, font_color: null, alignment: null };
-  const api = { template: vi.fn(), variables: vi.fn(), cover: vi.fn(), saveTemplate: vi.fn(), preview: vi.fn(), uploadCover: vi.fn(), deleteCover: vi.fn() };
-  const events = { update: vi.fn(), getById: vi.fn(), getEditableEvents: vi.fn() };
+  const api = { template: vi.fn(), variables: vi.fn(), cover: vi.fn(), saveTemplate: vi.fn(), preview: vi.fn(), uploadCover: vi.fn(), deleteCover: vi.fn(), deleteActivityTemplate: vi.fn() };
+  const events = { getAllActivities: vi.fn(), update: vi.fn(), getById: vi.fn(), getEditableEvents: vi.fn() };
   const auth = { hasAnyRole: vi.fn(), currentUserState: vi.fn() };
   beforeEach(() => {
     vi.resetAllMocks();
@@ -20,6 +20,7 @@ describe('Event certificate customization', () => {
     api.variables.mockReturnValue(of(['{participante.nome}', '{validacao.codigo}']));
     api.cover.mockReturnValue(of(new Blob())); api.preview.mockReturnValue(of(new Blob()));
     api.saveTemplate.mockReturnValue(of({})); api.deleteCover.mockReturnValue(of(null));
+    events.getAllActivities.mockReturnValue(of([]));
     events.getById.mockReturnValue(of({ id: 9, title: 'Evento', owner_id: 'owner' }));
     events.getEditableEvents.mockReturnValue(of({ content: [], next_cursor: null }));
     auth.currentUserState.mockReturnValue({ id: 'owner' }); auth.hasAnyRole.mockReturnValue(false);
@@ -83,7 +84,7 @@ describe('Event certificate customization', () => {
     expect(api.saveTemplate).toHaveBeenCalledTimes(1); expect(api.preview).not.toHaveBeenCalled();
     expect(component.busy()).toBe(true);
     pending.next({}); pending.complete();
-    expect(api.preview).toHaveBeenCalledWith(9, 'event'); expect(component.unsaved).toBe(false);
+    expect(api.preview).toHaveBeenCalledWith(9, 'event', undefined); expect(component.unsaved).toBe(false);
     expect(component.busy()).toBe(false); expect(component.previewUrl()).toBe('blob:certificate');
   });
   it('validates text and geometry before save, retaining drafts after failure', () => {
@@ -111,7 +112,7 @@ describe('Event certificate customization', () => {
   it('restores the shared background and discards stale preview', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     const component = create().componentInstance; component.preview(); component.restoreCover();
-    expect(api.deleteCover).toHaveBeenCalledWith(9); expect(component.previewUrl()).toBeNull();
+    expect(api.deleteCover).toHaveBeenCalledWith(9, 'event', undefined); expect(component.previewUrl()).toBeNull();
     expect(component.success()).toContain('restaurado');
   });
   it('updates color and live preview without saving or generating a server preview', () => {
@@ -201,14 +202,14 @@ describe('Event certificate customization', () => {
     expect(component.designBoxes[0].text_template).toBe(text);
   });
 
-  it('offers all four templates and retains edits independently with scope-specific variables', () => {
+  it('offers all seven templates and retains edits independently with scope-specific variables', () => {
     api.variables.mockImplementation((scope: string) => of(scope === 'instructor' ? ['{ministrante.nome}'] : scope === 'team' ? ['{equipe.nome}'] : ['{participante.nome}']));
     const fixture = create(); const component = fixture.componentInstance;
-    expect(fixture.nativeElement.querySelectorAll('.tabs button')).toHaveLength(4);
+    expect(fixture.nativeElement.querySelectorAll('.tabs button')).toHaveLength(7);
     component.selectScope('instructor'); component.addBox('participant');
     expect(component.designBoxes.at(-1)?.text_template).toBe('**{ministrante.nome}**');
     expect(component.variables()).toEqual(['{ministrante.nome}']); component.save();
-    expect(api.saveTemplate).toHaveBeenLastCalledWith(9, 'instructor', expect.any(Array));
+    expect(api.saveTemplate).toHaveBeenLastCalledWith(9, 'instructor', expect.any(Array), undefined);
     component.selectScope('team'); component.addBox('participant');
     expect(component.designBoxes.at(-1)?.text_template).toBe('**{equipe.nome}**');
     component.selectScope('instructor'); expect(component.boxes.length).toBe(2);
@@ -216,10 +217,44 @@ describe('Event certificate customization', () => {
   });
 
 
+  it('loads activity-specific models and protects unsaved edits when changing targets', () => {
+    events.getAllActivities.mockReturnValue(of([{ id: 5, title: 'Oficina' }, { id: 6, title: 'Palestra' }]));
+    const component = create().componentInstance; component.selectScope('activity-guest');
+    component.selectActivity('5');
+    expect(api.template).toHaveBeenCalledWith(9, 'activity-guest', 5);
+    expect(component.targetActivityId()).toBe(5);
+    component.addBox('participant');
+    expect(component.designBoxes.at(-1)?.text_template).toBe('**{convidado.nome}**');
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    component.selectActivity('6'); expect(component.activityId()).toBe(5); expect(component.form.dirty).toBe(true);
+    component.save(); expect(api.saveTemplate).toHaveBeenLastCalledWith(9, 'activity-guest', expect.any(Array), 5);
+    expect(api.preview).toHaveBeenLastCalledWith(9, 'activity-guest', 5);
+    api.template.mockReturnValueOnce(throwError(() => new Error('offline')));
+    component.selectActivity('6'); expect(component.activityId()).toBe(5); expect(component.error()).toBeTruthy();
+    confirm.mockRestore();
+  });
+  it('restores a specific activity template without changing other audience models', () => {
+    events.getAllActivities.mockReturnValue(of([{ id: 5, title: 'Oficina' }]));
+    const component = create().componentInstance; component.selectScope('activity-instructor'); component.selectActivity('5');
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    api.deleteActivityTemplate.mockReturnValue(of(null));
+    component.restoreActivityTemplate();
+    expect(api.deleteActivityTemplate).toHaveBeenCalledWith(9, 'activity-instructor', 5);
+    expect(api.template).toHaveBeenLastCalledWith(9, 'activity-instructor', 5);
+    expect(component.form.pristine).toBe(true); expect(component.previewUrl()).toBeNull();
+    confirm.mockRestore();
+  });
+  it('saves base workloads independently including zero values', () => {
+    events.update.mockReturnValue(of({ id: 9, instructor_certificate_workload_hours: 0, guest_certificate_workload_hours: 2, workload_hours: 3 }));
+    const component = create().componentInstance;
+    component.settings.patchValue({ instructor_certificate_workload_hours: 0, guest_certificate_workload_hours: 2, workload_hours: 3 }); component.saveSettings();
+    expect(events.update).toHaveBeenCalledWith(9, { organization: '', instructor_certificate_workload_hours: 0, guest_certificate_workload_hours: 2, workload_hours: 3 });
+    expect(component.settings.controls.instructor_certificate_workload_hours.value).toBe(0);
+  });
   it('saves organization and team hours without mixing them with instructor workload', () => {
     events.update.mockReturnValue(of({ id: 9, organization: 'IFMA', team_certificate_workload_hours: 12 }));
     const component = create().componentInstance;
-    component.settings.setValue({ organization: ' IFMA ', team_certificate_workload_hours: -1 }); component.saveSettings();
+    component.settings.patchValue({ organization: ' IFMA ', team_certificate_workload_hours: -1 }); component.saveSettings();
     expect(events.update).not.toHaveBeenCalled();
     component.settings.controls.team_certificate_workload_hours.setValue(12); component.settings.markAsDirty(); component.saveSettings();
     expect(events.update).toHaveBeenCalledWith(9, { organization: 'IFMA', team_certificate_workload_hours: 12 });

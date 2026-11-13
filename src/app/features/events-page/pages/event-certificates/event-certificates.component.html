@@ -11,25 +11,45 @@
   } @else if (!allowed()) {
     <p role="alert" class="panel">A personalização está disponível para o responsável pelo evento, editores ativos, moderadores e administradores.</p>
   } @else {
+    <details class="panel" (toggle)="manualOpen.set($any($event.target).open)">
+      <summary>Gestão e emissão manual <small>Ministrantes, convidados, equipe e certificados avulsos</small></summary>
+      @if (manualOpen()) {
+        <app-certificate-manual-management [event]="event()!" [boxes]="designBoxes" [allowCustom]="!isActivity()" [allowed]="allowed()" (working)="manualBusy.set($event)" />
+      }
+    </details>
     <div class="tabs" role="group" aria-label="Modelo de certificado">
-      <button type="button" [attr.aria-pressed]="scope() === 'event'" [disabled]="busy()" (click)="selectScope('event')">Participantes</button>
-      <button type="button" [attr.aria-pressed]="scope() === 'activity'" [disabled]="busy()" (click)="selectScope('activity')">Das atividades</button>
-      <button type="button" [attr.aria-pressed]="scope() === 'instructor'" [disabled]="busy()" (click)="selectScope('instructor')">Ministrantes e auxiliares</button>
-      <button type="button" [attr.aria-pressed]="scope() === 'team'" [disabled]="busy()" (click)="selectScope('team')">Equipe</button>
+      @for (item of scopes; track item.value) {
+        <button type="button" [attr.aria-pressed]="scope() === item.value" [disabled]="busy() || manualBusy()" (click)="selectScope(item.value)">{{ item.label }}</button>
+      }
     </div>
+    @if (isActivity()) {
+      <section class="panel">
+        <label>Aplicar modelo a
+          <select #activityTarget [disabled]="busy()" [value]="activityId() ?? ''" (change)="selectActivity(activityTarget.value); activityTarget.value = activityId()?.toString() ?? ''">
+            <option value="">Todas as atividades (modelo compartilhado)</option>
+            @for (item of activities(); track item.id) { <option [value]="item.id">{{ item.title }}</option> }
+          </select>
+        </label>
+        <button type="button" [disabled]="busy()" (click)="loadActivities()">Atualizar atividades</button>
+        @if (activityId()) { <p>Alterações aplicadas somente a esta atividade e ao público selecionado.</p><button type="button" [disabled]="busy()" (click)="restoreActivityTemplate()">Voltar ao modelo compartilhado</button> }
+      </section>
+    }
 
     <details class="panel">
-      <summary>Organização e carga horária da equipe</summary>
+      <summary>Organização e cargas horárias</summary>
       <label>Organização<input [formControl]="settings.controls.organization" maxlength="255" /></label>
       <label>Horas para o responsável e editores ativos<input type="number" min="0" step="0.25" [formControl]="settings.controls.team_certificate_workload_hours" /></label>
-      <p>O certificado de ministrante soma as cargas horárias das atividades. Este campo define somente o certificado da equipe.</p>
+      <label>Horas base dos participantes<input type="number" min="0" step="0.25" [formControl]="settings.controls.workload_hours" /></label>
+      <label>Horas base dos ministrantes<input type="number" min="0" step="0.25" [formControl]="settings.controls.instructor_certificate_workload_hours" /></label>
+      <label>Horas base dos convidados apresentadores<input type="number" min="0" step="0.25" [formControl]="settings.controls.guest_certificate_workload_hours" /></label>
+      <p>Nos certificados gerais, as horas base são somadas às atividades correspondentes. O certificado de uma atividade usa somente as horas daquela atividade. Para zerar uma carga base, informe 0.</p>
       <button type="button" [disabled]="busy() || settings.invalid" (click)="saveSettings()">Salvar configurações</button>
     </details>
     <details class="panel">
       <summary>Fundo do certificado <small>Enviar imagem ou restaurar o padrão</small></summary>
       <div class="cover-panel">
         <div>
-          <p>A imagem de fundo é compartilhada por participantes, ministrantes, equipe e atividades. Ao enviar, ela substitui o fundo atual.</p>
+          <p>{{ targetActivityId() ? 'Este fundo pertence somente à atividade e ao público selecionados.' : 'O fundo do evento é compartilhado pelos modelos que não possuem um fundo específico.' }}</p>
           <div class="actions">
             <label class="upload">Enviar imagem<input type="file" accept="image/png,image/jpeg,image/webp" [disabled]="busy()" (change)="upload($event)" /></label>
             <button type="button" [disabled]="busy()" (click)="restoreCover()">Restaurar fundo padrão</button>
