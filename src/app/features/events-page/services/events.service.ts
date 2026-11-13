@@ -409,9 +409,10 @@ export class EventsService {
       max_capacity: row.max_capacity !== undefined ? row.max_capacity : row.maxCapacity ?? null })));
   }
 
-  getActivityEnrollments(activityId: number, cursor?: string): Observable<EventEnrollmentsPage> {
+  getActivityEnrollments(activityId: number, cursor?: string, searchTerm = ''): Observable<EventEnrollmentsPage> {
     let params = new HttpParams().set('pageSize', '20');
     if (cursor) params = params.set('cursor', cursor);
+    if (searchTerm.trim()) params = params.set('searchTerm', searchTerm.trim());
     return this.api.get<ApiEnrollmentsPage>(`/events/activities/${activityId}/enrollments`, { params }).pipe(
       map((page) => ({
         content: page.content.map((item) => this.toEnrollment({ ...item, status: (item.have_check_in ?? item.haveCheckIn) ? 'CHECKED_IN' : item.status ?? 'CONFIRMED' })),

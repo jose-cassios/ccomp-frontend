@@ -37,7 +37,7 @@ describe('Private activity enrollment list', () => {
     actions[0].click(); fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.management-panel').textContent).toContain('Oficina de programação');
     expect(fixture.nativeElement.querySelector('app-activity-manual-enrollment')).not.toBeNull();
-    expect(api.getActivityEnrollments).toHaveBeenCalledWith(3, undefined);
+    expect(api.getActivityEnrollments).toHaveBeenCalledWith(3, undefined, '');
     actions[1].click(); fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('app-activity-manual-enrollment')).toBeNull();
     expect(fixture.nativeElement.querySelector('.management-panel')).not.toBeNull();
@@ -90,8 +90,31 @@ describe('Private activity enrollment list', () => {
     const fixture = setup(true);
     expect(api.getActivityEnrollments).not.toHaveBeenCalled();
     fixture.componentInstance.openEnrollments(true); fixture.componentInstance.load(true); fixture.detectChanges();
-    expect(api.getActivityEnrollments).toHaveBeenLastCalledWith(3, 'next');
+    expect(api.getActivityEnrollments).toHaveBeenLastCalledWith(3, 'next', '');
     expect(fixture.componentInstance.rows()).toHaveLength(2);
     expect(fixture.nativeElement.textContent).toContain('Ana');
+  });
+  it('searches across the API, resets the cursor and sorts loaded results without changing cursor order', () => {
+    const row = (id: number, name: string) => ({ id, status: 'CONFIRMED', user: { name } });
+    api.getActivityEnrollments.mockReturnValueOnce(of({ content: [row(2, 'Zélia'), row(1, 'Álvaro')], next_cursor: 'next' }))
+      .mockReturnValueOnce(of({ content: [row(3, 'Ana')], next_cursor: null }))
+      .mockReturnValueOnce(of({ content: [row(4, 'Maria')], next_cursor: 'search-page' }))
+      .mockReturnValueOnce(of({ content: [], next_cursor: null }));
+    const component = setup(true).componentInstance; component.load(); component.load(true);
+    expect(component.sortedRows().map(row => row.user?.name)).toEqual(['Álvaro', 'Ana', 'Zélia']);
+    expect(component.rows().map(row => row.id)).toEqual([2, 1, 3]);
+    component.search(' Maria ');
+    expect(api.getActivityEnrollments).toHaveBeenLastCalledWith(3, undefined, 'Maria');
+    expect(component.sortedRows().map(row => row.id)).toEqual([4]);
+    component.load(true); expect(api.getActivityEnrollments).toHaveBeenLastCalledWith(3, 'search-page', 'Maria');
+  });
+  it('keeps the active filter after an error and never searches without management permission', () => {
+    api.getActivityEnrollments.mockReturnValueOnce(throwError(() => new Error('offline'))).mockReturnValue(of({ content: [], next_cursor: null }));
+    const component = setup(true).componentInstance; component.search('Ana');
+    expect(component.error()).toBeTruthy(); expect(component.loading()).toBe(false);
+    component.load(); expect(api.getActivityEnrollments).toHaveBeenLastCalledWith(3, undefined, 'Ana');
+    component.search(''); expect(component.searchTerm()).toBe(''); expect(component.cursor()).toBeNull();
+    const before = api.getActivityEnrollments.mock.calls.length; component.manage = false; component.search('Outra');
+    expect(api.getActivityEnrollments).toHaveBeenCalledTimes(before);
   });
 });

@@ -26,6 +26,17 @@ describe('Event and activity capacity API contracts', () => {
     const req = http.expectOne(r => r.url === '/api/events/activities/3/enrollments' && r.params.get('cursor') === 'next');
     req.flush({ content: [{ id: 5, have_check_in: true, user: { id: 'u', name: 'Ana' } }], next_cursor: 'following' });
   });
+  it('sends the trimmed participant search with the same filter on subsequent cursor pages', () => {
+    service.getActivityEnrollments(3, undefined, ' Ana Silva ').subscribe();
+    const first = http.expectOne(r => r.url === '/api/events/activities/3/enrollments');
+    expect(first.request.params.get('searchTerm')).toBe('Ana Silva'); expect(first.request.params.has('cursor')).toBe(false);
+    first.flush({ content: [], next_cursor: 'search-page' });
+    service.getActivityEnrollments(3, 'search-page', 'Ana Silva').subscribe();
+    const next = http.expectOne(r => r.url === '/api/events/activities/3/enrollments');
+    expect(next.request.params.get('searchTerm')).toBe('Ana Silva'); expect(next.request.params.get('cursor')).toBe('search-page'); next.flush({ content: [], next_cursor: null });
+    service.getActivityEnrollments(3, undefined, ' ').subscribe();
+    const empty = http.expectOne(r => r.url === '/api/events/activities/3/enrollments'); expect(empty.request.params.has('searchTerm')).toBe(false); empty.flush({ content: [], next_cursor: null });
+  });
   it('sends max_capacity on creation, preserving zero when the old event response omits it', () => {
     service.create({ title: 'Evento', time_zone: 'America/Sao_Paulo', category: 'ACADEMIC_EDUCATIONAL', format: 'IN_PERSON', max_capacity: 0 }).subscribe(value => expect(value.max_capacity).toBe(0));
     const request = http.expectOne('/api/events'); expect(request.request.body.max_capacity).toBe(0); request.flush(event);
