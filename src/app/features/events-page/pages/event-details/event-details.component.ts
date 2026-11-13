@@ -30,11 +30,12 @@ import { EventSpeakersComponent } from '../../components/event-speakers/event-sp
 import { ActivityPeopleComponent } from '../../components/activity-people/activity-people.component';
 import { EventCoverDirective } from '../../components/event-cover.directive';
 import { CertificateDownloadComponent } from '../../components/certificate-download/certificate-download.component';
+import { ActivityCertificateComponent } from '../../components/certificate-download/activity-certificate.component';
 
 @Component({
   selector: 'app-event-details',
   standalone: true,
-  imports: [ActivityCapacityComponent, EventRoleCertificatesComponent, DatePipe, RouterLink, EventSpeakersComponent, ActivityPeopleComponent, EventCoverDirective, CertificateDownloadComponent],
+  imports: [ActivityCertificateComponent, ActivityCapacityComponent, EventRoleCertificatesComponent, DatePipe, RouterLink, EventSpeakersComponent, ActivityPeopleComponent, EventCoverDirective, CertificateDownloadComponent],
   templateUrl: './event-details.component.html',
   styleUrl: './event-details.component.css',
 })
@@ -65,6 +66,12 @@ export class EventDetailsComponent implements OnInit {
   );
   readonly editableEventIds = signal<ReadonlySet<number>>(new Set());
   readonly isAuthenticated = this.authService.isAuthenticatedState;
+  readonly certificateUserId = computed(() => this.authService.currentUserState()?.id ?? '');
+  activityCertificateCandidate(activity: EventActivity): boolean {
+    if (!this.isAuthenticated() || !this.certificateUserId() || !activity.subscribed || this.activitySubscriptionsLoading() || this.activitySubscriptionsError() || this.event()?.status === 'CANCELED') return false;
+    const end = eventTimestamp(activity.end_date, activity.time_zone ?? this.event()?.time_zone);
+    return Number.isFinite(end) && end <= Math.max(this.clock(), Date.now());
+  }
   readonly canEdit = computed(() => {
     const eventId = this.event()?.id;
     return this.authService.hasAnyRole(CONTENT_MANAGEMENT_ROLES)

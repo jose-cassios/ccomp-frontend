@@ -9,6 +9,7 @@ import { EventActivity, EventDetails } from '../../models/event.model';
 import { EventsService } from '../../services/events.service';
 import { EventDetailsComponent } from './event-details.component';
 import { EventGuestsService } from '../../services/event-guests.service';
+import { CertificatesService } from '../../services/certificates.service';
 
 describe('EventDetailsComponent', () => {
   let fixture: ComponentFixture<EventDetailsComponent>;
@@ -69,6 +70,7 @@ describe('EventDetailsComponent', () => {
           useValue: { isAuthenticatedState: authenticated, currentUserState: () => authenticated() ? { id: 'user' } : null, hasAnyRole: () => false, getCurrentUser: () => null },
         },
         { provide: EventsService, useValue: eventsService },
+        { provide: CertificatesService, useValue: { download: () => throwError(() => new HttpErrorResponse({ status: 400 })) } },
         { provide: ActivityInstructorsService, useValue: { forEvent: () => of([]) } },
         { provide: EventGuestsService, useValue: { guests: () => of({ content: [], next_cursor: null }), allGuests: () => of([]) } },
       ],
@@ -80,6 +82,21 @@ describe('EventDetailsComponent', () => {
   });
 
   afterEach(() => vi.restoreAllMocks());
+
+  it('checks activity certificates at the exact activity end, without waiting for the event to finish', () => {
+    authenticated.set(true);
+    component.event.set({ ...event, end_date: '2026-11-20T18:00', execution_status: 'IN_PROGRESS', time_zone: 'America/Fortaleza' });
+    const activity = { ...scheduleActivity, subscribed: true, end_date: '2026-11-13T12:00', time_zone: 'America/Fortaleza' };
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-11-13T14:59:59Z'));
+    expect(component.activityCertificateCandidate(activity)).toBe(false);
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-11-13T15:00:00Z'));
+    expect(component.activityCertificateCandidate(activity)).toBe(true);
+    expect(component.activityCertificateCandidate({ ...activity, subscribed: false })).toBe(false);
+    expect(component.activityCertificateCandidate({ ...activity, end_date: null })).toBe(false);
+    component.activitySubscriptionsError.set('offline'); expect(component.activityCertificateCandidate(activity)).toBe(false);
+    component.activitySubscriptionsError.set(null); component.event.update(e => ({ ...e!, status: 'CANCELED' })); expect(component.activityCertificateCandidate(activity)).toBe(false);
+    authenticated.set(false); expect(component.activityCertificateCandidate(activity)).toBe(false);
+  });
 
   it('uses the activity zone, with the parent event as fallback, when checking registration time', () => {
     vi.mocked(Date.now).mockReturnValue(Date.parse('2026-11-08T12:10:00Z'));

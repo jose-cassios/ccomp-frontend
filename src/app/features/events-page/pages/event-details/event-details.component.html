@@ -153,6 +153,9 @@
                           </div>
 
                           <div class="activity-card__action">
+                            @if (activityCertificateCandidate(activity)) {
+                              <app-activity-certificate [activityId]="activity.id" [userId]="certificateUserId()" [revision]="capacityRevision()" />
+                            }
                             @if (activityRequiresRegistration(activity)) {
                               <button
                                 type="button"
