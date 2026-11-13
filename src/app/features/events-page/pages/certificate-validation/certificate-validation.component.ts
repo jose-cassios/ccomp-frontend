@@ -63,7 +63,7 @@ export class CertificateValidationComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
-  readonly certificateTypes = { EVENT: 'Participação no evento', ACTIVITY: 'Participação em atividade', INSTRUCTOR: 'Ministrante ou auxiliar', EDITOR: 'Equipe do evento' };
+  readonly certificateTypes = { EVENT: 'Participação no evento', ACTIVITY: 'Participação em atividade', GUEST: 'Convidado', INSTRUCTOR: 'Ministrante ou auxiliar', EDITOR: 'Equipe do evento' };
   readonly code = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(64), Validators.pattern(/^[a-zA-Z0-9]+$/)] });
   readonly loading = signal(false);
   readonly result = signal<CertificateValidation | null>(null);

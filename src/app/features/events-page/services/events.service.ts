@@ -32,6 +32,10 @@ interface ApiEvent {
   max_capacity?: number | null;
   maxCapacity?: number | null;
   organization?: string | null;
+  instructorCertificateWorkloadHours?: number;
+  instructor_certificate_workload_hours?: number;
+  guestCertificateWorkloadHours?: number;
+  guest_certificate_workload_hours?: number;
   teamCertificateWorkloadHours?: number;
   team_certificate_workload_hours?: number;
   time_zone?: string;
@@ -555,6 +559,8 @@ export class EventsService {
       max_capacity: event.max_capacity !== undefined ? event.max_capacity : event.maxCapacity,
       organization: event.organization,
       workload_hours: event.workload_hours ?? event.workloadHours,
+      instructor_certificate_workload_hours: event.instructor_certificate_workload_hours ?? event.instructorCertificateWorkloadHours,
+      guest_certificate_workload_hours: event.guest_certificate_workload_hours ?? event.guestCertificateWorkloadHours,
       team_certificate_workload_hours: event.team_certificate_workload_hours ?? event.teamCertificateWorkloadHours,
       schedule_conflict_policy: event.schedule_conflict_policy ?? event.scheduleConflictPolicy ?? null,
       summary: event.summary ?? event.description ?? null,

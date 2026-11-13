@@ -240,7 +240,7 @@
     </div>
     <small>Deixe vazio para manter a configuração atual.</small>
     @if (certificateHours.invalid && certificateHours.touched) { <p class="field-error" role="alert">Informe cargas horárias iguais ou maiores que zero.</p> }
-    @if (event(); as savedEvent) { <a class="text-button" [routerLink]="['/eventos', savedEvent.id, 'certificados']">Personalizar certificados</a> }
+    @if (event(); as savedEvent) { <a class="text-button" [routerLink]="['/eventos', savedEvent.id, 'certificados']">Gerenciar certificados</a> }
   </div>
 </details>
 <footer class="form-footer">

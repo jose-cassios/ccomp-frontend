@@ -1,0 +1,60 @@
+@if (allowed) {
+  <p>Escolha o destinatário cadastrado ou prepare um certificado avulso com o texto do estúdio. A emissão gera um arquivo para download.</p>
+  @if (!finalized) { <p>As emissões ficam disponíveis após o encerramento do evento. Você já pode preparar modelos e prévias.</p> }
+  <fieldset [disabled]="busy()">
+    <label>Quem receberá o certificado?
+      <select [(ngModel)]="kind" (ngModelChange)="changeKind()">
+        <option value="instructor">Ministrante ou auxiliar</option><option value="guest">Convidado apresentador</option>
+        <option value="team">Responsável ou editor da equipe</option><option value="custom">Certificado avulso personalizado</option>
+      </select>
+    </label>
+    @if (!loaded()) { <button type="button" (click)="load()">Carregar destinatários</button> }
+    @if (kind === 'instructor') {
+      <label>Ministrante confirmado<select [(ngModel)]="recipient" (ngModelChange)="clearImages()"><option value="">Selecione uma pessoa</option>
+        @for (person of instructors(); track person.id) { <option [value]="person.id">{{ person.name }} · {{ activityName(person.activity_id) }}</option> }
+      </select></label>
+      @if (loaded() && !instructors().length) { <p>Nenhum ministrante confirmado. Cadastre e vincule a pessoa a uma atividade na programação.</p> }
+    }
+    @if (kind === 'guest') {
+      <label>Atividade<select [(ngModel)]="activity" (ngModelChange)="loadGuests()"><option value="">Selecione a atividade</option>
+        @for (item of activities(); track item.id) { <option [value]="item.id">{{ item.title }}</option> }
+      </select></label>
+      <label>Convidado apresentador confirmado<select [(ngModel)]="recipient" (ngModelChange)="clearImages()"><option value="">Selecione uma pessoa</option>
+        @for (person of guests(); track person.id) { <option [value]="person.id">{{ person.name }}</option> }
+      </select></label>
+      @if (activity && !busy() && !guests().length) { <p>Nenhum apresentador confirmado vinculado a esta atividade.</p> }
+    }
+    @if (kind === 'instructor' || kind === 'guest') {
+      <label>Abrangência<select [(ngModel)]="level" (ngModelChange)="clearImages()"><option value="event">Certificado geral do evento</option><option value="activity">Somente a atividade</option></select></label>
+      <p>Com validação: exige conta vinculada e os requisitos de emissão da API. Manual: permite destinatário sem conta, mas não gera código de validação.</p>
+      @if (kind === 'instructor' && level === 'event') { <p>Na emissão manual geral, a API ainda não preenche as datas automáticas do evento. Se o modelo as utiliza, preencha essas datas em um certificado avulso.</p> }
+      @if (kind === 'guest') { <p>Para convidados, a emissão manual usa o modelo e a carga horária da atividade selecionada.</p> }
+      <div class="actions"><button type="button" [disabled]="!finalized || !recipient || !loaded()" (click)="issue(true)">Emitir com validação</button>
+        <button type="button" [disabled]="!recipient || !loaded() || (kind === 'guest' && level !== 'activity')" (click)="issue()">Emitir manualmente</button></div>
+    }
+    @if (kind === 'team') {
+      <label>Integrante da equipe<select [(ngModel)]="recipient" (ngModelChange)="clearImages()"><option value="">Selecione uma pessoa</option>
+        @if (event.owner_id) { <option [value]="event.owner_id">Responsável pelo evento</option> }
+        @for (person of editors(); track person.id) { <option [value]="person.user_id">{{ person.name }} · {{ person.email_address }}</option> }
+      </select></label>
+      <p>Usa o modelo da equipe, sua carga horária configurada e o código de validação do destinatário.</p>
+      <button type="button" [disabled]="!recipient || !loaded()" (click)="issue()">Emitir certificado da equipe</button>
+    }
+    @if (kind === 'custom') {
+      @if (!allowCustom) { <p>Selecione um modelo de evento no estúdio para preparar um certificado avulso. Esta emissão usa o fundo geral do evento.</p> }
+      @else {
+        <p>Usa as caixas de texto atuais do estúdio e o fundo geral do evento, sem alterar o modelo salvo. Não cria código de validação nem histórico de emissão; os marcadores de validação serão removidos.</p>
+        <div class="fields">@for (token of tokens; track token) {
+          <label>{{ tokenLabel(token) }}<input [(ngModel)]="values[token]" (ngModelChange)="clearImages()" maxlength="2000" required /></label>
+        }</div>
+        <div class="actions"><button type="button" (click)="custom(true)">Visualizar com estes dados</button><button type="button" [disabled]="!finalized" (click)="custom(false)">Emitir certificado avulso</button></div>
+        @if (!finalized) { <p>A prévia está disponível. A emissão definitiva requer evento encerrado e não cancelado.</p> }
+      }
+    }
+  </fieldset>
+  @if (busy()) { <p role="status"><span class="mini-spinner" aria-hidden="true"></span> Processando…</p> }
+  @if (error()) { <p role="alert">{{ error() }}</p> }
+  @if (success()) { <p role="status">{{ success() }}</p> }
+  @if (previewUrl(); as url) { <img class="preview" [src]="url" alt="Prévia do certificado manual, sem emissão definitiva" /> }
+  @if (resultUrl(); as url) { <a [href]="url" download="certificado.png">Baixar novamente o certificado gerado</a> }
+}

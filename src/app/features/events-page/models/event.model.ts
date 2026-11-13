@@ -140,6 +140,8 @@ export interface EventDetails extends EventListItem {
   workload_hours?: number | null;
   max_capacity?: number | null;
   organization?: string | null;
+  instructor_certificate_workload_hours?: number;
+  guest_certificate_workload_hours?: number;
   team_certificate_workload_hours?: number | null;
   schedule_conflict_policy?: 'ALLOW' | 'PREVENT' | null;
   summary?: string | null;
@@ -187,6 +189,8 @@ export interface UpdateEventPayload {
   /** Sent separately through PUT /events/{id}/capacity, never in the generic PATCH. */
   max_capacity?: number | null;
   organization?: string;
+  instructor_certificate_workload_hours?: number;
+  guest_certificate_workload_hours?: number;
   team_certificate_workload_hours?: number;
   time_zone?: string;
   schedule_conflict_policy?: 'ALLOW' | 'PREVENT';

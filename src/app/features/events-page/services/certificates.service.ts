@@ -1,42 +1,42 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { catchError, from, switchMap, throwError } from 'rxjs';
+import { Observable, catchError, from, switchMap, throwError } from 'rxjs';
 import { ApiConfig } from '../../../core/api/api.config';
-import { CertificateBox, CertificateScope, CertificateTemplate, CertificateValidation } from '../models/certificate.model';
+import { CertificateBox, CertificateScope, CertificateTemplateScope, ManualCertificateContent, ManualInstructorCertificate, CertificateTemplate, CertificateValidation } from '../models/certificate.model';
 
 @Injectable({ providedIn: 'root' })
 export class CertificatesService {
   private readonly http = inject(HttpClient);
   private readonly config = inject(ApiConfig);
 
-  template(eventId: number, scope: CertificateScope) {
-    return this.http.get<CertificateTemplate>(this.url(eventId, scope, 'box-template'), { params: this.params(scope) });
+  template(eventId: number, scope: CertificateTemplateScope, activityId?: number) {
+    return this.http.get<CertificateTemplate>(this.url(eventId, scope, 'box-template', activityId), { params: this.params(scope) });
   }
 
-  saveTemplate(eventId: number, scope: CertificateScope, boxes: CertificateBox[]) {
-    return this.http.post(this.url(eventId, scope, 'box-template'), { boxes }, { params: this.params(scope) });
+  saveTemplate(eventId: number, scope: CertificateTemplateScope, boxes: CertificateBox[], activityId?: number) {
+    return this.http.post(this.url(eventId, scope, 'box-template', activityId), { boxes }, { params: this.params(scope) });
   }
 
-  variables(scope: CertificateScope = 'event') {
-    return this.http.get<string[]>(this.config.buildUrl('/events/certificate-variables'), { params: new HttpParams().set('type', this.type(scope)) });
+  variables(scope: CertificateTemplateScope = 'event') {
+    return this.http.get<string[]>(this.config.buildUrl('/events/certificate-variables'), { params: new HttpParams().set('type', this.variableType(scope)) });
   }
 
-  cover(eventId: number) {
-    return this.image(this.url(eventId, 'event', 'cover-template'));
+  cover(eventId: number, scope: CertificateTemplateScope = 'event', activityId?: number) {
+    return this.image(this.url(eventId, activityId ? scope : 'event', 'cover-template', activityId), this.params(scope));
   }
 
-  uploadCover(eventId: number, file: File) {
+  uploadCover(eventId: number, file: File, scope: CertificateTemplateScope = 'event', activityId?: number) {
     const body = new FormData();
     body.append('file', file);
-    return this.http.post(this.url(eventId, 'event', 'cover-template'), body);
+    return this.http.post(this.url(eventId, activityId ? scope : 'event', 'cover-template', activityId), body, { params: this.params(scope) });
   }
 
-  deleteCover(eventId: number) {
-    return this.http.delete<void>(this.url(eventId, 'event', 'cover-template'));
+  deleteCover(eventId: number, scope: CertificateTemplateScope = 'event', activityId?: number) {
+    return this.http.delete<void>(this.url(eventId, activityId ? scope : 'event', 'cover-template', activityId), { params: this.params(scope) });
   }
 
-  preview(eventId: number, scope: CertificateScope) {
-    return this.image(this.url(eventId, scope, 'preview'), this.params(scope));
+  preview(eventId: number, scope: CertificateTemplateScope, activityId?: number) {
+    return this.image(this.url(eventId, scope, 'preview'), activityId ? this.params(scope).set('activityId', activityId) : this.params(scope));
   }
 
   download(id: number, scope: CertificateScope, instructorId?: number) {
@@ -54,17 +54,47 @@ export class CertificatesService {
       `/events/certificates/validate/${encodeURIComponent(code.trim().toUpperCase())}`));
   }
 
-  private url(eventId: number, scope: CertificateScope, suffix: string) {
-    return this.config.buildUrl(`/events/${eventId}/${scope === 'activity' ? 'activity-' : ''}certificate-${suffix}`);
+  deleteActivityTemplate(eventId: number, scope: CertificateTemplateScope, activityId: number) {
+    return this.http.delete<void>(this.url(eventId, scope, 'box-template', activityId), { params: this.params(scope) });
   }
 
-  private type(scope: CertificateScope) { return { event: 'PARTICIPANT', activity: 'ACTIVITY', instructor: 'INSTRUCTOR', team: 'EDITOR' }[scope]; }
-  private params(scope: CertificateScope) { return scope === 'activity' ? new HttpParams() : new HttpParams().set('type', this.type(scope)); }
+  manualInstructor(eventId: number, target: ManualInstructorCertificate) {
+    return this.binary(this.http.post(this.config.buildUrl(`/events/${eventId}/instructor-certificate/manual`), target, { responseType: 'blob' }));
+  }
+  manualTeam(eventId: number, userId: string) {
+    return this.binary(this.http.post(this.config.buildUrl(`/events/${eventId}/team-certificate/manual/${encodeURIComponent(userId)}`), null, { responseType: 'blob' }));
+  }
+  manualContent(eventId: number, content: ManualCertificateContent, preview = false) {
+    return this.binary(this.http.post(this.config.buildUrl(`/events/${eventId}/certificate/manual${preview ? '/preview' : ''}`), content, { responseType: 'blob' }));
+  }
+  guestCertificate(eventId: number, activityId: number, guestId: number, activity = false) {
+    return this.image(this.config.buildUrl(`/events/${eventId}/activities/${activityId}/guests/${guestId}/${activity ? 'activity-certificate' : 'instructor-certificate'}`));
+  }
+  instructorActivityCertificate(eventId: number, activityId: number, instructorId: number) {
+    return this.image(this.config.buildUrl(`/events/${eventId}/activities/${activityId}/instructors/${instructorId}/activity-certificate`));
+  }
+  private url(eventId: number, scope: CertificateTemplateScope, suffix: string, activityId?: number) {
+    const activity = scope.startsWith('activity');
+    return this.config.buildUrl(activity && activityId
+      ? `/events/${eventId}/activities/${activityId}/certificate-${suffix}`
+      : `/events/${eventId}/${activity ? 'activity-' : ''}certificate-${suffix}`);
+  }
+  private type(scope: CertificateTemplateScope) {
+    return { event: 'PARTICIPANT', activity: 'PARTICIPANT', instructor: 'INSTRUCTOR', guest: 'GUEST', team: 'EDITOR', 'activity-instructor': 'INSTRUCTOR', 'activity-guest': 'GUEST' }[scope];
+  }
+  private variableType(scope: CertificateTemplateScope) {
+    return scope === 'activity' ? 'ACTIVITY' : scope === 'activity-instructor' ? 'ACTIVITY_INSTRUCTOR' : scope === 'activity-guest' ? 'ACTIVITY_GUEST' : this.type(scope);
+  }
+  private params(scope: CertificateTemplateScope) { return new HttpParams().set('type', this.type(scope)); }
 
   private image(url: string, params = new HttpParams()) {
+    return this.binary(this.http.get(url, { responseType: 'blob', params }));
+  }
+
+  private binary(request: Observable<Blob>) {
     // HttpClient returns error JSON as a Blob when responseType is blob.
     // Decode it so enrollment/check-in errors remain readable to participants.
-    return this.http.get(url, { responseType: 'blob', params }).pipe(catchError((error: unknown) => {
+    return request.pipe(catchError((error: unknown) => {
       if (!(error instanceof HttpErrorResponse) || !(error.error instanceof Blob)) {
         return throwError(() => error);
       }

@@ -1,4 +1,7 @@
 export type CertificateScope = 'event' | 'activity' | 'instructor' | 'team';
+export type CertificateTemplateScope = CertificateScope | 'guest' | 'activity-instructor' | 'activity-guest';
+export interface ManualInstructorCertificate { instructor_id?: number; activity_id?: number; activity_guest_id?: number; }
+export interface ManualCertificateContent { boxes: CertificateBox[]; variables: Record<string, string>; }
 export type CertificateAlignment = 'LEFT' | 'RIGHT' | 'CENTERED' | 'JUSTIFIED';
 
 /** The API uses Jackson SNAKE_CASE, including the nested text boxes. */
@@ -25,5 +28,5 @@ export interface CertificateValidation {
   activity_title: string | null;
   workload_hours: string | null;
   issued_at: string;
-  certificate_type?: 'EVENT' | 'ACTIVITY' | 'INSTRUCTOR' | 'EDITOR';
+  certificate_type?: 'EVENT' | 'ACTIVITY' | 'INSTRUCTOR' | 'GUEST' | 'EDITOR';
 }

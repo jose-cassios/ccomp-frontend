@@ -160,3 +160,8 @@
   font-size: 0.85rem;
   opacity: 0.5;
 }
+
+.footer-bottom{display:flex;align-items:center;justify-content:center;gap:.75rem;flex-wrap:wrap}
+.github-link{display:inline-grid;place-items:center;width:36px;height:36px;color:inherit;border-radius:.4rem}
+.github-link svg{width:18px;height:18px;fill:currentColor}
+.github-link:hover,.github-link:focus-visible{background:rgba(255,255,255,.12);outline:2px solid currentColor;outline-offset:2px}
