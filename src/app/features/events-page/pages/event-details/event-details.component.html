@@ -79,6 +79,8 @@
           <p class="event-description">{{ currentEvent.content || currentEvent.description || 'A organização ainda não publicou uma descrição detalhada para este evento.' }}</p>
         </article>
 
+        <app-event-materials [eventId]="currentEvent.id" [manage]="canManageCertificates()" />
+
         <section class="schedule-card" aria-labelledby="schedule-title">
           <span class="section-kicker">Programação</span>
           <h2 id="schedule-title">Atividades do evento</h2>
@@ -129,7 +131,7 @@
                             </div>
                             <h3>{{ activity.title }}</h3>
                             <app-activity-capacity [activityId]="activity.id" [revision]="capacityRevision()" (updated)="updateCapacity(activity.id, $event)" />
-                            <app-activity-people [activityTitle]="activity.title" (enrollmentChanged)="refreshActivityEnrollments()" [manage]="canManageCertificates()" [eventId]="currentEvent.id" [activityId]="activity.id" [canView]="isAuthenticated() && subscribed()" [canViewInstructors]="isAuthenticated()" (activityChanged)="refreshActivities()" />
+                            <app-activity-people [endDate]="activity.end_date ?? null" [timeZone]="currentEvent.time_zone" [canceled]="currentEvent.status === 'CANCELED'" [activityTitle]="activity.title" (enrollmentChanged)="refreshActivityEnrollments()" [manage]="canManageCertificates()" [eventId]="currentEvent.id" [activityId]="activity.id" [canView]="isAuthenticated() && subscribed()" [canViewInstructors]="isAuthenticated()" (activityChanged)="refreshActivities()" />
                             <p class="activity-meta">
                               @if (activity.end_date) {
                                 <span>Até {{ activity.end_date | date: 'HH:mm' }}</span>

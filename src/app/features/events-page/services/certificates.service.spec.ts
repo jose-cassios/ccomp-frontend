@@ -16,6 +16,16 @@ describe('CertificatesService API contract', () => {
   });
   afterEach(() => http.verify());
 
+
+  it('issues manual participant certificates with the event enrollment ID for both scopes', () => {
+    for (const activityId of [undefined, 15]) {
+      service.manualParticipant(9, 42, activityId).subscribe();
+      const path = activityId ? '/events/9/activities/15/enrollments/42/certificate/manual' : '/events/9/enrollments/42/certificate/manual';
+      const request = http.expectOne(r => r.url.endsWith(path));
+      expect(request.request.method).toBe('POST'); expect(request.request.body).toBeNull();
+      expect(request.request.responseType).toBe('blob'); request.flush(new Blob(['PNG']));
+    }
+  });
   for (const scope of ['event', 'activity'] as const) {
     const prefix = scope === 'activity' ? 'activity-' : '';
     it(`loads and saves the ${scope} template using snake_case fields`, () => {

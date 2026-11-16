@@ -1,3 +1,4 @@
+import { EventMaterialsComponent } from '../../components/event-materials/event-materials.component';
 import { ActivityCapacityComponent, ActivityCapacity } from '../../components/activity-people/activity-capacity.component';
 import { EventRoleCertificatesComponent } from '../../components/certificate-download/event-role-certificates.component';
 import { eventTimestamp } from '../../models/event-time';
@@ -35,7 +36,7 @@ import { ActivityCertificateComponent } from '../../components/certificate-downl
 @Component({
   selector: 'app-event-details',
   standalone: true,
-  imports: [ActivityCertificateComponent, ActivityCapacityComponent, EventRoleCertificatesComponent, DatePipe, RouterLink, EventSpeakersComponent, ActivityPeopleComponent, EventCoverDirective, CertificateDownloadComponent],
+  imports: [EventMaterialsComponent, ActivityCertificateComponent, ActivityCapacityComponent, EventRoleCertificatesComponent, DatePipe, RouterLink, EventSpeakersComponent, ActivityPeopleComponent, EventCoverDirective, CertificateDownloadComponent],
   templateUrl: './event-details.component.html',
   styleUrl: './event-details.component.css',
 })

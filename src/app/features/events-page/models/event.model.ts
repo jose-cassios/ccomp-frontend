@@ -189,6 +189,8 @@ export interface UpdateEventPayload {
   /** Sent separately through PUT /events/{id}/capacity, never in the generic PATCH. */
   max_capacity?: number | null;
   organization?: string;
+  /** Local do evento, também usado em {evento.local} nos certificados. */
+  address?: string;
   instructor_certificate_workload_hours?: number;
   guest_certificate_workload_hours?: number;
   team_certificate_workload_hours?: number;

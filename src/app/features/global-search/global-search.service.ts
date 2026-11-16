@@ -47,7 +47,7 @@ export class GlobalSearchService {
       news: this.allNewsWithContent().pipe(map((items) => items
         .map((news) => this.newsResult(news, normalizedQuery))
         .filter((result): result is GlobalSearchResult => result !== null)), catchError(() => of([]))),
-      clubs: this.allClubs().pipe(map((items) => items
+      clubs: this.allClubs(query.trim().slice(0, 100)).pipe(map((items) => items
         .map((club) => this.clubResult(club, normalizedQuery))
         .filter((result): result is GlobalSearchResult => result !== null)), catchError(() => of([]))),
     });
@@ -57,8 +57,8 @@ export class GlobalSearchService {
     return this.collectPages((cursor) => this.eventsService.search({}, cursor, 50));
   }
 
-  private allClubs(): Observable<Club[]> {
-    return this.collectPages((cursor) => this.clubsService.search(cursor, 50));
+  private allClubs(term: string): Observable<Club[]> {
+    return this.collectPages((cursor) => this.clubsService.search(cursor, 50, term));
   }
 
   private allNewsWithContent(): Observable<NewsItemType[]> {
@@ -122,7 +122,7 @@ export class GlobalSearchService {
   }
 
   private clubResult(club: Club, query: string): GlobalSearchResult | null {
-    return makeResult({
+    const result: Omit<GlobalSearchResult, 'matchLabel'> = {
       id: club.id,
       type: 'club',
       title: club.name,
@@ -131,7 +131,8 @@ export class GlobalSearchService {
       imageUrl: club.cover_image_url,
       link: ['/projetos/clubes'],
       queryParams: { club: club.id },
-    }, query);
+    };
+    return makeResult(result, query) ?? { ...result, matchLabel: 'Conteúdo relacionado' };
   }
 }
 

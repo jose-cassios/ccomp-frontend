@@ -45,8 +45,9 @@ describe('EventEditorComponent', () => {
     removeCover: vi.fn(() => of(void 0)),
     coverUrl: (id: number) => `http://localhost:8080/api/events/${id}/images/cover`,
     create: vi.fn(() => of(createdEvent)),
-    update: vi.fn((_eventId: number, payload: { enrollment_start_date?: string; enrollment_end_date?: string; enrollment_paused?: boolean }) => of({
+    update: vi.fn((_eventId: number, payload: { address?: string; enrollment_start_date?: string; enrollment_end_date?: string; enrollment_paused?: boolean }) => of({
       ...createdEvent,
+      address: payload.address ?? null,
       enrollment_start_date: payload.enrollment_start_date ?? null,
       enrollment_end_date: payload.enrollment_end_date ?? null,
       enrollment_paused: payload.enrollment_paused ?? false,
@@ -137,8 +138,41 @@ describe('EventEditorComponent', () => {
     expect(eventsService.update).not.toHaveBeenCalled();
   });
 
+
+  it('saves the location via PATCH even for an open event, preserving it across steps', () => {
+    component.form.patchValue({ title: createdEvent.title, address: '  Auditório IFMA, Caxias  ', start_date: '2026-09-10T08:00', end_date: '2026-09-10T18:00' });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS');
+    component.save();
+    expect(eventsService.create).not.toHaveBeenCalledWith(expect.objectContaining({ address: expect.anything() }));
+    expect(eventsService.update).toHaveBeenCalledWith(14, expect.objectContaining({ address: 'Auditório IFMA, Caxias' }));
+    expect(component.form.controls.address.value).toBe('Auditório IFMA, Caxias');
+    expect(component.activeStep()).toBe('presentation');
+    component.savePresentation();
+    expect(eventsService.update).toHaveBeenLastCalledWith(14, expect.objectContaining({ address: 'Auditório IFMA, Caxias' }));
+    component.form.controls.address.setValue(''); component.save();
+    expect(eventsService.update).toHaveBeenLastCalledWith(14, expect.objectContaining({ address: '' }));
+    expect(component.form.controls.address.value).toBe('');
+  });
+
+  it('validates location length and retains the draft when saving its location fails', () => {
+    component.form.patchValue({ title: createdEvent.title, address: 'x'.repeat(256), start_date: '2026-09-10T08:00', end_date: '2026-09-10T18:00' });
+    component.selectEventRegistrationPolicy('OPEN_ACCESS'); component.save();
+    expect(eventsService.create).not.toHaveBeenCalled();
+    expect(component.sectionOpen('event-basics')).toBe(true);
+    component.form.controls.address.setValue('Auditório');
+    eventsService.update.mockReturnValueOnce(throwError(() => new Error('Falha')));
+    component.save();
+    expect(component.event()?.id).toBe(14);
+    expect(component.form.controls.address.value).toBe('Auditório');
+    expect(component.activeStep()).toBe('details');
+    component.save();
+    expect(eventsService.create).toHaveBeenCalledTimes(1);
+    expect(component.activeStep()).toBe('presentation');
+  });
+
   it('should create the event with only the required API fields and advance to the presentation step', () => {
     component.form.setValue({
+      address: '',
       title: createdEvent.title,
       category: createdEvent.category,
       format: createdEvent.format,
@@ -175,6 +209,7 @@ describe('EventEditorComponent', () => {
       end_date: null,
     }));
     component.form.setValue({
+      address: '',
       title: createdEvent.title,
       category: createdEvent.category,
       format: createdEvent.format,
@@ -195,6 +230,7 @@ describe('EventEditorComponent', () => {
 
   it('should send page details through PATCH /events/{eventId}', () => {
     component.form.setValue({
+      address: '',
       title: createdEvent.title,
       category: createdEvent.category,
       format: createdEvent.format,
@@ -214,6 +250,7 @@ describe('EventEditorComponent', () => {
     component.savePresentation();
 
     expect(eventsService.update).toHaveBeenCalledWith(createdEvent.id, {
+      address: '',
       time_zone: 'America/Sao_Paulo',
       title: createdEvent.title,
       summary: 'Palestras e oficinas para a comunidade.',
@@ -253,6 +290,7 @@ describe('EventEditorComponent', () => {
 
   it('should accept registrations before the event, but not after it ends', () => {
     component.form.setValue({
+      address: '',
       title: createdEvent.title,
       category: createdEvent.category,
       format: createdEvent.format,
@@ -274,6 +312,7 @@ describe('EventEditorComponent', () => {
 
   it('should persist an activity and refresh the saved schedule', () => {
     component.form.setValue({
+      address: '',
       title: createdEvent.title,
       category: createdEvent.category,
       format: createdEvent.format,
@@ -349,6 +388,7 @@ describe('EventEditorComponent', () => {
 
   it('should update an existing activity through the activity PATCH route', () => {
     component.form.setValue({
+      address: '',
       title: createdEvent.title,
       category: createdEvent.category,
       format: createdEvent.format,
@@ -427,6 +467,7 @@ describe('EventEditorComponent', () => {
 
   it('completes creation as a draft and publishes only through the explicit publish action', () => {
     component.form.setValue({
+      address: '',
       title: createdEvent.title,
       category: createdEvent.category,
       format: createdEvent.format,

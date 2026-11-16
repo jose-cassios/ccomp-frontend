@@ -99,7 +99,7 @@ export class EventCertificatesComponent implements OnInit {
   readonly previewUrl = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
-  readonly settings = this.fb.group({ workload_hours: this.fb.control<number | null>(null, Validators.min(0)), instructor_certificate_workload_hours: this.fb.control<number | null>(null, Validators.min(0)), guest_certificate_workload_hours: this.fb.control<number | null>(null, Validators.min(0)), organization: ['', Validators.maxLength(255)], team_certificate_workload_hours: this.fb.control<number | null>(null, Validators.min(0)) });
+  readonly settings = this.fb.group({ address: ['', Validators.maxLength(255)], workload_hours: this.fb.control<number | null>(null, Validators.min(0)), instructor_certificate_workload_hours: this.fb.control<number | null>(null, Validators.min(0)), guest_certificate_workload_hours: this.fb.control<number | null>(null, Validators.min(0)), organization: ['', Validators.maxLength(255)], team_certificate_workload_hours: this.fb.control<number | null>(null, Validators.min(0)) });
   readonly forms = {
     guest: this.fb.group({ boxes: new FormArray<ReturnType<EventCertificatesComponent['boxForm']>>([]) }),
     'activity-instructor': this.fb.group({ boxes: new FormArray<ReturnType<EventCertificatesComponent['boxForm']>>([]) }),
@@ -168,7 +168,7 @@ export class EventCertificatesComponent implements OnInit {
   saveSettings(): void {
     if (!this.allowed() || this.busy() || this.settings.invalid) return;
     const value = this.settings.getRawValue();
-    this.run(this.events.update(this.eventId, { organization: value.organization.trim(),
+    this.run(this.events.update(this.eventId, { organization: value.organization.trim(), address: value.address.trim(),
       ...(value.workload_hours !== null ? { workload_hours: value.workload_hours } : {}),
       ...(value.instructor_certificate_workload_hours !== null ? { instructor_certificate_workload_hours: value.instructor_certificate_workload_hours } : {}),
       ...(value.guest_certificate_workload_hours !== null ? { guest_certificate_workload_hours: value.guest_certificate_workload_hours } : {}),
@@ -177,7 +177,7 @@ export class EventCertificatesComponent implements OnInit {
   }
 
   private resetSettings(event: EventDetails): void {
-    this.settings.reset({ organization: event.organization ?? '', workload_hours: event.workload_hours ?? null,
+    this.settings.reset({ address: event.address ?? '', organization: event.organization ?? '', workload_hours: event.workload_hours ?? null,
       instructor_certificate_workload_hours: event.instructor_certificate_workload_hours ?? null,
       guest_certificate_workload_hours: event.guest_certificate_workload_hours ?? null,
       team_certificate_workload_hours: event.team_certificate_workload_hours ?? null });

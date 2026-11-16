@@ -13,6 +13,8 @@ export class TodosClubesComponent {
 
   readonly clubs = input<readonly Club[]>([]);
   readonly loading = input(false);
+  readonly enrollingClubId = input<number | null>(null);
+  readonly joined = input<Record<number, boolean>>({});
   readonly loadingMore = input(false);
   readonly error = input<string | null>(null);
   readonly hasMore = input(false);

@@ -6,9 +6,9 @@ import { ClubesService } from './clubes.service';
 
 describe('ClubesService', () => {
   const api = {
-    get: vi.fn((_endpoint: string, _options?: { params?: HttpParams }) => of({})),
-    post: vi.fn((_endpoint: string, _body: unknown, _options?: { params?: HttpParams }) => of({})),
-    patch: vi.fn((_endpoint: string, _body: unknown, _options?: { params?: HttpParams }) => of({})),
+    get: vi.fn((endpoint: string, _options?: { params?: HttpParams }) => of<unknown>(endpoint === '/highlights/clubs' ? [] : { content: [] })),
+    post: vi.fn((_endpoint: string, _body: unknown, _options?: { params?: HttpParams }) => of<unknown>({})),
+    patch: vi.fn((_endpoint: string, _body: unknown, _options?: { params?: HttpParams }) => of<unknown>({})),
     delete: vi.fn(() => of(void 0)),
   };
   let service: ClubesService;
@@ -69,4 +69,33 @@ describe('ClubesService', () => {
     expect(api.patch.mock.calls[0]?.[0]).toBe('/clubs/4/members/8/status');
     expect(api.patch.mock.calls[0]?.[2]?.params?.get('status')).toBe('INACTIVE');
   });
+  it('normalizes camelCase club fields and pagination cursors', () => {
+    api.get.mockReturnValueOnce(of({ content: [{ id: 4, name: 'Robótica', coverImageUrl: 'https://example.org/image.png', publishedAt: '2026-11-15T09:00:00' }], nextCursor: 'next', previousCursor: null }));
+    service.search().subscribe(page => {
+      expect(page.next_cursor).toBe('next'); expect(page.content[0].cover_image_url).toBe('https://example.org/image.png'); expect(page.content[0].published_at).toBe('2026-11-15T09:00:00');
+    });
+  });
+  it('maps member summaries and entity enrollment responses', () => {
+    api.post.mockReturnValueOnce(of({ content: [{ id: 8, clubId: 4, role: 'INSTRUCTOR', status: 'ACTIVE', user: { id: 'u', name: 'Ana', emailAddress: 'ana@example.com' } }], nextCursor: 'cursor' }));
+    service.searchMembers(4).subscribe(page => { expect(page.content[0].user.email_address).toBe('ana@example.com'); expect(page.content[0].club_id).toBe(4); expect(page.next_cursor).toBe('cursor'); });
+    api.post.mockReturnValueOnce(of({ id: 8, club: { id: 4 }, userId: 'u', role: 'MEMBER', status: 'ACTIVE', joinedAt: '2026-11-15T10:00:00' }));
+    service.enroll(4).subscribe(row => { expect(row.club_id).toBe(4); expect(row.user_id).toBe('u'); expect(row.joined_at).toBe('2026-11-15T10:00:00'); });
+  });
+  it('sends search terms separately from member filters', () => {
+    service.search('next', 10, ' Robótica ').subscribe();
+    expect(api.get.mock.calls[0][1]?.params?.get('searchTerm')).toBe('Robótica');
+    service.searchMembers(4, { status: 'COMPLETED' }, 'next', 10, ' Ana ').subscribe();
+    expect(api.post.mock.calls[0][1]).toEqual({ status: 'COMPLETED' });
+    expect(api.post.mock.calls[0][2]?.params?.get('searchTerm')).toBe('Ana');
+  });
+  it('normalizes status and capacity in My clubs, including zero', () => {
+    api.get.mockReturnValueOnce(of({ content: [{ id: 4, status: 'MEMBERS_ONLY', maxMembers: 0 }], nextCursor: 'next' }));
+    service.getMine().subscribe(page => { expect(page.next_cursor).toBe('next'); expect(page.content[0].status).toBe('MEMBERS_ONLY'); expect(page.content[0].max_members).toBe(0); });
+  });
+  it('encodes normalized email addresses and keeps pagination within API limits', () => {
+    service.addMember(4, ' Ana+Clube@Example.com ', 'INSTRUCTOR').subscribe();
+    expect(api.post).toHaveBeenCalledWith('/clubs/4/members/staff/ana%2Bclube%40example.com', null, expect.anything());
+    service.search(undefined, 100).subscribe(); expect(api.get.mock.calls[0][1]?.params?.get('pageSize')).toBe('50');
+  });
+
 });

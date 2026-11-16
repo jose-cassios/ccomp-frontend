@@ -36,7 +36,9 @@
     }
 
     <details class="panel">
-      <summary>Organização e cargas horárias</summary>
+      <summary>Local, organização e cargas horárias</summary>
+      <label>Local do evento<input [formControl]="settings.controls.address" maxlength="255" placeholder="Ex.: Auditório Central, IFMA Campus Caxias" aria-describedby="certificate-address-help" /></label>
+      <small id="certificate-address-help">Usado na informação automática de local dos certificados e na página do evento. Salve as configurações para aplicar.</small>
       <label>Organização<input [formControl]="settings.controls.organization" maxlength="255" /></label>
       <label>Horas para o responsável e editores ativos<input type="number" min="0" step="0.25" [formControl]="settings.controls.team_certificate_workload_hours" /></label>
       <label>Horas base dos participantes<input type="number" min="0" step="0.25" [formControl]="settings.controls.workload_hours" /></label>
