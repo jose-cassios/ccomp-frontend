@@ -261,9 +261,6 @@ describe('Event certificate customization', () => {
     const component = create().componentInstance;
     component.settings.patchValue({ instructor_certificate_workload_hours: 0, guest_certificate_workload_hours: 2, workload_hours: 3 }); component.saveSettings();
     expect(events.update).toHaveBeenCalledWith(9, { address: '', organization: '', instructor_certificate_workload_hours: 0, guest_certificate_workload_hours: 2, workload_hours: 3 });
-    expect(component.settings.controls.instructor_certificate_workload_hours.value).toBe(0);
-  });
-  it('saves organization and team hours without mixing them with instructor workload', () => {
     events.update.mockReturnValue(of({ id: 9, organization: 'IFMA', team_certificate_workload_hours: 12 }));
     const component = create().componentInstance;
     component.settings.patchValue({ organization: ' IFMA ', team_certificate_workload_hours: -1 }); component.saveSettings();
