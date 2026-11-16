@@ -43,7 +43,7 @@
             <p>{{ club.summary || 'Conheça as atividades deste clube.' }}</p>
             <div class="card-actions">
               <button type="button" class="details-button" (click)="selected.emit(club)">Ver detalhes</button>
-              <button type="button" class="enroll-button" (click)="enroll.emit(club)">Inscrever-se</button>
+              <button type="button" class="enroll-button" [disabled]="enrollingClubId() !== null" (click)="joined()[club.id] ? selected.emit(club) : enroll.emit(club)">{{ enrollingClubId() === club.id ? 'Inscrevendo…' : joined()[club.id] ? 'Participando' : 'Inscrever-se' }}</button>
             </div>
           </div>
         </article>

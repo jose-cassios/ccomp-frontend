@@ -40,11 +40,7 @@ export interface ClubMemberUser {
   id: string;
   name: string;
   email_address: string;
-  status_account: 'ACTIVE' | 'DEACTIVATED' | 'BLOCKED';
-  role: 'ADMIN' | 'MODERATOR' | 'STAFF' | 'USER';
-  active: boolean;
-  admin: boolean;
-  team_member: boolean;
+
 }
 
 export interface ClubMemberListItem {

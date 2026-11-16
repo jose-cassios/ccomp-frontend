@@ -11,6 +11,8 @@ import { Club } from '../../models/clube.model';
 export class ClubeDestaquesComponent {
   readonly clubs = input<readonly Club[]>([]);
   readonly loading = input(false);
+  readonly enrollingClubId = input<number | null>(null);
+  readonly joined = input<Record<number, boolean>>({});
   readonly selected = output<Club>();
   readonly enroll = output<Club>();
 }

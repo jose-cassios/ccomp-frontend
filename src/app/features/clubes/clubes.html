@@ -3,22 +3,28 @@
     <div>
       <h1>Clubes</h1>
     </div>
-    @if (canManage()) {
+    @if (canCreate()) {
       <button type="button" class="primary-button" (click)="openCreateClub()">Novo clube</button>
     }
   </header>
 
-  @if (message()) {
+  @if (message() && !activeModal()) {
     <div class="notice notice--success" role="status">
       <span>{{ message() }}</span>
       <button type="button" aria-label="Fechar aviso" (click)="message.set(null)">×</button>
     </div>
   }
 
+  @if (modalError() && !activeModal()) {
+    <div class="notice toast-error" role="alert">{{ modalError() }}<button type="button" aria-label="Fechar aviso" (click)="modalError.set(null)">×</button></div>
+  }
+
   <app-clube-destaques
     [clubs]="highlightedClubs()"
     [loading]="highlightsLoading()"
     (selected)="openDetails($event)"
+    [enrollingClubId]="enrollingClubId()"
+    [joined]="confirmedMemberships()"
     (enroll)="enroll($event)"
   />
 
@@ -29,6 +35,8 @@
     [error]="publicError()"
     [hasMore]="!!nextCursor()"
     (selected)="openDetails($event)"
+    [enrollingClubId]="enrollingClubId()"
+    [joined]="confirmedMemberships()"
     (enroll)="enroll($event)"
     (loadMore)="loadClubs(true)"
   />
@@ -40,7 +48,7 @@
           <span class="eyebrow">Participação e gestão</span>
           <h2>Meus clubes</h2>
         </div>
-        @if (canCreate()) { <button type="button" class="primary-button" (click)="openCreateClub()">Criar clube</button> }
+        <button type="button" class="secondary-button" [disabled]="managedLoading()" (click)="loadManagedClubs()">Atualizar meus clubes</button>
       </div>
 
       @if (managementError()) {
@@ -48,21 +56,24 @@
       }
 
       @if (managedLoading() && !managedClubs().length) {
-        <div class="empty-state" role="status">Carregando clubes gerenciados...</div>
+        <div class="empty-state" role="status">Carregando seus clubes...</div>
       } @else if (managedClubs().length) {
         <div class="managed-list">
           @for (club of managedClubs(); track club.id) {
             <article>
               <div>
-                <span>{{ club.published_at ? 'Publicado' : 'Rascunho' }}</span>
+                <span>{{ publicationLabel(club) }}</span>
                 <h3>{{ club.name }}</h3>
                 <p>{{ club.summary || 'Sem resumo.' }}</p>
               </div>
               <div class="row-actions">
                 <button type="button" [disabled]="enrollingClubId() !== null" (click)="unenroll(club)">Sair do clube</button>
-                <button type="button" (click)="openMembers(club)">Membros</button>
-                <button type="button" (click)="openEditClub(club)">Editar</button>
-                <button type="button" class="danger-button" (click)="deleteClub(club)">Excluir</button>
+                <button type="button" (click)="openDetails(club)">Ver clube</button>
+                @if (canEdit(club)) {
+                  <button type="button" (click)="openMembers(club)">Membros</button>
+                  <button type="button" (click)="openEditClub(club)">Editar</button>
+                  <button type="button" class="danger-button" [disabled]="deletingClubId() !== null" (click)="deleteClub(club)">{{ deletingClubId() === club.id ? 'Excluindo…' : 'Excluir' }}</button>
+                }
               </div>
             </article>
           }
@@ -86,24 +97,28 @@
       [class.modal--wide]="activeModal() === 'members'"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="club-modal-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true"
       (click)="$event.stopPropagation()"
     >
       <header class="modal-header">
         <div>
           @if (activeModal() === 'details') {
             <span class="eyebrow">Detalhes do clube</span>
-            <h2>{{ selectedClub()?.name }}</h2>
+            <h2 id="club-modal-title">{{ selectedClub()?.name }}</h2>
           } @else if (activeModal() === 'editor') {
             <span class="eyebrow">Gestão de clubes</span>
-            <h2>{{ editingClub() ? 'Editar clube' : 'Novo clube' }}</h2>
+            <h2 id="club-modal-title">{{ editingClub() ? 'Editar clube' : 'Novo clube' }}</h2>
           } @else {
             <span class="eyebrow">Participantes</span>
-            <h2>Membros de {{ selectedClub()?.name }}</h2>
+            <h2 id="club-modal-title">Membros de {{ selectedClub()?.name }}</h2>
           }
         </div>
-        <button type="button" class="close-button" aria-label="Fechar" (click)="closeModal()">×</button>
+        <button type="button" class="close-button" [disabled]="modalBusy()" aria-label="Fechar" (click)="closeModal()">×</button>
       </header>
 
+      @if (message()) { <div class="notice notice--success modal-notice" role="status">{{ message() }}</div> }
+      @if (detailsLoading()) { <p role="status"><span class="mini-spinner" aria-hidden="true"></span> Carregando detalhes…</p> }
+      @if (detailsFailed() && selectedClub(); as club) { <button type="button" class="secondary-button" (click)="retryDetails()">Tentar carregar novamente</button> }
       @if (modalError()) {
         <div class="notice notice--error" role="alert">{{ modalError() }}</div>
       }
@@ -122,15 +137,22 @@
           }
           <div class="modal-actions">
             <button type="button" class="secondary-button" (click)="closeModal()">Fechar</button>
-            <button type="button" class="primary-button" [disabled]="enrollingClubId() === club.id" (click)="enroll(club)">
-              {{ enrollingClubId() === club.id ? 'Inscrevendo...' : 'Inscrever-se' }}
-            </button>
+            @if (canEdit(club)) {
+              <button type="button" class="secondary-button" (click)="openMembers(club)">Gerenciar membros</button>
+              <button type="button" class="secondary-button" (click)="openEditClub(club)">Editar clube</button>
+            }
+            @if (confirmedMemberships()[club.id] === true) {
+              <button type="button" class="secondary-button" [disabled]="enrollingClubId() !== null" (click)="unenroll(club)">{{ enrollingClubId() === club.id ? 'Cancelando…' : 'Sair do clube' }}</button>
+            } @else {
+              <button type="button" class="primary-button" [disabled]="enrollingClubId() !== null || detailsLoading() || detailsFailed()" (click)="enroll(club)">{{ enrollingClubId() === club.id ? 'Inscrevendo…' : 'Participar do clube' }}</button>
+            }
           </div>
         </div>
       }
 
       @if (activeModal() === 'editor') {
         <form class="club-form" [formGroup]="clubForm" (ngSubmit)="saveClub()">
+          <fieldset class="club-fields" [disabled]="saving() || detailsLoading() || detailsFailed()">
           <label class="field">
             <span>Nome *</span>
             <input type="text" formControlName="name" maxlength="255" />
@@ -141,7 +163,7 @@
 
           <label class="field">
             <span>Resumo *</span>
-            <textarea formControlName="summary" rows="3"></textarea>
+            <textarea formControlName="summary" rows="3" maxlength="255"></textarea>
             @if (clubForm.controls.summary.touched && clubForm.controls.summary.invalid) {
               <small>Informe um resumo com pelo menos 10 caracteres.</small>
             }
@@ -164,7 +186,7 @@
           <label class="field">
             <span>Data de publicação</span>
             <input type="datetime-local" formControlName="published_at" />
-            <small class="hint">Sem uma data, o clube permanece como rascunho.</small>
+            <small class="hint">Horário de Brasília. Em um novo clube, deixe vazio para salvar como rascunho. Uma data futura agenda a publicação.</small>
           </label>
 
           <label class="field">
@@ -173,11 +195,13 @@
           </label>
 
           <div class="modal-actions">
+            <button type="button" class="secondary-button" [disabled]="saving() || uploading() || detailsLoading()" (click)="publishNow()">Publicar agora</button>
             <button type="button" class="secondary-button" (click)="closeModal()">Cancelar</button>
             <button type="submit" class="primary-button" [disabled]="saving() || uploading()">
               {{ saving() ? 'Salvando...' : 'Salvar clube' }}
             </button>
           </div>
+                  </fieldset>
         </form>
       }
 
@@ -195,7 +219,7 @@
                 <option value="INSTRUCTOR">Instrutor</option>
               </select>
             </label>
-            <button type="submit" class="primary-button" [disabled]="memberForm.invalid || membersLoading()">Adicionar</button>
+            <button type="submit" class="primary-button" [disabled]="memberForm.invalid || membersLoading() || addingMember() || changingMemberId() !== null">{{ addingMember() ? 'Adicionando…' : 'Adicionar' }}</button>
           </form>
 
           <form class="member-filters" [formGroup]="memberFilterForm" (ngSubmit)="loadMembers()">
@@ -223,24 +247,28 @@
             <div class="empty-state" role="status">Carregando membros...</div>
           } @else if (members().length) {
             <div class="member-list">
-              @for (member of members(); track member.id) {
+              @for (member of sortedMembers(); track member.id) {
                 <article>
                   <div class="member-avatar">{{ member.user.name.charAt(0) }}</div>
                   <div class="member-info">
                     <strong>{{ member.user.name }}</strong>
                     <span>{{ member.user.email_address }}</span>
                   </div>
-                  <span class="member-role">{{ roleLabel(member.role) }}</span>
+                  <label class="member-role">Função
+                    <select #roleSelect [value]="member.role" [disabled]="changingMemberId() !== null || membersLoading() || !canChangeMember(member)" (change)="changeMemberRole(member, $any(roleSelect.value)); roleSelect.value = member.role">
+                      <option value="MEMBER">Membro</option><option value="INSTRUCTOR">Instrutor</option>
+                    </select>
+                  </label>
                   <button
                     type="button"
                     class="status-button"
                     [class.status-button--inactive]="member.status === 'INACTIVE'"
-                    [disabled]="changingMemberId() === member.id"
+                    [disabled]="changingMemberId() !== null || membersLoading() || !canChangeMember(member)"
                     (click)="changeMemberStatus(member)"
                   >
-                    {{ member.status === 'ACTIVE' ? 'Ativo' : member.status === 'CANCELLED' ? 'Cancelado · reativar' : 'Inativo · reativar' }}
+                    {{ changingMemberId() === member.id ? 'Atualizando…' : member.status === 'ACTIVE' ? 'Ativo · desativar' : member.status === 'CANCELLED' ? 'Cancelado · reativar' : 'Inativo · reativar' }}
                   </button>
-                  @if (member.status !== 'CANCELLED') {
+                  @if (member.status !== 'CANCELLED' && canChangeMember(member)) {
                     <button type="button" class="danger-button" [disabled]="changingMemberId() !== null" (click)="changeMemberStatus(member, 'CANCELLED')">Cancelar vínculo</button>
                   }
                 </article>
