@@ -1,6 +1,10 @@
+export type ClubStatus = 'DRAFT' | 'OPEN' | 'MEMBERS_ONLY';
+
 export interface Club {
   id: number;
   name: string;
+  status?: ClubStatus;
+  max_members?: number | null;
   summary: string | null;
   cover_image_url: string | null;
   content: string | null;
@@ -16,11 +20,14 @@ export interface ClubPage {
 }
 
 export interface CreateClubPayload {
+  max_members?: number;
   name: string;
   summary: string;
 }
 
 export interface UpdateClubPayload {
+  status?: ClubStatus;
+  max_members?: number;
   name?: string;
   summary?: string;
   cover_image_url?: string;
@@ -29,7 +36,7 @@ export interface UpdateClubPayload {
 }
 
 export type ClubMemberRole = 'INSTRUCTOR' | 'MEMBER';
-export type ClubMemberStatus = 'ACTIVE' | 'INACTIVE' | 'CANCELLED';
+export type ClubMemberStatus = 'ACTIVE' | 'INACTIVE' | 'CANCELLED' | 'COMPLETED' | 'BANNED';
 
 export interface ClubMemberFilter {
   role?: ClubMemberRole;

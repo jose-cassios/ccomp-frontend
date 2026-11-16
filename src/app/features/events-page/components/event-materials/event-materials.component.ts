@@ -1,5 +1,6 @@
 import { DOCUMENT } from '@angular/common';
-import { Component, DestroyRef, ElementRef, inject, Input, signal, ViewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, EventEmitter, effect, inject, Input, Output, signal, ViewChild } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
@@ -15,6 +16,9 @@ export class EventMaterialsComponent {
   @Input({ required: true }) eventId!: number;
   @Input() activityId?: number;
   @Input() manage = false;
+  @Input() restrictedMessage = '';
+  @Output() working = new EventEmitter<boolean>();
+  private readonly reportWorking = effect(() => this.working.emit(this.busy()));
   @ViewChild('fileInput') fileInput?: ElementRef<HTMLInputElement>;
   private readonly api = inject(EventMaterialsService);
   private readonly document = inject(DOCUMENT);
@@ -47,7 +51,8 @@ export class EventMaterialsComponent {
     this.busy.set(true); this.error.set('');
     this.api.list(this.eventId, this.activityId, more ? this.cursor()! : undefined).pipe(takeUntilDestroyed(this.destroy), finalize(() => this.busy.set(false))).subscribe({
       next: page => { this.loaded.set(true); this.rows.update(rows => more ? [...rows, ...page.content] : page.content); this.cursor.set(page.next_cursor); },
-      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível carregar os materiais.')),
+      error: error => this.error.set(error instanceof HttpErrorResponse && error.status === 403 && this.restrictedMessage
+        ? this.restrictedMessage : apiErrorMessage(error, 'Não foi possível carregar os materiais.')),
     });
   }
   chooseFile(event: Event): void {

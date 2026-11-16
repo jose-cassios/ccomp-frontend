@@ -22,7 +22,7 @@ export function safeMaterialUrl(value?: string | null): string | null {
 export class EventMaterialsService {
   private readonly http = inject(HttpClient);
   private readonly config = inject(ApiConfig);
-  private base(eventId: number, activityId?: number) {
+  protected base(eventId: number, activityId?: number) {
     return this.config.buildUrl(activityId ? `/events/activities/${activityId}/materials` : `/events/${eventId}/materials`);
   }
   list(eventId: number, activityId?: number, cursor?: string) {

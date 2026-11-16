@@ -14,7 +14,7 @@ import {
   UpdateClubPayload,
 } from '../models/clube.model';
 
-type ApiClub = Partial<Club> & { coverImageUrl?: string; createdAt?: string; publishedAt?: string; updatedAt?: string };
+type ApiClub = Partial<Club> & { maxMembers?: number | null; coverImageUrl?: string; createdAt?: string; publishedAt?: string; updatedAt?: string };
 type ApiPage<T> = { content?: T[]; next_cursor?: string | null; nextCursor?: string | null; previous_cursor?: string | null; previousCursor?: string | null };
 type ApiMembership = Partial<ClubMembership> & { club?: { id: number }; clubId?: number; userId?: string; joinedAt?: string; leftAt?: string; stillLinked?: boolean };
 type ApiMember = Omit<ApiMembership, 'user'> & { user?: { id?: string; name?: string; email_address?: string; emailAddress?: string | { value?: string } } };
@@ -25,9 +25,11 @@ type ApiMember = Omit<ApiMembership, 'user'> & { user?: { id?: string; name?: st
 export class ClubesService {
   private readonly api = inject(ApiService);
 
-  search(nextCursor?: string, pageSize = 10): Observable<ClubPage> {
+  search(nextCursor?: string, pageSize = 10, searchTerm?: string): Observable<ClubPage> {
+    let params = this.cursorParams('nextCursor', nextCursor, 'pageSize', pageSize);
+    if (searchTerm?.trim()) params = params.set('searchTerm', searchTerm.trim());
     return this.api.get<ApiPage<ApiClub>>('/clubs/search', {
-      params: this.cursorParams('nextCursor', nextCursor, 'pageSize', pageSize),
+      params,
     }).pipe(map(page => this.clubPage(page)));
   }
 
@@ -36,9 +38,9 @@ export class ClubesService {
   }
 
   getMine(nextCursor?: string, pageSize = 10): Observable<ClubPage> {
-    return this.api.get<ClubPage>('/clubs/me', {
+    return this.api.get<ApiPage<ApiClub>>('/clubs/me', {
       params: this.cursorParams('nextCursor', nextCursor, 'pageSize', pageSize),
-    });
+    }).pipe(map(page => this.clubPage(page)));
   }
 
   getById(clubId: number): Observable<Club> {
@@ -70,9 +72,12 @@ export class ClubesService {
     filter: ClubMemberFilter = {},
     cursor?: string,
     size = 10,
+    searchTerm?: string,
   ): Observable<ClubMemberPage> {
+    let params = this.cursorParams('cursor', cursor, 'size', size);
+    if (searchTerm?.trim()) params = params.set('searchTerm', searchTerm.trim());
     return this.api.post<ApiPage<ApiMember>>(`/clubs/${clubId}/members/search`, filter, {
-      params: this.cursorParams('cursor', cursor, 'size', size),
+      params,
     }).pipe(map(page => ({
       ...this.cursors(page), content: (page.content ?? []).map(row => ({
         ...this.membership(row, clubId), user: { id: row.user?.id ?? '', name: row.user?.name ?? 'Participante',
@@ -96,7 +101,7 @@ export class ClubesService {
   }
 
   private club(row: ApiClub): Club {
-    return { id: row.id!, name: row.name ?? '', summary: row.summary ?? null, content: row.content ?? null,
+    return { id: row.id!, name: row.name ?? '', status: row.status ?? 'DRAFT', max_members: row.max_members ?? row.maxMembers ?? null, summary: row.summary ?? null, content: row.content ?? null,
       cover_image_url: row.cover_image_url ?? row.coverImageUrl ?? null,
       published_at: row.published_at ?? row.publishedAt ?? null,
       created_at: row.created_at ?? row.createdAt ?? '', updated_at: row.updated_at ?? row.updatedAt ?? '' };
@@ -109,7 +114,7 @@ export class ClubesService {
     return { id: row.id!, club_id: row.club_id ?? row.clubId ?? row.club?.id ?? clubId,
       user_id: row.user_id ?? row.userId ?? '', role: row.role ?? 'MEMBER', status: row.status ?? 'ACTIVE',
       joined_at: row.joined_at ?? row.joinedAt ?? '', left_at: row.left_at ?? row.leftAt ?? null,
-      still_linked: row.still_linked ?? row.stillLinked ?? row.status !== 'CANCELLED' };
+      still_linked: row.still_linked ?? row.stillLinked ?? !['CANCELLED', 'BANNED'].includes(row.status ?? 'ACTIVE') };
   }
 
   private cursorParams(

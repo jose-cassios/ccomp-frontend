@@ -28,6 +28,12 @@
     (enroll)="enroll($event)"
   />
 
+  <form class="club-search" [formGroup]="searchForm" (ngSubmit)="searchClubs()">
+    <label for="club-search">Buscar clubes</label>
+    <div><input id="club-search" type="search" formControlName="term" maxlength="100" placeholder="Nome, resumo ou conteúdo" /><button type="submit" class="secondary-button" [disabled]="loading()">Buscar</button></div>
+    @if (searchForm.controls.term.touched && searchForm.invalid) { <small role="alert">Use entre 2 e 100 caracteres ou deixe vazio para ver todos.</small> }
+  </form>
+
   <app-todos-clubes
     [clubs]="clubs()"
     [loading]="loading()"
@@ -41,7 +47,7 @@
     (loadMore)="loadClubs(true)"
   />
 
-  @if (canManage()) {
+  @if (isAuthenticated()) {
     <section class="management-section">
       <div class="management-heading">
         <div>
@@ -135,6 +141,13 @@
               <p>{{ club.content }}</p>
             </div>
           }
+          <p class="hint">{{ publicationLabel(club) }}@if (club.max_members != null) { · Limite de {{ club.max_members }} membros }</p>
+          @if (isAuthenticated() && !detailsLoading() && !detailsFailed()) {
+            <app-club-materials [clubId]="club.id" [manage]="canEdit(club)" (working)="childWorking('materials', $event)" />
+            @if (isInvolved(club) || canEdit(club)) {
+              <app-club-certificates [clubId]="club.id" [manage]="canEdit(club)" [self]="isInvolved(club)" (working)="childWorking('certificates', $event)" />
+            }
+          }
           <div class="modal-actions">
             <button type="button" class="secondary-button" (click)="closeModal()">Fechar</button>
             @if (canEdit(club)) {
@@ -143,7 +156,7 @@
             }
             @if (confirmedMemberships()[club.id] === true) {
               <button type="button" class="secondary-button" [disabled]="enrollingClubId() !== null" (click)="unenroll(club)">{{ enrollingClubId() === club.id ? 'Cancelando…' : 'Sair do clube' }}</button>
-            } @else {
+            } @else if (club.status === 'OPEN') {
               <button type="button" class="primary-button" [disabled]="enrollingClubId() !== null || detailsLoading() || detailsFailed()" (click)="enroll(club)">{{ enrollingClubId() === club.id ? 'Inscrevendo…' : 'Participar do clube' }}</button>
             }
           </div>
@@ -184,9 +197,18 @@
           </div>
 
           <label class="field">
-            <span>Data de publicação</span>
-            <input type="datetime-local" formControlName="published_at" />
-            <small class="hint">Horário de Brasília. Em um novo clube, deixe vazio para salvar como rascunho. Uma data futura agenda a publicação.</small>
+            <span>Visibilidade</span>
+            <select formControlName="status">
+              <option value="DRAFT">Rascunho</option><option value="OPEN">Público</option><option value="MEMBERS_ONLY">Exclusivo para membros</option>
+            </select>
+            <small class="hint">Público: aparece na busca e permite inscrições. Exclusivo: acesso aos membros e gestores. Rascunho: somente gestores.</small>
+          </label>
+          <label class="field">
+            <span>Limite de membros</span>
+            <input type="number" formControlName="max_members" min="0" step="1" placeholder="Sem limite" />
+            <small class="hint">Conta apenas membros ativos, sem incluir instrutores. Zero bloqueia novas inscrições de membros.</small>
+            @if (selectedClub()?.max_members != null) { <small class="hint">O limite pode ser alterado; a remoção do limite ainda não é suportada pela API.</small> }
+            @if (clubForm.controls.max_members.touched && clubForm.controls.max_members.invalid) { <small>Informe um número inteiro maior ou igual a zero.</small> }
           </label>
 
           <label class="field">
@@ -207,6 +229,7 @@
 
       @if (activeModal() === 'members') {
         <div class="members-panel">
+          @if (selectedClub(); as club) { <app-club-certificates [clubId]="club.id" [manage]="canEdit(club)" (working)="childWorking('workload', $event)" /> }
           <form class="add-member-form" [formGroup]="memberForm" (ngSubmit)="addMember()">
             <label class="field">
               <span>E-mail do participante</span>
@@ -223,6 +246,9 @@
           </form>
 
           <form class="member-filters" [formGroup]="memberFilterForm" (ngSubmit)="loadMembers()">
+            <label class="field"><span>Nome ou e-mail</span><input type="search" formControlName="term" maxlength="100" placeholder="Buscar participante" />
+              @if (memberFilterForm.controls.term.touched && memberFilterForm.controls.term.invalid) { <small>Use pelo menos 2 caracteres.</small> }
+            </label>
             <label>
               <span>Função</span>
               <select formControlName="role">
@@ -238,6 +264,7 @@
                 <option value="ACTIVE">Ativo</option>
                 <option value="INACTIVE">Inativo</option>
                 <option value="CANCELLED">Cancelado</option>
+                <option value="COMPLETED">Participação concluída</option><option value="BANNED">Banido</option>
               </select>
             </label>
             <button type="submit" class="secondary-button" [disabled]="membersLoading()">Filtrar</button>
@@ -255,21 +282,17 @@
                     <span>{{ member.user.email_address }}</span>
                   </div>
                   <label class="member-role">Função
-                    <select #roleSelect [value]="member.role" [disabled]="changingMemberId() !== null || membersLoading() || !canChangeMember(member)" (change)="changeMemberRole(member, $any(roleSelect.value)); roleSelect.value = member.role">
+                    <select #roleSelect [value]="member.role" [disabled]="member.status === 'BANNED' || addingMember() || changingMemberId() !== null || membersLoading() || !canChangeMember(member)" (change)="changeMemberRole(member, $any(roleSelect.value)); roleSelect.value = member.role">
                       <option value="MEMBER">Membro</option><option value="INSTRUCTOR">Instrutor</option>
                     </select>
                   </label>
-                  <button
-                    type="button"
-                    class="status-button"
-                    [class.status-button--inactive]="member.status === 'INACTIVE'"
-                    [disabled]="changingMemberId() !== null || membersLoading() || !canChangeMember(member)"
-                    (click)="changeMemberStatus(member)"
-                  >
-                    {{ changingMemberId() === member.id ? 'Atualizando…' : member.status === 'ACTIVE' ? 'Ativo · desativar' : member.status === 'CANCELLED' ? 'Cancelado · reativar' : 'Inativo · reativar' }}
-                  </button>
-                  @if (member.status !== 'CANCELLED' && canChangeMember(member)) {
-                    <button type="button" class="danger-button" [disabled]="changingMemberId() !== null" (click)="changeMemberStatus(member, 'CANCELLED')">Cancelar vínculo</button>
+                  <label class="member-role">Participação
+                    <select #statusSelect [value]="member.status" [disabled]="addingMember() || changingMemberId() !== null || membersLoading() || !canChangeMember(member)" (change)="changeMemberStatus(member, $any(statusSelect.value)); statusSelect.value = member.status">
+                      @for (status of memberStatuses; track status.value) { <option [value]="status.value">{{ status.label }}</option> }
+                    </select>
+                  </label>
+                  @if (member.status === 'COMPLETED') {
+                    <app-club-certificate-download [clubId]="selectedClub()!.id" [recipient]="{ id: member.user.id, role: member.role }" (working)="childWorking('member-' + member.id, $event)" />
                   }
                 </article>
               }

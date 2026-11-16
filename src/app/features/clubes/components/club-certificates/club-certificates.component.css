@@ -1,0 +1,15 @@
+:host { display: block; min-width: 0; overflow-wrap: anywhere; }
+details { margin: 1rem 0; border: 1px solid var(--border-primary); border-radius: .75rem; background: var(--surface-card, white); }
+summary { padding: 1rem; font-weight: 700; cursor: pointer; color: var(--brand-700); }
+.panel { padding: 0 1rem 1rem; }
+p { margin: .5rem 0 1rem; font-size: .875rem; line-height: 1.5; color: var(--text-secondary); }
+p[role=alert] { color: var(--error); }
+form { display: flex; align-items: end; flex-wrap: wrap; gap: .75rem; }
+label { display: grid; gap: .5rem; flex: 1 1 160px; min-width: 0; font-size: .875rem; font-weight: 600; }
+input { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid var(--border-primary); border-radius: .5rem; padding: .75rem; font: inherit; background: var(--surface-card, white); color: var(--text-primary); }
+button { padding: .65rem .8rem; border: 1px solid var(--brand-border); background: var(--brand-tint); color: var(--brand-700); border-radius: .5rem; font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; }
+button:disabled { opacity: .65; cursor: default; }
+button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 3px; }
+.spinner { display: inline-block; width: .8rem; height: .8rem; border: 2px solid var(--brand-border); border-top-color: var(--brand-600); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
