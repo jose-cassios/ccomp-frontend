@@ -1,3 +1,5 @@
+import { EventMaterialsComponent } from '../../components/event-materials/event-materials.component';
+import { ParticipantCertificateComponent } from '../../components/certificate-download/participant-certificate.component';
 import { ActivityCapacityComponent } from '../../components/activity-people/activity-capacity.component';
 import { EventRoleCertificatesComponent } from '../../components/certificate-download/event-role-certificates.component';
 import { DEFAULT_EVENT_TIME_ZONE, EVENT_TIME_ZONES, eventTimestamp, eventLocalInput, isEventTimeZone } from '../../models/event-time';
@@ -67,7 +69,7 @@ const EDITOR_STEPS: ReadonlyArray<{ value: EventEditorStep; label: string; short
 @Component({
   selector: 'app-event-editor',
   standalone: true,
-  imports: [EventCredentialsComponent, ActivityCapacityComponent, DatePipe, ReactiveFormsModule, RouterLink, ActivityPeopleComponent, EventCoverDirective, EventGuestManagerComponent],
+  imports: [EventMaterialsComponent, ParticipantCertificateComponent, EventCredentialsComponent, ActivityCapacityComponent, DatePipe, ReactiveFormsModule, RouterLink, ActivityPeopleComponent, EventCoverDirective, EventGuestManagerComponent],
   templateUrl: './event-editor.component.html',
   styleUrls: ['./event-editor.component.css', './event-activity-dialog.css', './event-editor-sections.css'],
 })
@@ -88,7 +90,7 @@ export class EventEditorComponent implements OnInit {
   }
   private revealValidation(): void {
     let section: string;
-    if (this.form.controls.title.invalid || this.form.controls.category.invalid || this.form.controls.format.invalid) {
+    if (this.form.controls.address.invalid || this.form.controls.title.invalid || this.form.controls.category.invalid || this.form.controls.format.invalid) {
       this.activeStep.set('details'); section = 'event-basics';
     } else if (!this.hasValidDates() || this.form.controls.start_date.invalid || this.form.controls.end_date.invalid) {
       this.activeStep.set('details'); section = 'event-dates';
@@ -126,6 +128,7 @@ export class EventEditorComponent implements OnInit {
   readonly knownTimeZone = (zone: string) => EVENT_TIME_ZONES.some(item => item.value === zone);
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(255)]],
+    address: ['', Validators.maxLength(255)],
     category: this.fb.nonNullable.control<EventCategory>('ACADEMIC_EDUCATIONAL', Validators.required),
     format: this.fb.nonNullable.control<EventFormat>('IN_PERSON', Validators.required),
     start_date: ['', Validators.required],
@@ -546,7 +549,7 @@ export class EventEditorComponent implements OnInit {
             this.ownedEventIds.update(ids => new Set(ids).add(createdEvent.id));
             this.editorAccessResolved.set(true); this.editingExisting.set(true);
             this.location.replaceState(`/eventos/${createdEvent.id}/editar`);
-            return this.hasEnrollmentSettings()
+            return this.hasEnrollmentSettings() || !!value.address.trim()
               ? this.eventsService.update(createdEvent.id, this.buildBasicUpdatePayload()).pipe(map(saved => ({ ...saved, max_capacity: saved.max_capacity !== undefined ? saved.max_capacity : createdEvent.max_capacity })))
               : of(createdEvent);
           }),
@@ -1249,6 +1252,7 @@ export class EventEditorComponent implements OnInit {
       ...(this.certificateHours.controls.team_certificate_workload_hours.value !== null ? { team_certificate_workload_hours: this.certificateHours.controls.team_certificate_workload_hours.value } : {}),
       time_zone: this.timeZone.value,
       title: value.title,
+      address: value.address.trim(),
       category: value.category,
       format: value.format,
       start_date: value.start_date,
@@ -1321,6 +1325,7 @@ export class EventEditorComponent implements OnInit {
     this.conflictPolicy.setValue(enrichedEvent.schedule_conflict_policy ?? 'PREVENT', { emitEvent: false });
     this.form.reset({
       title: enrichedEvent.title ?? '',
+      address: enrichedEvent.address ?? '',
       category: enrichedEvent.category ?? 'ACADEMIC_EDUCATIONAL',
       format: enrichedEvent.format ?? 'IN_PERSON',
       start_date: this.toLocalInput(enrichedEvent.start_date),

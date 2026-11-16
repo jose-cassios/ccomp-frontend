@@ -244,11 +244,23 @@ describe('Event certificate customization', () => {
     expect(component.form.pristine).toBe(true); expect(component.previewUrl()).toBeNull();
     confirm.mockRestore();
   });
+
+  it('restores and saves the location used by the live certificate preview', () => {
+    events.getById.mockReturnValue(of({ id: 9, title: 'Evento', owner_id: 'owner', address: 'Local antigo' }));
+    const component = create().componentInstance;
+    expect(component.settings.controls.address.value).toBe('Local antigo');
+    component.settings.controls.address.setValue('x'.repeat(256)); component.saveSettings();
+    expect(events.update).not.toHaveBeenCalled();
+    events.update.mockReturnValue(of({ id: 9, address: 'Auditório IFMA' }));
+    component.settings.controls.address.setValue(' Auditório IFMA '); component.saveSettings();
+    expect(events.update).toHaveBeenCalledWith(9, expect.objectContaining({ address: 'Auditório IFMA' }));
+    expect(component.samples()['{evento.local}']).toBe('Auditório IFMA');
+  });
   it('saves base workloads independently including zero values', () => {
     events.update.mockReturnValue(of({ id: 9, instructor_certificate_workload_hours: 0, guest_certificate_workload_hours: 2, workload_hours: 3 }));
     const component = create().componentInstance;
     component.settings.patchValue({ instructor_certificate_workload_hours: 0, guest_certificate_workload_hours: 2, workload_hours: 3 }); component.saveSettings();
-    expect(events.update).toHaveBeenCalledWith(9, { organization: '', instructor_certificate_workload_hours: 0, guest_certificate_workload_hours: 2, workload_hours: 3 });
+    expect(events.update).toHaveBeenCalledWith(9, { address: '', organization: '', instructor_certificate_workload_hours: 0, guest_certificate_workload_hours: 2, workload_hours: 3 });
     expect(component.settings.controls.instructor_certificate_workload_hours.value).toBe(0);
   });
   it('saves organization and team hours without mixing them with instructor workload', () => {
@@ -257,7 +269,7 @@ describe('Event certificate customization', () => {
     component.settings.patchValue({ organization: ' IFMA ', team_certificate_workload_hours: -1 }); component.saveSettings();
     expect(events.update).not.toHaveBeenCalled();
     component.settings.controls.team_certificate_workload_hours.setValue(12); component.settings.markAsDirty(); component.saveSettings();
-    expect(events.update).toHaveBeenCalledWith(9, { organization: 'IFMA', team_certificate_workload_hours: 12 });
+    expect(events.update).toHaveBeenCalledWith(9, { address: '', organization: 'IFMA', team_certificate_workload_hours: 12 });
     expect(component.settings.controls.organization.value).toBe('IFMA'); expect(component.settings.pristine).toBe(true);
   });
 

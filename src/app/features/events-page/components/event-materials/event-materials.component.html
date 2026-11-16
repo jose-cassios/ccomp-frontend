@@ -1,0 +1,40 @@
+<details (toggle)="open($event)">
+  <summary>Materiais de apoio</summary>
+  <div class="materials-body" [attr.aria-busy]="busy()">
+    @if (busy()) { <p role="status"><span class="mini-spinner" aria-hidden="true"></span> Aguarde…</p> }
+    @if (error()) { <p role="alert" class="error">{{ error() }}</p> }
+    @if (success()) { <p role="status">{{ success() }}</p> }
+    @if (!loaded() && !busy()) { <button type="button" (click)="load()">Carregar materiais</button> }
+    @if (loaded() && !rows().length) { <p>Ainda não há materiais disponíveis.</p> }
+    @for (row of rows(); track row.id) {
+      <article>
+        <div class="material-copy"><strong>{{ row.title }}</strong>@if (row.description) { <p>{{ row.description }}</p> }
+          <small>{{ row.type === 'LINK' ? 'Link externo' : (row.original_file_name || 'Arquivo') }}</small>
+        </div>
+        <div class="actions">
+          @if (row.type === 'LINK') {
+            @if (safeUrl(row.url); as url) { <a [href]="url" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'Abrir ' + row.title + ' em nova aba'">Abrir link ↗</a> }
+          } @else { <button type="button" [disabled]="busy()" (click)="download(row)">Baixar arquivo</button> }
+          @if (manage) { <button type="button" class="remove" [disabled]="busy()" (click)="remove(row)" [attr.aria-label]="'Remover ' + row.title">Remover</button> }
+        </div>
+      </article>
+    }
+    @if (cursor()) { <button type="button" [disabled]="busy()" (click)="load(true)">Mais materiais</button> }
+    @if (manage) {
+      <button type="button" class="add" [disabled]="busy()" [attr.aria-expanded]="adding()" (click)="adding.set(!adding())">{{ adding() ? 'Fechar formulário' : '+ Adicionar material' }}</button>
+      @if (adding()) {
+        <form [formGroup]="form" (ngSubmit)="save()">
+          <fieldset [disabled]="busy()">
+            <legend>Novo material</legend>
+            <label>Tipo<select [value]="kind()" (change)="kind.set($any($event.target).value)"><option value="LINK">Link</option><option value="FILE">Arquivo</option></select></label>
+            <label>Título *<input formControlName="title" maxlength="255" placeholder="Ex.: Slides da apresentação" /></label>
+            <label>Descrição (opcional)<textarea formControlName="description" rows="2" maxlength="1000"></textarea></label>
+            @if (kind() === 'LINK') { <label>Link *<input type="url" formControlName="url" maxlength="2048" placeholder="https://…" /></label> }
+            @else { <label>Arquivo *<input #fileInput type="file" accept="application/pdf,image/png,image/jpeg,image/webp" (change)="chooseFile($event)" /></label><small>PDF, PNG, JPEG ou WebP, até 10 MB.</small>@if (file()) { <small>Selecionado: {{ file()!.name }}</small> } }
+            <button type="submit" [disabled]="busy()">{{ busy() ? 'Salvando…' : 'Adicionar material' }}</button>
+          </fieldset>
+        </form>
+      }
+    }
+  </div>
+</details>

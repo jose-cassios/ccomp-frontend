@@ -1,3 +1,5 @@
+import { EventMaterialsComponent } from '../event-materials/event-materials.component';
+import { ParticipantCertificateComponent } from '../certificate-download/participant-certificate.component';
 import { ActivityManualEnrollmentComponent } from './activity-manual-enrollment.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
@@ -11,8 +13,9 @@ import { ActivityCheckInComponent } from '../activity-check-in/activity-check-in
 import { ActivityInstructorsComponent } from './activity-instructors.component';
 
 @Component({
-  selector: 'app-activity-people', standalone: true, imports: [ActivityManualEnrollmentComponent, EventGuestsComponent, ActivityCheckInComponent, ActivityInstructorsComponent],
+  selector: 'app-activity-people', standalone: true, imports: [EventMaterialsComponent, ParticipantCertificateComponent, ActivityManualEnrollmentComponent, EventGuestsComponent, ActivityCheckInComponent, ActivityInstructorsComponent],
   template: `
+    <app-event-materials [eventId]="eventId" [activityId]="activityId" [manage]="manage" />
     @if (canView || manage || canViewInstructors) {
     <details (toggle)="open = $any($event.target).open">
       <summary>Convidados e ministrantes</summary>
@@ -44,6 +47,9 @@ import { ActivityInstructorsComponent } from './activity-instructors.component';
           @if (error()) { <p role="alert">{{ error() }}</p> }
           @for (row of sortedRows(); track row.id) {
             <article><div><strong>{{ row.user?.name || 'Participante' }}</strong><small>{{ row.user?.email_address }}</small><small>{{ stateLabel(row.status) }}</small></div>
+              @if (row.status === 'CHECKED_IN') {
+                <app-participant-certificate [eventId]="eventId" [activityId]="activityId" [enrollment]="row" [allowed]="manage" [endDate]="endDate" [timeZone]="timeZone" [canceled]="canceled" />
+              }
               @if (row.status === 'CONFIRMED') {
                 <button type="button" [disabled]="attendingId() !== null || loading()" (click)="markAttendance(row)">
                   @if (attendingId() === row.id) { <span class="mini-spinner" aria-hidden="true"></span> Registrando… } @else { Confirmar presença }
@@ -64,6 +70,9 @@ export class ActivityPeopleComponent {
   @Input({ required: true }) eventId!: number;
   @Input({ required: true }) activityId!: number;
   @Input() manage = false;
+  @Input() endDate: string | null = null;
+  @Input() timeZone?: string | null;
+  @Input() canceled = false;
   @Input() activityTitle = '';
   readonly managementOpen = signal(false);
   @Input() canView = false;

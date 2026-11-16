@@ -64,6 +64,10 @@ export class CertificatesService {
   manualTeam(eventId: number, userId: string) {
     return this.binary(this.http.post(this.config.buildUrl(`/events/${eventId}/team-certificate/manual/${encodeURIComponent(userId)}`), null, { responseType: 'blob' }));
   }
+  manualParticipant(eventId: number, enrollmentId: number, activityId?: number) {
+    const activity = activityId ? `/activities/${activityId}` : '';
+    return this.binary(this.http.post(this.config.buildUrl(`/events/${eventId}${activity}/enrollments/${enrollmentId}/certificate/manual`), null, { responseType: 'blob' }));
+  }
   manualContent(eventId: number, content: ManualCertificateContent, preview = false) {
     return this.binary(this.http.post(this.config.buildUrl(`/events/${eventId}/certificate/manual${preview ? '/preview' : ''}`), content, { responseType: 'blob' }));
   }

@@ -83,6 +83,14 @@
               </select>
             </label>
 
+            <label class="field field--wide">
+              <span>Local do evento</span>
+              <input type="text" formControlName="address" maxlength="255" placeholder="Ex.: Auditório Central, IFMA Campus Caxias" aria-describedby="event-address-help" />
+              <small id="event-address-help">Informe o espaço e a cidade ou, para eventos online, a plataforma. Este local aparece na página do evento e nos certificados.</small>
+              @if (form.controls.address.touched && form.controls.address.invalid) {
+                <strong>Informe um local com até 255 caracteres.</strong>
+              }
+            </label>
 </div></div>
 </details>
 <details class="editor-section" id="event-dates" [open]="sectionOpen('event-dates')" (toggle)="rememberSection($event)">
@@ -165,6 +173,7 @@
       }
 
       @case ('presentation') {
+        @if (event(); as savedEvent) { <app-event-materials [eventId]="savedEvent.id" [manage]="canManageActivities()" /> }
         <form class="editor-card event-form" [formGroup]="presentationForm" (ngSubmit)="savePresentation()">
           <div class="card-heading">
             <div>
@@ -344,7 +353,7 @@
                             </div>
                             <h3>{{ activity.title }}</h3>
                             <app-activity-capacity [activityId]="activity.id" [revision]="activityEnrollmentRevision()" />
-                            <app-activity-people [activityTitle]="activity.title" (enrollmentChanged)="activityEnrollmentRevision.update(incrementRevision)" [eventId]="event()!.id" [activityId]="activity.id" [manage]="canManageActivities()" />
+                            <app-activity-people [endDate]="activity.end_date ?? null" [timeZone]="event()?.time_zone" [canceled]="event()?.status === 'CANCELED'" [activityTitle]="activity.title" (enrollmentChanged)="activityEnrollmentRevision.update(incrementRevision)" [eventId]="event()!.id" [activityId]="activity.id" [manage]="canManageActivities()" />
                             <p class="activity-row__meta">
                               @if (activity.end_date) { até {{ activity.end_date | date: 'HH:mm' }} }
                               @if (activity.location) { <span>• {{ activity.location }}</span> }
@@ -458,6 +467,9 @@
                         <small>{{ enrollment.user?.email_address || 'E-mail não informado' }}</small>
                       </span>
                       <span><em>{{ enrollmentStateLabel(enrollment.status) }}</em>
+                        @if (enrollment.status === 'CHECKED_IN') {
+                          <app-participant-certificate [eventId]="event()!.id" [enrollment]="enrollment" [allowed]="canManageActivities()" [endDate]="event()!.end_date" [timeZone]="event()!.time_zone" [canceled]="event()!.status === 'CANCELED'" />
+                        }
                         @if (enrollment.status === 'CONFIRMED') {
                           <button type="button" class="text-button" [disabled]="eventAttendanceBusyId() !== null" (click)="markEventAttendance(enrollment)">
                             @if (eventAttendanceBusyId() === enrollment.id) { <span class="mini-spinner" aria-hidden="true"></span> Registrando… } @else { Confirmar presença }
@@ -552,6 +564,7 @@
 <details class="editor-section" id="review-info" [open]="sectionOpen('review-info')" (toggle)="rememberSection($event)">
   <summary><span><strong>Informações e inscrições</strong><small>{{ form.controls.title.value }} · {{ publicationStatusLabel(event()?.status) }}</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
   <div class="editor-section__body"><dl class="review-list">
+  <div><dt>Local</dt><dd>{{ form.controls.address.value.trim() || 'Não informado' }}</dd></div>
   <div><dt>Formato</dt><dd>{{ formatLabel(form.controls.format.value) }}</dd></div>
   <div><dt>Execução</dt><dd>{{ executionStatusLabel(event()?.execution_status) }}</dd></div>
   <div><dt>Início do evento</dt><dd>{{ form.controls.start_date.value | date:'dd/MM/yyyy HH:mm' }}</dd></div>
