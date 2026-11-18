@@ -1,6 +1,8 @@
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { AuthService } from '../../auth/services/auth.service';
+import { NEWS_MODERATION_ROLES } from '../../auth/config/auth.config';
 import { NewsPreviewComponent } from '../components/news-preview/news-preview.component';
 import { type NewsItemType } from '../interface/news.interface';
 import { NewsService } from '../services/news.service';
@@ -13,6 +15,8 @@ import { NewsService } from '../services/news.service';
   styleUrl: './news.component.css',
 })
 export class NewsComponent implements OnInit {
+  private readonly authService = inject(AuthService);
+  readonly canModerateNews = computed(() => this.authService.isAuthenticatedState() && this.authService.hasAnyRole(NEWS_MODERATION_ROLES));
   private readonly route = inject(ActivatedRoute);
   private readonly newsService = inject(NewsService);
   private readonly destroyRef = inject(DestroyRef);

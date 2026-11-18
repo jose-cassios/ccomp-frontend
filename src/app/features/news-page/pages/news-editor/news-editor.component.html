@@ -22,7 +22,7 @@
       <button type="button" class="button button--secondary mobile-view-button" [class.active]="activeView() === 'preview'" (click)="setView('preview')">
         Pré-visualizar
       </button>
-      @if (news() && isAuthor()) {
+      @if (news() && canAdministerNews()) {
         <button type="button" class="button button--danger" [disabled]="isBusy()" (click)="deleteNews()">
           {{ operation() === 'deleting' ? 'Excluindo...' : 'Excluir' }}
         </button>
@@ -142,7 +142,7 @@
           <span class="content-help">Editores podem ajudar a manter este conteúdo.</span>
         </div>
 
-        @if (isAuthor()) {
+        @if (canAdministerNews()) {
           <form class="add-editor-form" [formGroup]="editorForm" (ngSubmit)="addEditor()">
             <label class="field">
               <span>E-mail do novo editor</span>
@@ -165,7 +165,7 @@
                   <strong>{{ editor.name }}</strong>
                   <small>{{ editor.email_address }}</small>
                 </span>
-                @if (isAuthor()) {
+                @if (canAdministerNews()) {
                   <button type="button" class="remove-editor" [disabled]="editorsLoading()" (click)="removeEditor(editor)">
                     Remover
                   </button>

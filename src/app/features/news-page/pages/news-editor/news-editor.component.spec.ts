@@ -1,12 +1,16 @@
+import { signal } from '@angular/core';
+import { AuthService } from '../../../auth/services/auth.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { StorageService } from '../../../../core/storage/storage.service';
 import { NewsItemType } from '../../interface/news.interface';
 import { NewsService } from '../../services/news.service';
 import { NewsEditorComponent } from './news-editor.component';
 
 describe('NewsEditorComponent', () => {
+  const role = signal('STAFF');
+  const route = { snapshot: { paramMap: convertToParamMap({}) } };
   let component: NewsEditorComponent;
   let fixture: ComponentFixture<NewsEditorComponent>;
 
@@ -30,6 +34,7 @@ describe('NewsEditorComponent', () => {
   };
 
   const newsService = {
+    getMine: vi.fn(() => of({ author: [], editor: [] })),
     create: vi.fn(() => of(createdNews)),
     update: vi.fn(() => of(savedNews)),
     publish: vi.fn(() => of(void 0)),
@@ -41,14 +46,15 @@ describe('NewsEditorComponent', () => {
   };
 
   beforeEach(async () => {
-    vi.clearAllMocks();
+    vi.clearAllMocks(); role.set('STAFF'); route.snapshot.paramMap = convertToParamMap({});
     await TestBed.configureTestingModule({
       imports: [NewsEditorComponent],
       providers: [
         provideRouter([]),
+        { provide: AuthService, useValue: { isAuthenticatedState: () => true, hasAnyRole: (allowed: readonly string[]) => allowed.includes(role()) } },
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: convertToParamMap({}) } },
+          useValue: route,
         },
         { provide: NewsService, useValue: newsService },
         { provide: StorageService, useValue: { upload: vi.fn() } },
@@ -122,6 +128,7 @@ describe('NewsEditorComponent', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     component.news.set(savedNews);
+    component.isAuthor.set(true);
 
     component.deleteNews();
 
@@ -129,6 +136,27 @@ describe('NewsEditorComponent', () => {
     expect(component.hasUnsavedChanges()).toBe(false);
   });
 
+  it.each(['ADM', 'MODERATOR'])('allows %s to load and save another author published news', roleName => {
+    role.set(roleName);
+    route.snapshot.paramMap = convertToParamMap({ id: '42' });
+    component.ngOnInit(); fixture.detectChanges();
+    expect(newsService.getById).toHaveBeenCalledWith('42'); expect(component.isAuthor()).toBe(false);
+    expect(component.form.enabled).toBe(true);
+    component.form.controls.summary.setValue('Resumo revisado pela administração.'); component.save();
+    expect(newsService.update).toHaveBeenCalledWith(42, expect.objectContaining({ summary: 'Resumo revisado pela administração.' }));
+  });
+  it('allows administrators to publish a saved draft even when the personal news lookup fails', () => {
+    role.set('ADM'); newsService.getById.mockReturnValueOnce(of(savedNews as any));
+    newsService.getMine.mockReturnValueOnce(throwError(() => new Error('unavailable')));
+    route.snapshot.paramMap = convertToParamMap({ id: '42' }); component.ngOnInit();
+    expect(component.isAuthor()).toBe(false); expect(component.canPublish()).toBe(true);
+    component.publish(); expect(newsService.publish).toHaveBeenCalledWith(42);
+  });
+  it('keeps publication and administrative controls unavailable to nonauthor STAFF', () => {
+    (component as any).applyNews(savedNews); fixture.detectChanges(); component.publish();
+    expect(component.canAdministerNews()).toBe(false); expect(newsService.publish).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('.button--danger')).toBeNull();
+  });
   it('should show feedback and allow it to be dismissed', () => {
     component.successMessage.set('Notícia salva com sucesso.');
     fixture.detectChanges();

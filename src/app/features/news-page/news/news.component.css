@@ -9,3 +9,7 @@
 @media (max-width: 700px) {
   .news-page { padding: 24px 12px 48px; }
 }
+
+.news-actions { display: flex; justify-content: flex-end; margin-bottom: 1rem; }
+.edit-link { padding: .6rem .9rem; border: 1px solid var(--brand-border); border-radius: .5rem; background: var(--brand-tint); color: var(--brand-700); font-weight: 600; text-decoration: none; }
+.edit-link:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 3px; }

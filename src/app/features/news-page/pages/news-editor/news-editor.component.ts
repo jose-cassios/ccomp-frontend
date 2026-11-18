@@ -1,3 +1,5 @@
+import { AuthService } from '../../../auth/services/auth.service';
+import { NEWS_MODERATION_ROLES } from '../../../auth/config/auth.config';
 import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { apiErrorMessage } from '../../../../core/api/api-error';
@@ -43,6 +45,7 @@ const EMPTY_FORM: EditorFormValue = {
   styleUrl: './news-editor.component.css',
 })
 export class NewsEditorComponent implements OnInit {
+  private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -59,6 +62,7 @@ export class NewsEditorComponent implements OnInit {
 
   readonly news = signal<NewsItemType | null>(null);
   readonly isAuthor = signal(false);
+  readonly canAdministerNews = computed(() => this.isAuthor() || (this.authService.isAuthenticatedState() && this.authService.hasAnyRole(NEWS_MODERATION_ROLES)));
   readonly operation = signal<EditorOperation>('idle');
   readonly activeView = signal<EditorView>('edit');
   readonly errorMessage = signal<string | null>(null);
@@ -88,7 +92,7 @@ export class NewsEditorComponent implements OnInit {
   readonly canPublish = computed(
     () =>
       Boolean(this.news()?.id) &&
-      this.isAuthor() &&
+      this.canAdministerNews() &&
       this.formIsValid() &&
       !this.hasUnsavedChanges() &&
       !this.isPublished() &&
@@ -106,7 +110,7 @@ export class NewsEditorComponent implements OnInit {
   });
   readonly publishDisabledReason = computed(() => {
     if (this.isPublished()) return 'Esta notícia já foi publicada.';
-    if (this.news() && !this.isAuthor()) return 'A publicação é responsabilidade da pessoa autora.';
+    if (this.news() && !this.canAdministerNews()) return 'A publicação exige autoria ou permissão de administrador ou moderador.';
     if (!this.news()) return 'Salve a notícia antes de publicar.';
     if (this.hasUnsavedChanges()) return 'Salve as alterações antes de publicar.';
     if (!this.formIsValid()) return 'Preencha todos os campos obrigatórios.';
@@ -193,7 +197,7 @@ export class NewsEditorComponent implements OnInit {
 
   deleteNews(): void {
     const currentNews = this.news();
-    if (!currentNews || this.isBusy()) return;
+    if (!currentNews || !this.canAdministerNews() || this.isBusy()) return;
 
     const itemType = this.isPublished() ? 'a notícia publicada' : 'o rascunho';
     if (typeof window !== 'undefined' && !window.confirm(`Excluir ${itemType} “${currentNews.title}”?`)) {
@@ -261,7 +265,7 @@ export class NewsEditorComponent implements OnInit {
 
   addEditor(): void {
     const currentNews = this.news();
-    if (!currentNews || this.editorForm.invalid || this.editorsLoading()) {
+    if (!currentNews || !this.canAdministerNews() || this.editorForm.invalid || this.editorsLoading()) {
       this.editorForm.markAllAsTouched();
       return;
     }
@@ -286,7 +290,7 @@ export class NewsEditorComponent implements OnInit {
 
   removeEditor(editor: NewsEditorUser): void {
     const currentNews = this.news();
-    if (!currentNews || this.editorsLoading()) return;
+    if (!currentNews || !this.canAdministerNews() || this.editorsLoading()) return;
 
     this.editorsLoading.set(true);
     this.errorMessage.set(null);
@@ -384,7 +388,7 @@ export class NewsEditorComponent implements OnInit {
     this.news.set(news);
     this.form.reset(value, { emitEvent: false });
     // A publicação controla a visibilidade. O PATCH continua permitido pela API
-    // para a pessoa autora, inclusive depois que a notícia está pública.
+    // para autores, administradores e moderadores, inclusive após a publicação.
     this.form.enable({ emitEvent: false });
     this.formValue.set(value);
     this.formIsValid.set(this.form.valid);
