@@ -1,6 +1,6 @@
 export type CertificateScope = 'event' | 'activity' | 'instructor' | 'team';
 export type CertificateTemplateScope = CertificateScope | 'guest' | 'activity-instructor' | 'activity-guest';
-export interface ManualInstructorCertificate { instructor_id?: number; activity_id?: number; activity_guest_id?: number; }
+export interface ManualInstructorCertificate { instructor_id?: number; activity_id?: number; event_guest_id?: number; }
 export interface ManualCertificateContent { boxes: CertificateBox[]; variables: Record<string, string>; }
 export type CertificateAlignment = 'LEFT' | 'RIGHT' | 'CENTERED' | 'JUSTIFIED';
 

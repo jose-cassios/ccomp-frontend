@@ -3,6 +3,11 @@
   @if (isLoading()) {
     <div class="feedback" role="status">Carregando notícia...</div>
   } @else if (news(); as selectedNews) {
+    @if (canModerateNews()) {
+      <nav class="news-actions" aria-label="Administração da notícia">
+        <a class="edit-link" [routerLink]="['/noticias', selectedNews.id, 'editar']">Editar notícia</a>
+      </nav>
+    }
     <app-news-preview [news]="selectedNews"></app-news-preview>
   } @else {
     <div class="feedback feedback--error" role="alert">

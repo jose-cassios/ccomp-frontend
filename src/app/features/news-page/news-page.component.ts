@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
-import { NEWS_MANAGEMENT_ROLES } from '../auth/config/auth.config';
+import { NEWS_MANAGEMENT_ROLES, NEWS_MODERATION_ROLES } from '../auth/config/auth.config';
 import { AuthService } from '../auth/services/auth.service';
 import { NewsCardComponent } from './components/news-card/news-card.component';
 import { NewsSidebarComponent } from './components/news-sidebar/news-sidebar.component';
@@ -34,6 +34,7 @@ export class NewsPageComponent implements OnInit {
   readonly draftsError = signal<string | null>(null);
   readonly draftsSuccess = signal<string | null>(null);
   readonly canManageNews = computed(() => this.authService.hasAnyRole(NEWS_MANAGEMENT_ROLES));
+  readonly canModerateNews = computed(() => this.authService.isAuthenticatedState() && this.authService.hasAnyRole(NEWS_MODERATION_ROLES));
   readonly isAuthenticated = this.authService.isAuthenticatedState;
   readonly showEditorialArea = computed(() =>
     this.canManageNews() || this.draftsLoading() || this.editableNewsIds().size > 0,
@@ -115,15 +116,15 @@ export class NewsPageComponent implements OnInit {
   }
 
   canEditNews(news: NewsItemType): boolean {
-    return this.editableNewsIds().has(news.id);
+    return this.canModerateNews() || this.editableNewsIds().has(news.id);
   }
 
   canDeleteDraft(news: NewsItemType): boolean {
-    return this.authoredNewsIds().has(news.id);
+    return this.canModerateNews() || this.authoredNewsIds().has(news.id);
   }
 
   deleteDraft(draft: NewsItemType): void {
-    if (this.deletingNewsId() !== null) return;
+    if (!this.canDeleteDraft(draft) || this.deletingNewsId() !== null) return;
     if (typeof window !== 'undefined' && !window.confirm(`Excluir o rascunho “${draft.title}”?`)) {
       return;
     }

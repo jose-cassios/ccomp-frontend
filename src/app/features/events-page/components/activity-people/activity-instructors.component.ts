@@ -8,6 +8,7 @@ import { EventsService } from '../../services/events.service';
 import { AuthService } from '../../../auth/services/auth.service';
 import { apiErrorMessage } from '../../../../core/api/api-error';
 import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
+import { CertificatesService } from '../../services/certificates.service';
 
 @Component({
   selector: 'app-activity-instructors', standalone: true, imports: [ReactiveFormsModule],
@@ -21,6 +22,9 @@ import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
         @for (person of people(); track person.id) {
           <article><strong>{{ person.name || 'Ministrante' }}</strong><small>{{ person.role === 'ASSISTANT' ? 'Auxiliar' : 'Ministrante' }} · {{ person.status === 'CONFIRMED' ? 'Confirmado' : 'Cancelado' }}</small><p>{{ person.description }}</p>
             @if (manage) {
+              @if (eventFinished && person.status === 'CONFIRMED') {
+                <button type="button" [disabled]="busy()" (click)="issueCertificate(person)">{{ busyCertificateId() === person.id ? 'Emitindo…' : 'Emitir certificado da atividade' }}</button>
+              }
               <details><summary>Vincular conta</summary><p>Uma conta ativa poderá editar esta atividade, sem convite por email.</p><label>Email<input type="email" [formControl]="accountEmailFor(person.id)" /></label><button type="button" [disabled]="busy()" (click)="link(person)">Vincular conta</button></details>
               <button type="button" [disabled]="busy()" (click)="remove(person)">Excluir desta atividade</button>
             }
@@ -47,9 +51,12 @@ export class ActivityInstructorsComponent implements OnChanges {
   @Input({ required: true }) eventId!: number;
   @Input({ required: true }) activityId!: number;
   @Input() manage = false;
+  @Input() eventFinished = false;
   @Input() revision = 0;
   @Output() activityChanged = new EventEmitter<void>();
   private readonly service = inject(ActivityInstructorsService);
+  private readonly certificates = inject(CertificatesService);
+  readonly busyCertificateId = signal<number | null>(null);
   private readonly events = inject(EventsService);
   private readonly destroy = inject(DestroyRef);
   readonly auth = inject(AuthService);
@@ -74,6 +81,21 @@ export class ActivityInstructorsComponent implements OnChanges {
     this.service.forActivity(this.eventId, this.activityId).pipe(takeUntilDestroyed(this.destroy), finalize(() => this.loading.set(false))).subscribe({
       next: people => { this.denied.set(false); this.people.set(people); },
       error: e => e instanceof HttpErrorResponse && [401,403].includes(e.status) ? this.denied.set(true) : this.error.set(apiErrorMessage(e, 'Não foi possível consultar ministrantes.')),
+    });
+  }
+  issueCertificate(person: Instructor) {
+    if (!this.manage || !this.eventFinished || person.status !== 'CONFIRMED' || this.busy()) return;
+    if (!window.confirm(`Emitir o certificado da atividade para ${person.name || 'este ministrante'}?`)) return;
+    this.busyCertificateId.set(person.id); this.busy.set(true); this.error.set(''); this.message.set('');
+    this.certificates.manualInstructor(this.eventId, { instructor_id: person.id, activity_id: this.activityId }).pipe(
+      takeUntilDestroyed(this.destroy), finalize(() => { this.busyCertificateId.set(null); this.busy.set(false); }),
+    ).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob); const link = document.createElement('a');
+        link.href = url; link.download = `certificado-ministrante-${person.id}.png`; link.click(); URL.revokeObjectURL(url);
+        this.message.set('Certificado emitido e download iniciado.');
+      },
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível emitir o certificado do ministrante.')),
     });
   }
   link(person: Instructor): void {

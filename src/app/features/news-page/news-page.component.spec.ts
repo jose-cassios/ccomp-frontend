@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { AuthService } from '../auth/services/auth.service';
 import { NewsItemType } from './interface/news.interface';
 import { NewsService } from './services/news.service';
@@ -70,6 +70,28 @@ describe('NewsPageComponent', () => {
     expect(fixture.nativeElement.querySelector('.btn-create-news')).toBeNull();
   });
 
+  it.each(['ADM', 'MODERATOR'])('shows edit links for %s without authorship or editor membership', role => {
+    newsResponse = [firstNews, secondNews];
+    authService.isAuthenticatedState.mockReturnValue(true);
+    authService.hasAnyRole.mockImplementation((allowed: readonly string[]) => allowed.includes(role));
+    createComponent();
+    expect(fixture.nativeElement.querySelectorAll('.edit-link')).toHaveLength(2);
+    expect(component.authoredNewsIds().size).toBe(0);
+    expect(component.canDeleteDraft(firstNews)).toBe(true);
+  });
+  it('does not depend on the personal news request to allow admin editing', () => {
+    newsResponse = [firstNews]; authService.isAuthenticatedState.mockReturnValue(true);
+    authService.hasAnyRole.mockImplementation((allowed: readonly string[]) => allowed.includes('ADM'));
+    newsService.getMine.mockReturnValueOnce(throwError(() => new Error('unavailable')));
+    createComponent(); expect(component.canEditNews(firstNews)).toBe(true);
+    expect(fixture.nativeElement.querySelector('.edit-link')).not.toBeNull();
+  });
+  it('does not grant cross-author editing to STAFF or ordinary users', () => {
+    newsResponse = [firstNews]; authService.isAuthenticatedState.mockReturnValue(true);
+    authService.hasAnyRole.mockImplementation((allowed: readonly string[]) => allowed.includes('STAFF'));
+    createComponent(); expect(component.canEditNews(firstNews)).toBe(false);
+    expect(fixture.nativeElement.querySelector('.edit-link')).toBeNull();
+  });
   it('should search news and show edit actions only for editable news', () => {
     newsResponse = [firstNews, secondNews];
     myNews = { author: [firstNews], editor: [secondNews] };

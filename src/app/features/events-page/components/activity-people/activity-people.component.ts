@@ -20,8 +20,8 @@ import { ActivityInstructorsComponent } from './activity-instructors.component';
     <details (toggle)="open = $any($event.target).open">
       <summary>Convidados e ministrantes</summary>
       @if (open) {
-        <app-event-guests [eventId]="eventId" [activityId]="activityId" [manage]="manage" [canView]="canView" />
-        <app-activity-instructors (activityChanged)="activityChanged.emit()" [manage]="manage" [eventId]="eventId" [activityId]="activityId" />
+        <app-event-guests [eventId]="eventId" [activityId]="activityId" [manage]="manage" [canView]="canView" [eventFinished]="eventFinished" />
+        <app-activity-instructors (activityChanged)="activityChanged.emit()" [manage]="manage" [eventFinished]="eventFinished" [eventId]="eventId" [activityId]="activityId" />
       }
     </details>
     }
@@ -48,7 +48,7 @@ import { ActivityInstructorsComponent } from './activity-instructors.component';
           @for (row of sortedRows(); track row.id) {
             <article><div><strong>{{ row.user?.name || 'Participante' }}</strong><small>{{ row.user?.email_address }}</small><small>{{ stateLabel(row.status) }}</small></div>
               @if (row.status === 'CHECKED_IN') {
-                <app-participant-certificate [eventId]="eventId" [activityId]="activityId" [enrollment]="row" [allowed]="manage" [endDate]="endDate" [timeZone]="timeZone" [canceled]="canceled" />
+                <app-participant-certificate [eventId]="eventId" [activityId]="activityId" [enrollment]="row" [allowed]="manage" [eventFinished]="eventFinished" [endDate]="endDate" [timeZone]="timeZone" [canceled]="canceled" />
               }
               @if (row.status === 'CONFIRMED') {
                 <button type="button" [disabled]="attendingId() !== null || loading()" (click)="markAttendance(row)">
@@ -73,6 +73,7 @@ export class ActivityPeopleComponent {
   @Input() endDate: string | null = null;
   @Input() timeZone?: string | null;
   @Input() canceled = false;
+  @Input() eventFinished = false;
   @Input() activityTitle = '';
   readonly managementOpen = signal(false);
   @Input() canView = false;

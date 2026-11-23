@@ -131,7 +131,7 @@
                             </div>
                             <h3>{{ activity.title }}</h3>
                             <app-activity-capacity [activityId]="activity.id" [revision]="capacityRevision()" (updated)="updateCapacity(activity.id, $event)" />
-                            <app-activity-people [endDate]="activity.end_date ?? null" [timeZone]="currentEvent.time_zone" [canceled]="currentEvent.status === 'CANCELED'" [activityTitle]="activity.title" (enrollmentChanged)="refreshActivityEnrollments()" [manage]="canManageCertificates()" [eventId]="currentEvent.id" [activityId]="activity.id" [canView]="isAuthenticated() && subscribed()" [canViewInstructors]="isAuthenticated()" (activityChanged)="refreshActivities()" />
+                            <app-activity-people [endDate]="activity.end_date ?? null" [timeZone]="currentEvent.time_zone" [canceled]="currentEvent.status === 'CANCELED'" [eventFinished]="currentEvent.execution_status === 'FINISHED'" [activityTitle]="activity.title" (enrollmentChanged)="refreshActivityEnrollments()" [manage]="canManageCertificates()" [eventId]="currentEvent.id" [activityId]="activity.id" [canView]="isAuthenticated() && subscribed()" [canViewInstructors]="isAuthenticated()" (activityChanged)="refreshActivities()" />
                             <p class="activity-meta">
                               @if (activity.end_date) {
                                 <span>Até {{ activity.end_date | date: 'HH:mm' }}</span>

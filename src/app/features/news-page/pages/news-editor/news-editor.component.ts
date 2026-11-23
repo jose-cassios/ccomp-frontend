@@ -1,3 +1,5 @@
+import { AuthService } from '../../../auth/services/auth.service';
+import { NEWS_MODERATION_ROLES } from '../../../auth/config/auth.config';
 import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { apiErrorMessage } from '../../../../core/api/api-error';
@@ -43,6 +45,7 @@ const EMPTY_FORM: EditorFormValue = {
   styleUrl: './news-editor.component.css',
 })
 export class NewsEditorComponent implements OnInit {
+  private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -59,6 +62,7 @@ export class NewsEditorComponent implements OnInit {
 
   readonly news = signal<NewsItemType | null>(null);
   readonly isAuthor = signal(false);
+  readonly canAdministerNews = computed(() => this.isAuthor() || (this.authService.isAuthenticatedState() && this.authService.hasAnyRole(NEWS_MODERATION_ROLES)));
   readonly operation = signal<EditorOperation>('idle');
   readonly activeView = signal<EditorView>('edit');
   readonly errorMessage = signal<string | null>(null);
@@ -74,6 +78,9 @@ export class NewsEditorComponent implements OnInit {
   readonly editors = signal<NewsEditorUser[]>([]);
   readonly editorsLoading = signal(false);
   readonly uploadingCover = signal(false);
+  readonly canUploadCover = computed(() => this.authService.isAuthenticatedState() && this.authService.hasAnyRole(NEWS_MODERATION_ROLES));
+  readonly failedCoverUrl = signal<string | null>(null);
+  readonly coverPreviewUrl = computed(() => this.formValue().cover_image_url.trim());
   readonly editorForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
   });
@@ -88,7 +95,7 @@ export class NewsEditorComponent implements OnInit {
   readonly canPublish = computed(
     () =>
       Boolean(this.news()?.id) &&
-      this.isAuthor() &&
+      this.canAdministerNews() &&
       this.formIsValid() &&
       !this.hasUnsavedChanges() &&
       !this.isPublished() &&
@@ -106,7 +113,7 @@ export class NewsEditorComponent implements OnInit {
   });
   readonly publishDisabledReason = computed(() => {
     if (this.isPublished()) return 'Esta notícia já foi publicada.';
-    if (this.news() && !this.isAuthor()) return 'A publicação é responsabilidade da pessoa autora.';
+    if (this.news() && !this.canAdministerNews()) return 'A publicação exige autoria ou permissão de administrador ou moderador.';
     if (!this.news()) return 'Salve a notícia antes de publicar.';
     if (this.hasUnsavedChanges()) return 'Salve as alterações antes de publicar.';
     if (!this.formIsValid()) return 'Preencha todos os campos obrigatórios.';
@@ -193,7 +200,7 @@ export class NewsEditorComponent implements OnInit {
 
   deleteNews(): void {
     const currentNews = this.news();
-    if (!currentNews || this.isBusy()) return;
+    if (!currentNews || !this.canAdministerNews() || this.isBusy()) return;
 
     const itemType = this.isPublished() ? 'a notícia publicada' : 'o rascunho';
     if (typeof window !== 'undefined' && !window.confirm(`Excluir ${itemType} “${currentNews.title}”?`)) {
@@ -234,6 +241,11 @@ export class NewsEditorComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file || this.uploadingCover() || this.isBusy()) return;
+    if (!this.canUploadCover()) {
+      this.errorMessage.set('O envio de arquivos está disponível na API apenas para administradores e moderadores. Você pode informar uma URL pública para a capa.');
+      input.value = '';
+      return;
+    }
     if (!file.type.startsWith('image/')) {
       this.errorMessage.set('Selecione um arquivo de imagem válido.');
       input.value = '';
@@ -242,6 +254,7 @@ export class NewsEditorComponent implements OnInit {
 
     this.uploadingCover.set(true);
     this.errorMessage.set(null);
+    this.successMessage.set(null);
     this.storageService.upload(file).pipe(
       finalize(() => {
         this.uploadingCover.set(false);
@@ -249,19 +262,29 @@ export class NewsEditorComponent implements OnInit {
       }),
     ).subscribe({
       next: (response) => {
-        this.form.controls.cover_image_url.setValue(response.url);
+        const url = response.url?.trim();
+        if (!url || !/^https?:\/\/.+/i.test(url)) {
+          this.errorMessage.set('O arquivo foi enviado, mas a API não retornou uma URL válida para a imagem. A capa anterior foi mantida.');
+          return;
+        }
+        this.failedCoverUrl.set(null);
+        this.form.controls.cover_image_url.setValue(url);
         this.form.controls.cover_image_url.markAsTouched();
         this.successMessage.set('Imagem enviada. Salve a notícia para aplicar a nova capa.');
       },
       error: (error: unknown) => {
-        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível enviar a imagem.'));
+        this.errorMessage.set(error instanceof HttpErrorResponse && error.status === 413
+          ? 'A imagem excede o tamanho permitido pelo servidor. Escolha um arquivo menor.'
+          : error instanceof HttpErrorResponse && error.status === 403
+            ? 'A API recusou o envio da imagem. O upload exige permissão de administrador ou moderador.'
+            : this.getErrorMessage(error, 'Não foi possível enviar a imagem. A capa anterior foi mantida. Tente novamente.'));
       },
     });
   }
 
   addEditor(): void {
     const currentNews = this.news();
-    if (!currentNews || this.editorForm.invalid || this.editorsLoading()) {
+    if (!currentNews || !this.canAdministerNews() || this.editorForm.invalid || this.editorsLoading()) {
       this.editorForm.markAllAsTouched();
       return;
     }
@@ -286,7 +309,7 @@ export class NewsEditorComponent implements OnInit {
 
   removeEditor(editor: NewsEditorUser): void {
     const currentNews = this.news();
-    if (!currentNews || this.editorsLoading()) return;
+    if (!currentNews || !this.canAdministerNews() || this.editorsLoading()) return;
 
     this.editorsLoading.set(true);
     this.errorMessage.set(null);
@@ -384,7 +407,7 @@ export class NewsEditorComponent implements OnInit {
     this.news.set(news);
     this.form.reset(value, { emitEvent: false });
     // A publicação controla a visibilidade. O PATCH continua permitido pela API
-    // para a pessoa autora, inclusive depois que a notícia está pública.
+    // para autores, administradores e moderadores, inclusive após a publicação.
     this.form.enable({ emitEvent: false });
     this.formValue.set(value);
     this.formIsValid.set(this.form.valid);

@@ -104,7 +104,7 @@ export class CertificateManualManagementComponent implements OnInit {
       const person = this.guests().find(row => String(row.id) === this.recipient);
       if (!person || (!automatic && this.level !== 'activity')) return;
       request = automatic ? this.api.guestCertificate(this.event.id, Number(this.activity), person.id, this.level === 'activity')
-        : this.api.manualInstructor(this.event.id, { activity_id: Number(this.activity), activity_guest_id: person.id });
+        : this.api.manualInstructor(this.event.id, { activity_id: Number(this.activity), event_guest_id: person.event_guest_id ?? person.id });
     }
     if (!window.confirm('Emitir o certificado para a pessoa selecionada?')) return;
     this.run(request, blob => this.download(blob));

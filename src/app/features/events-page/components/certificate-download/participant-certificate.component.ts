@@ -14,7 +14,10 @@ import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
   selector: 'app-participant-certificate', standalone: true,
   template: `@if (available()) {
     <button type="button" [disabled]="busy()" [attr.aria-busy]="busy()" (click)="download()">
-      @if (busy()) { <span class="mini-spinner" aria-hidden="true"></span> Gerando… } @else { Emitir certificado }
+      @if (busy() && action() === 'download') { <span class="mini-spinner" aria-hidden="true"></span> Gerando… } @else { Emitir certificado }
+    </button>
+    <button type="button" [disabled]="busy()" [attr.aria-busy]="busy()" (click)="sendEmail()">
+      @if (busy() && action() === 'email') { <span class="mini-spinner" aria-hidden="true"></span> Enviando… } @else { Enviar por e-mail }
     </button>
     @if (error()) { <small role="alert">{{ error() }}</small> }
     @if (success()) { <small role="status">{{ success() }}</small> }
@@ -29,7 +32,9 @@ export class ParticipantCertificateComponent {
   readonly endDate = input<string | null>(null);
   readonly timeZone = input<string | null>();
   readonly canceled = input(false);
+  readonly eventFinished = input(false);
   readonly busy = signal(false);
+  readonly action = signal<'download' | 'email' | null>(null);
   readonly error = signal('');
   readonly success = signal('');
   private readonly api = inject(CertificatesService);
@@ -41,17 +46,16 @@ export class ParticipantCertificateComponent {
   constructor() { this.destroy.onDestroy(() => { if (this.url) URL.revokeObjectURL(this.url); }); }
   available(): boolean {
     const end = eventTimestamp(this.endDate(), this.timeZone() ?? undefined);
-    return this.allowed() && !this.canceled() && this.enrollment().status === 'CHECKED_IN' && Number.isFinite(end) && end <= Date.now();
+    return this.allowed() && this.eventFinished() && !this.canceled() && this.enrollment().status === 'CHECKED_IN' && Number.isFinite(end) && end <= Date.now();
   }
   download(): void {
     if (!this.available() || this.busy()) return;
     const row = this.enrollment();
     if (this.activityId() && !row.user?.id) return;
-    this.busy.set(true); this.error.set(''); this.success.set('');
-    const target = this.activityId() ? this.events.findEventEnrollment(this.eventId(), row.user!.id) : of(row);
-    target.pipe(
+    this.busy.set(true); this.action.set('download'); this.error.set(''); this.success.set('');
+    this.eventEnrollment(row).pipe(
       switchMap(enrollment => this.api.manualParticipant(this.eventId(), enrollment.id, this.activityId())),
-      takeUntilDestroyed(this.destroy), finalize(() => this.busy.set(false)),
+      takeUntilDestroyed(this.destroy), finalize(() => { this.busy.set(false); this.action.set(null); }),
     ).subscribe({
       next: blob => {
         if (this.url) URL.revokeObjectURL(this.url);
@@ -63,5 +67,22 @@ export class ParticipantCertificateComponent {
       },
       error: error => this.error.set(apiErrorMessage(error, 'Não foi possível emitir o certificado. Verifique o encerramento e a presença no evento e na atividade.')),
     });
+  }
+  sendEmail(): void {
+    if (!this.available() || this.busy()) return;
+    const row = this.enrollment();
+    if (this.activityId() && !row.user?.id) return;
+    if (typeof window !== 'undefined' && !window.confirm(`Enviar o certificado para ${row.user?.name || 'esta pessoa'} por e-mail?`)) return;
+    this.busy.set(true); this.action.set('email'); this.error.set(''); this.success.set('');
+    this.eventEnrollment(row).pipe(
+      switchMap(enrollment => this.api.emailManualParticipant(this.eventId(), enrollment.id, this.activityId())),
+      takeUntilDestroyed(this.destroy), finalize(() => { this.busy.set(false); this.action.set(null); }),
+    ).subscribe({
+      next: () => this.success.set('Certificado enviado por e-mail.'),
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível enviar o certificado. Verifique o encerramento e a presença.')),
+    });
+  }
+  private eventEnrollment(row: EventEnrollment) {
+    return this.activityId() ? this.events.findEventEnrollment(this.eventId(), row.user!.id) : of(row);
   }
 }

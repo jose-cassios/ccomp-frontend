@@ -68,6 +68,10 @@ export class CertificatesService {
     const activity = activityId ? `/activities/${activityId}` : '';
     return this.binary(this.http.post(this.config.buildUrl(`/events/${eventId}${activity}/enrollments/${enrollmentId}/certificate/manual`), null, { responseType: 'blob' }));
   }
+  emailManualParticipant(eventId: number, enrollmentId: number, activityId?: number) {
+    const activity = activityId ? `/activities/${activityId}` : '';
+    return this.http.post(this.config.buildUrl(`/events/${eventId}${activity}/enrollments/${enrollmentId}/certificate/manual/email`), null);
+  }
   manualContent(eventId: number, content: ManualCertificateContent, preview = false) {
     return this.binary(this.http.post(this.config.buildUrl(`/events/${eventId}/certificate/manual${preview ? '/preview' : ''}`), content, { responseType: 'blob' }));
   }

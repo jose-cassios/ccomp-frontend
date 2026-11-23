@@ -3,6 +3,13 @@
   <h3>{{ activityId ? 'Convidados da atividade' : 'Convidados do evento' }}</h3>
   @if (error()) { <p role="alert">{{ error() }}</p><button type="button" (click)="loadGuests()">Atualizar convidados</button> }
   @if (message()) { <p role="status">{{ message() }}</p> }
+  @if (manage && activityId) {
+    <form class="guest-search" (submit)="$event.preventDefault(); searchGuests(guestSearchInput.value)">
+      <label>Buscar convidado ou apresentador<input #guestSearchInput type="search" maxlength="100" placeholder="Nome ou e-mail" [value]="guestSearch()"></label>
+      <button type="submit" [disabled]="loading()">Buscar</button>
+      @if (guestSearch()) { <button type="button" [disabled]="loading()" (click)="guestSearchInput.value = ''; searchGuests('')">Limpar busca</button> }
+    </form>
+  }
   @if (busy() || loading() || invitationsLoading()) { <p role="status"><span class="mini-spinner"></span> Carregando…</p> }
   @if (manage && !activityId && canViewEmail()) {
     <p>Convidados não recebem permissão de edição. Para colaboradores, use a equipe organizadora.</p>
@@ -27,7 +34,7 @@
     } @empty { @if (!invitationsLoading()) { <p>Nenhum convite encontrado.</p> } }
     @if (invitationCursor()) { <button type="button" [disabled]="invitationsLoading()" (click)="loadInvitations(true)">Mais convites</button> }
   }
-  @for (guest of guests(); track guest.id) {
+  @for (guest of filteredGuests(); track guest.id) {
     <article>
       @if (guest.image_url) { <img class="guest-photo" [eventCover]="guest.image_url" [alt]="guest.name || 'Convidado externo'" /> }
       <div><strong>{{ guest.name || (guest.user_id === auth.getCurrentUser()?.id ? 'Você' : 'Convidado externo') }}</strong>
@@ -39,8 +46,11 @@
         <button type="button" [disabled]="busy()" (click)="update(guest, 'status')">{{ guest.status === 'CONFIRMED' ? 'Cancelar presença' : 'Confirmar presença' }}</button>
         <button type="button" [disabled]="busy()" (click)="update(guest, 'visibility')">{{ guest.visibility === 'PUBLIC' ? 'Tornar privado' : 'Tornar público' }}</button>
       }
+      @if (manage && activityId && eventFinished && guest.status === 'CONFIRMED' && guest.role === 'PRESENTER') {
+        <button type="button" [disabled]="certificateBusyId() !== null" (click)="issueActivityCertificate(guest)">{{ certificateBusyId() === (guest.event_guest_id ?? guest.id) ? 'Emitindo…' : 'Emitir certificado da atividade' }}</button>
+      }
     </article>
-  } @empty { @if (!loading()) { <p>Nenhum convidado disponível para exibição.</p> } }
+  } @empty { @if (!loading()) { <p>{{ guestSearch() ? 'Nenhum convidado encontrado para esta busca.' : 'Nenhum convidado disponível para exibição.' }}</p> } }
   @if (guestCursor()) { <button type="button" [disabled]="loading()" (click)="loadGuests(true)">Mais convidados</button> }
 </section>
 

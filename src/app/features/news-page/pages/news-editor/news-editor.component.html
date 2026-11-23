@@ -22,7 +22,7 @@
       <button type="button" class="button button--secondary mobile-view-button" [class.active]="activeView() === 'preview'" (click)="setView('preview')">
         Pré-visualizar
       </button>
-      @if (news() && isAuthor()) {
+      @if (news() && canAdministerNews()) {
         <button type="button" class="button button--danger" [disabled]="isBusy()" (click)="deleteNews()">
           {{ operation() === 'deleting' ? 'Excluindo...' : 'Excluir' }}
         </button>
@@ -88,17 +88,32 @@
 
           <div class="field field--wide upload-field">
             <span>Ou envie uma imagem</span>
-            <label class="upload-button">
+            <label class="upload-button" [attr.aria-busy]="uploadingCover()">
               {{ uploadingCover() ? 'Enviando imagem...' : 'Selecionar imagem de capa' }}
               <input
                 type="file"
                 accept="image/*"
-                [disabled]="uploadingCover() || isBusy()"
+                [disabled]="!canUploadCover() || uploadingCover() || isBusy()"
                 (change)="uploadCover($event)"
               />
             </label>
-            <small>O endereço retornado pelo storage será preenchido no campo acima.</small>
+            @if (canUploadCover()) {
+              <small>Após enviar a imagem, clique em Salvar alterações para aplicar a capa.</small>
+            } @else {
+              <small>A API permite enviar arquivos apenas como administrador ou moderador. Use uma URL pública no campo acima.</small>
+            }
           </div>
+          @if (coverPreviewUrl()) {
+          <div class="field field--wide cover-preview">
+            <span>Prévia da capa</span>
+            <img [src]="coverPreviewUrl()" alt="Prévia da imagem de capa"
+              (error)="failedCoverUrl.set(coverPreviewUrl())"
+              (load)="failedCoverUrl.set(null)" />
+            @if (failedCoverUrl() === coverPreviewUrl()) {
+              <strong role="status">Não foi possível exibir a capa. A URL precisa ser pública e acessível pelo navegador. Se você enviou um arquivo, a API pode ter retornado um endereço interno do armazenamento.</strong>
+            }
+          </div>
+          }
         </div>
       </section>
 
@@ -142,7 +157,7 @@
           <span class="content-help">Editores podem ajudar a manter este conteúdo.</span>
         </div>
 
-        @if (isAuthor()) {
+        @if (canAdministerNews()) {
           <form class="add-editor-form" [formGroup]="editorForm" (ngSubmit)="addEditor()">
             <label class="field">
               <span>E-mail do novo editor</span>
@@ -165,7 +180,7 @@
                   <strong>{{ editor.name }}</strong>
                   <small>{{ editor.email_address }}</small>
                 </span>
-                @if (isAuthor()) {
+                @if (canAdministerNews()) {
                   <button type="button" class="remove-editor" [disabled]="editorsLoading()" (click)="removeEditor(editor)">
                     Remover
                   </button>
