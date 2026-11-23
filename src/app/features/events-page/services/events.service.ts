@@ -502,9 +502,11 @@ export class EventsService {
     eventId: number | string,
     nextCursor?: string,
     pageSize = 10,
+    searchTerm = '',
   ): Observable<EventEnrollmentsPage> {
     let params = new HttpParams().set('pageSize', pageSize.toString());
     if (nextCursor) params = params.set('nextCursor', nextCursor);
+    if (searchTerm.trim()) params = params.set('searchTerm', searchTerm.trim());
 
     return this.api.get<ApiEnrollmentsPage>(
       `/events/${encodeURIComponent(eventId)}/enrollments`,

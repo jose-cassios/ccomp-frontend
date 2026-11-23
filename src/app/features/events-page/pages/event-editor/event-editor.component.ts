@@ -341,6 +341,7 @@ export class EventEditorComponent implements OnInit {
   readonly editorAccessResolved = signal(false);
   readonly enrollments = signal<EventEnrollment[]>([]);
   readonly enrollmentsNextCursor = signal<string | null>(null);
+  readonly enrollmentSearchTerm = signal('');
   readonly enrollmentsLoading = signal(false);
   readonly enrollmentsError = signal<string | null>(null);
   readonly ownedEventIds = signal<ReadonlySet<number>>(new Set());
@@ -1212,7 +1213,7 @@ export class EventEditorComponent implements OnInit {
     if (!currentEvent || !nextCursor || this.enrollmentsLoading()) return;
 
     this.enrollmentsLoading.set(true);
-    this.eventsService.getEnrollments(currentEvent.id, nextCursor).pipe(
+    this.eventsService.getEnrollments(currentEvent.id, nextCursor, 10, this.enrollmentSearchTerm()).pipe(
       finalize(() => this.enrollmentsLoading.set(false)),
     ).subscribe({
       next: (page) => {
@@ -1225,12 +1226,12 @@ export class EventEditorComponent implements OnInit {
     });
   }
 
-  loadEnrollments(eventId: number): void {
+  loadEnrollments(eventId: number, searchTerm = this.enrollmentSearchTerm()): void {
     if (!this.canViewEnrollments() || this.enrollmentsLoading()) return;
 
     this.enrollmentsLoading.set(true);
     this.enrollmentsError.set(null);
-    this.eventsService.getEnrollments(eventId).pipe(
+    this.eventsService.getEnrollments(eventId, undefined, 10, searchTerm).pipe(
       finalize(() => this.enrollmentsLoading.set(false)),
     ).subscribe({
       next: (page) => {
@@ -1242,6 +1243,19 @@ export class EventEditorComponent implements OnInit {
         this.enrollmentsError.set('Não foi possível carregar os inscritos deste evento.');
       },
     });
+  }
+
+  searchEnrollments(term: string): void {
+    if (this.enrollmentsLoading()) return;
+    const currentEvent = this.event();
+    if (!currentEvent) return;
+
+    const normalizedTerm = term.trim().slice(0, 100);
+    this.enrollmentSearchTerm.set(normalizedTerm);
+    this.enrollments.set([]);
+    this.enrollmentsNextCursor.set(null);
+    this.enrollmentsError.set(null);
+    this.loadEnrollments(currentEvent.id, normalizedTerm);
   }
 
   private buildBasicUpdatePayload(): UpdateEventPayload {
