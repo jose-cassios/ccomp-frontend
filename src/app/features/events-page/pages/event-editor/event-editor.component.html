@@ -452,6 +452,15 @@
   <summary><span><strong id="enrollments-title">Inscritos</strong><small>{{ enrollments().length }} participante(s) carregado(s)</small></span><span class="section-chevron" aria-hidden="true"></span></summary>
   <div class="editor-section__body"><section class="review-enrollments" aria-labelledby="enrollments-title">
 
+              <form class="inline-form" role="search" (submit)="$event.preventDefault(); searchEnrollments(enrollmentSearchInput.value)">
+                <label class="field field--grow" for="event-enrollment-search">Buscar inscrito
+                  <input #enrollmentSearchInput id="event-enrollment-search" type="search" maxlength="100" placeholder="Nome ou e-mail do participante" [value]="enrollmentSearchTerm()" [disabled]="enrollmentsLoading()" />
+                </label>
+                <button class="button button--secondary" type="submit" [disabled]="enrollmentsLoading()">{{ enrollmentsLoading() ? 'Buscando…' : 'Buscar' }}</button>
+                @if (enrollmentSearchTerm()) {
+                  <button class="text-button" type="button" [disabled]="enrollmentsLoading()" (click)="enrollmentSearchInput.value = ''; searchEnrollments('')">Limpar</button>
+                }
+              </form>
 
               @if (enrollmentsLoading() && !enrollments().length) {
                 <p class="empty-inline">Carregando inscritos...</p>
