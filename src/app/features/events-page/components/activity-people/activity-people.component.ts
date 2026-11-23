@@ -47,9 +47,6 @@ import { ActivityInstructorsComponent } from './activity-instructors.component';
           @if (error()) { <p role="alert">{{ error() }}</p> }
           @for (row of sortedRows(); track row.id) {
             <article><div><strong>{{ row.user?.name || 'Participante' }}</strong><small>{{ row.user?.email_address }}</small><small>{{ stateLabel(row.status) }}</small></div>
-              @if (row.status === 'CHECKED_IN') {
-                <app-participant-certificate [eventId]="eventId" [activityId]="activityId" [enrollment]="row" [allowed]="manage" [eventFinished]="eventFinished" [endDate]="endDate" [timeZone]="timeZone" [canceled]="canceled" />
-              }
               @if (row.status === 'CONFIRMED') {
                 <button type="button" [disabled]="attendingId() !== null || loading()" (click)="markAttendance(row)">
                   @if (attendingId() === row.id) { <span class="mini-spinner" aria-hidden="true"></span> Registrando… } @else { Confirmar presença }
@@ -70,10 +67,6 @@ export class ActivityPeopleComponent {
   @Input({ required: true }) eventId!: number;
   @Input({ required: true }) activityId!: number;
   @Input() manage = false;
-  @Input() endDate: string | null = null;
-  @Input() timeZone?: string | null;
-  @Input() canceled = false;
-  @Input() eventFinished = false;
   @Input() activityTitle = '';
   readonly managementOpen = signal(false);
   @Input() canView = false;
