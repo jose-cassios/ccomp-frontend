@@ -51,7 +51,7 @@ describe('Manual certificate management', () => {
   it('uses the activity guest link instead of the event guest profile ID', () => {
     const component = create().componentInstance;
     component.kind = 'guest'; component.activity = '5'; component.loadGuests(); component.recipient = '8'; component.level = 'activity';
-    component.issue(); expect(api.manualInstructor).toHaveBeenCalledWith(9, { activity_id: 5, activity_guest_id: 8 });
+    component.issue(); expect(api.manualInstructor).toHaveBeenCalledWith(9, { activity_id: 5, event_guest_id: 99 });
     component.issue(true); expect(api.guestCertificate).toHaveBeenCalledWith(9, 5, 8, true);
     component.level = 'event'; component.issue(); expect(api.manualInstructor).toHaveBeenCalledTimes(1);
   });

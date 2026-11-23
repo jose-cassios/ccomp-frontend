@@ -78,6 +78,9 @@ export class NewsEditorComponent implements OnInit {
   readonly editors = signal<NewsEditorUser[]>([]);
   readonly editorsLoading = signal(false);
   readonly uploadingCover = signal(false);
+  readonly canUploadCover = computed(() => this.authService.isAuthenticatedState() && this.authService.hasAnyRole(NEWS_MODERATION_ROLES));
+  readonly failedCoverUrl = signal<string | null>(null);
+  readonly coverPreviewUrl = computed(() => this.formValue().cover_image_url.trim());
   readonly editorForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
   });
@@ -238,6 +241,11 @@ export class NewsEditorComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file || this.uploadingCover() || this.isBusy()) return;
+    if (!this.canUploadCover()) {
+      this.errorMessage.set('O envio de arquivos está disponível na API apenas para administradores e moderadores. Você pode informar uma URL pública para a capa.');
+      input.value = '';
+      return;
+    }
     if (!file.type.startsWith('image/')) {
       this.errorMessage.set('Selecione um arquivo de imagem válido.');
       input.value = '';
@@ -246,6 +254,7 @@ export class NewsEditorComponent implements OnInit {
 
     this.uploadingCover.set(true);
     this.errorMessage.set(null);
+    this.successMessage.set(null);
     this.storageService.upload(file).pipe(
       finalize(() => {
         this.uploadingCover.set(false);
@@ -253,12 +262,22 @@ export class NewsEditorComponent implements OnInit {
       }),
     ).subscribe({
       next: (response) => {
-        this.form.controls.cover_image_url.setValue(response.url);
+        const url = response.url?.trim();
+        if (!url || !/^https?:\/\/.+/i.test(url)) {
+          this.errorMessage.set('O arquivo foi enviado, mas a API não retornou uma URL válida para a imagem. A capa anterior foi mantida.');
+          return;
+        }
+        this.failedCoverUrl.set(null);
+        this.form.controls.cover_image_url.setValue(url);
         this.form.controls.cover_image_url.markAsTouched();
         this.successMessage.set('Imagem enviada. Salve a notícia para aplicar a nova capa.');
       },
       error: (error: unknown) => {
-        this.errorMessage.set(this.getErrorMessage(error, 'Não foi possível enviar a imagem.'));
+        this.errorMessage.set(error instanceof HttpErrorResponse && error.status === 413
+          ? 'A imagem excede o tamanho permitido pelo servidor. Escolha um arquivo menor.'
+          : error instanceof HttpErrorResponse && error.status === 403
+            ? 'A API recusou o envio da imagem. O upload exige permissão de administrador ou moderador.'
+            : this.getErrorMessage(error, 'Não foi possível enviar a imagem. A capa anterior foi mantida. Tente novamente.'));
       },
     });
   }

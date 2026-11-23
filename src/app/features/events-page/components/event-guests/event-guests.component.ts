@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, Input, OnChanges, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -9,6 +9,8 @@ import { apiErrorMessage } from '../../../../core/api/api-error';
 import { ApiMessage, apiMessage } from '../../models/event.model';
 import { EventGuest, EventGuestsService, GuestInvitation } from '../../services/event-guests.service';
 import { EventCoverDirective } from '../event-cover.directive';
+import { CertificatesService } from '../../services/certificates.service';
+import { autoDismissFeedback } from '../../../../core/ui/feedback-auto-dismiss';
 
 @Component({
   selector: 'app-event-guests', standalone: true,
@@ -21,12 +23,18 @@ export class EventGuestsComponent implements OnChanges {
   @Input() activityId?: number;
   @Input() manage = false;
   @Input() canView = false;
+  @Input() eventFinished = false;
   private readonly service = inject(EventGuestsService);
   readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   readonly form = this.fb.nonNullable.group({ email: ['', [Validators.required, Validators.email]] });
   readonly accessDenied = signal(false);
   readonly guests = signal<EventGuest[]>([]);
+  readonly guestSearch = signal('');
+  readonly filteredGuests = computed(() => {
+    const query = this.guestSearch().trim().toLocaleLowerCase('pt-BR');
+    return this.guests().filter(guest => !query || `${guest.name ?? ''} ${guest.email ?? ''}`.toLocaleLowerCase('pt-BR').includes(query));
+  });
   readonly invitations = signal<GuestInvitation[]>([]);
   readonly guestCursor = signal<string | null>(null);
   readonly invitationCursor = signal<string | null>(null);
@@ -36,6 +44,9 @@ export class EventGuestsComponent implements OnChanges {
   readonly error = signal('');
   readonly message = signal('');
   readonly filter = this.fb.nonNullable.control('', Validators.email);
+  readonly certificateBusyId = signal<number | null>(null);
+  readonly certificateApi = inject(CertificatesService);
+  private readonly feedback = autoDismissFeedback(this.error, this.message, () => { this.error.set(''); this.message.set(''); });
   readonly statusLabels: Record<string, string> = {
     PENDING: 'Pendente', ACCEPTED: 'Aceito', DECLINED: 'Recusado', CANCELLED: 'Cancelado',
   };
@@ -45,6 +56,30 @@ export class EventGuestsComponent implements OnChanges {
     if (this.manage && !this.activityId && this.canViewEmail()) this.loadInvitations();
   }
   canViewEmail(): boolean { return this.auth.hasAnyRole(['ADM', 'MODERATOR']); }
+  searchGuests(term: string) {
+    if (!this.manage || this.loading()) return;
+    this.guestSearch.set(term.trim().slice(0, 100));
+    this.loading.set(true); this.error.set(''); this.guestCursor.set(null);
+    this.service.allGuests(this.eventId, this.activityId).pipe(finalize(() => this.loading.set(false))).subscribe({
+      next: rows => { this.accessDenied.set(false); this.guests.set(rows); },
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível buscar convidados.')),
+    });
+  }
+  issueActivityCertificate(guest: EventGuest) {
+    if (!this.manage || !this.eventFinished || guest.status !== 'CONFIRMED' || guest.role !== 'PRESENTER' || this.certificateBusyId() !== null || !this.activityId) return;
+    if (!window.confirm(`Emitir o certificado da atividade para ${guest.name || 'este convidado'}?`)) return;
+    const guestId = guest.event_guest_id ?? guest.id;
+    this.certificateBusyId.set(guestId); this.error.set(''); this.message.set('');
+    this.certificateApi.manualInstructor(this.eventId, { activity_id: this.activityId, event_guest_id: guestId })
+      .pipe(finalize(() => this.certificateBusyId.set(null))).subscribe({
+        next: blob => {
+          const url = URL.createObjectURL(blob); const link = document.createElement('a');
+          link.href = url; link.download = `certificado-convidado-${guestId}.png`; link.click(); URL.revokeObjectURL(url);
+          this.message.set('Certificado emitido e download iniciado.');
+        },
+        error: error => this.error.set(apiErrorMessage(error, 'Não foi possível emitir o certificado do convidado.')),
+      });
+  }
   loadGuests(more = false) {
     if (!this.canView && !this.manage) return;
     if (this.loading() || (more && !this.guestCursor())) return;

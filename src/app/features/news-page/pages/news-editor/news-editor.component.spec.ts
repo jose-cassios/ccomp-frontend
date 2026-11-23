@@ -2,7 +2,8 @@ import { signal } from '@angular/core';
 import { AuthService } from '../../../auth/services/auth.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { StorageService } from '../../../../core/storage/storage.service';
 import { NewsItemType } from '../../interface/news.interface';
 import { NewsService } from '../../services/news.service';
@@ -169,5 +170,45 @@ describe('NewsEditorComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('.feedback-viewport')).toBeNull();
+  });
+
+  it('uploads a cover and persists its URL when saving the news', () => {
+    role.set('ADM');
+    (component as any).applyNews(savedNews);
+    const file = new File(['image'], 'capa.png', { type: 'image/png' });
+    const input = { files: [file], value: 'capa.png' };
+    const upload = new Subject<{ url: string; file_name: string }>();
+    vi.mocked(TestBed.inject(StorageService).upload).mockReturnValue(upload);
+    component.uploadCover({ target: input } as unknown as Event);
+    expect(component.uploadingCover()).toBe(true);
+    component.save();
+    expect(newsService.update).not.toHaveBeenCalled();
+    upload.next({ url: 'https://files.example/capa.png', file_name: 'capa.png' });
+    upload.complete();
+    expect(component.uploadingCover()).toBe(false);
+    expect(input.value).toBe('');
+    expect(component.hasUnsavedChanges()).toBe(true);
+    expect(component.coverPreviewUrl()).toBe('https://files.example/capa.png');
+    component.save();
+    expect(newsService.update).toHaveBeenCalledWith(42, expect.objectContaining({ cover_image_url: 'https://files.example/capa.png' }));
+  });
+
+  it('keeps the previous cover and clears loading after a failed upload', () => {
+    role.set('ADM');
+    (component as any).applyNews(savedNews);
+    vi.mocked(TestBed.inject(StorageService).upload).mockReturnValue(throwError(() => new HttpErrorResponse({ status: 413 })));
+    component.uploadCover({ target: { files: [new File(['image'], 'capa.png', { type: 'image/png' })], value: '' } } as unknown as Event);
+    expect(component.uploadingCover()).toBe(false);
+    expect(component.form.controls.cover_image_url.value).toBe(savedNews.cover_image_url);
+    expect(component.errorMessage()).toContain('tamanho permitido');
+  });
+
+  it('does not replace the previous cover with a malformed upload response', () => {
+    role.set('ADM');
+    (component as any).applyNews(savedNews);
+    vi.mocked(TestBed.inject(StorageService).upload).mockReturnValue(of({ url: '', file_name: 'capa.png' }));
+    component.uploadCover({ target: { files: [new File(['image'], 'capa.png', { type: 'image/png' })], value: '' } } as unknown as Event);
+    expect(component.form.controls.cover_image_url.value).toBe(savedNews.cover_image_url);
+    expect(component.errorMessage()).toContain('API não retornou uma URL válida');
   });
 });

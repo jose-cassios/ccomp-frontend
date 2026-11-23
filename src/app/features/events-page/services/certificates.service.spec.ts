@@ -141,9 +141,9 @@ describe('CertificatesService API contract', () => {
     const instructor = http.expectOne(r => r.url.endsWith('/events/9/instructor-certificate/manual'));
     expect(instructor.request.method).toBe('POST'); expect(instructor.request.responseType).toBe('blob');
     expect(instructor.request.body).toEqual({ instructor_id: 4, activity_id: 5 }); instructor.flush(new Blob());
-    service.manualInstructor(9, { activity_id: 5, activity_guest_id: 8 }).subscribe();
+    service.manualInstructor(9, { activity_id: 5, event_guest_id: 8 }).subscribe();
     const guest = http.expectOne(r => r.url.endsWith('/instructor-certificate/manual'));
-    expect(guest.request.body).toEqual({ activity_id: 5, activity_guest_id: 8 }); guest.flush(new Blob());
+    expect(guest.request.body).toEqual({ activity_id: 5, event_guest_id: 8 }); guest.flush(new Blob());
     service.manualTeam(9, 'recipient-id').subscribe();
     const team = http.expectOne(r => r.url.endsWith('/events/9/team-certificate/manual/recipient-id'));
     expect(team.request.method).toBe('POST'); expect(team.request.body).toBeNull(); team.flush(new Blob());

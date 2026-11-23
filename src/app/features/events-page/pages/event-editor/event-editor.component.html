@@ -353,7 +353,7 @@
                             </div>
                             <h3>{{ activity.title }}</h3>
                             <app-activity-capacity [activityId]="activity.id" [revision]="activityEnrollmentRevision()" />
-                            <app-activity-people [endDate]="activity.end_date ?? null" [timeZone]="event()?.time_zone" [canceled]="event()?.status === 'CANCELED'" [activityTitle]="activity.title" (enrollmentChanged)="activityEnrollmentRevision.update(incrementRevision)" [eventId]="event()!.id" [activityId]="activity.id" [manage]="canManageActivities()" />
+                            <app-activity-people [endDate]="activity.end_date ?? null" [timeZone]="event()?.time_zone" [canceled]="event()?.status === 'CANCELED'" [eventFinished]="event()?.execution_status === 'FINISHED'" [activityTitle]="activity.title" (enrollmentChanged)="activityEnrollmentRevision.update(incrementRevision)" [eventId]="event()!.id" [activityId]="activity.id" [manage]="canManageActivities()" />
                             <p class="activity-row__meta">
                               @if (activity.end_date) { até {{ activity.end_date | date: 'HH:mm' }} }
                               @if (activity.location) { <span>• {{ activity.location }}</span> }
@@ -468,7 +468,7 @@
                       </span>
                       <span><em>{{ enrollmentStateLabel(enrollment.status) }}</em>
                         @if (enrollment.status === 'CHECKED_IN') {
-                          <app-participant-certificate [eventId]="event()!.id" [enrollment]="enrollment" [allowed]="canManageActivities()" [endDate]="event()!.end_date" [timeZone]="event()!.time_zone" [canceled]="event()!.status === 'CANCELED'" />
+                          <app-participant-certificate [eventId]="event()!.id" [enrollment]="enrollment" [allowed]="canManageActivities()" [eventFinished]="event()!.execution_status === 'FINISHED'" [endDate]="event()!.end_date" [timeZone]="event()!.time_zone" [canceled]="event()!.status === 'CANCELED'" />
                         }
                         @if (enrollment.status === 'CONFIRMED') {
                           <button type="button" class="text-button" [disabled]="eventAttendanceBusyId() !== null" (click)="markEventAttendance(enrollment)">
